@@ -1,0 +1,651 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model asignacion_pendiente {
+  id                                               Int                         @id @default(autoincrement())
+  solicitud_id                                     Int                         @unique(map: "asignacion_pendiente_solicitud_unica_key")
+  insumo_id                                        Int
+  cantidad_requerida                               Int
+  cantidad_asignada                                Int                         @default(0)
+  estado_id                                        Int
+  fecha_asignacion                                 DateTime?                   @db.Date
+  activo                                           Boolean                     @default(true)
+  created_at                                       DateTime                    @default(now()) @db.Timestamp(6)
+  updated_at                                       DateTime?                   @db.Timestamp(6)
+  created_by                                       Int?
+  updated_by                                       Int?
+  usuario_asignacion_pendiente_created_byTousuario usuario?                    @relation("asignacion_pendiente_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ap_created_by")
+  estado_asignacion_pendiente                      estado_asignacion_pendiente @relation(fields: [estado_id], references: [id], onUpdate: NoAction, map: "fk_ap_estado")
+  insumo                                           insumo                      @relation(fields: [insumo_id], references: [id], onUpdate: NoAction, map: "fk_ap_insumo")
+  solicitud_apoyo                                  solicitud_apoyo             @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ap_solicitud")
+  usuario_asignacion_pendiente_updated_byTousuario usuario?                    @relation("asignacion_pendiente_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ap_updated_by")
+
+  @@index([insumo_id, estado_id], map: "idx_asignacion_insumo_estado", where: raw("(activo = true)"))
+}
+
+model auditoria_log {
+  id                    BigInt                @id @default(autoincrement())
+  tabla_afectada        String                @db.VarChar(50)
+  registro_id           Int
+  tipo_accion_id        Int
+  usuario_id            Int?
+  fecha_hora            DateTime              @default(now()) @db.Timestamp(6)
+  valores_antiguos      Json?
+  valores_nuevos        Json?
+  tipo_accion_auditoria tipo_accion_auditoria @relation(fields: [tipo_accion_id], references: [id], onUpdate: NoAction, map: "fk_auditoria_tipo_accion")
+  usuario               usuario?              @relation(fields: [usuario_id], references: [id], onUpdate: NoAction, map: "fk_auditoria_usuario")
+
+  @@index([tipo_accion_id], map: "idx_auditoria_tipo_accion")
+}
+
+model categoria_insumo {
+  id                                           Int       @id @default(autoincrement())
+  nombre                                       String    @unique @db.VarChar(100)
+  requiere_fecha_caducidad                     Boolean   @default(false)
+  requiere_codigo_fabricante                   Boolean   @default(false)
+  bloquea_solicitud_sin_stock                  Boolean   @default(false)
+  activo                                       Boolean   @default(true)
+  created_at                                   DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                                   DateTime? @db.Timestamp(6)
+  created_by                                   Int?
+  updated_by                                   Int?
+  usuario_categoria_insumo_created_byTousuario usuario?  @relation("categoria_insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cat_created_by")
+  usuario_categoria_insumo_updated_byTousuario usuario?  @relation("categoria_insumo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cat_updated_by")
+  insumo                                       insumo[]
+}
+
+model comunidad {
+  id                                    Int       @id @default(autoincrement())
+  municipio_id                          Int
+  nombre                                String    @db.VarChar(100)
+  ubicacion                             String?   @db.VarChar(255)
+  activo                                Boolean   @default(true)
+  created_at                            DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                            DateTime? @db.Timestamp(6)
+  created_by                            Int?
+  updated_by                            Int?
+  usuario_comunidad_created_byTousuario usuario?  @relation("comunidad_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_com_created_by")
+  usuario_comunidad_updated_byTousuario usuario?  @relation("comunidad_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_com_updated_by")
+  municipio                             municipio @relation(fields: [municipio_id], references: [id], onUpdate: NoAction, map: "fk_comunidad_municipio")
+  persona                               persona[]
+
+  @@unique([nombre, municipio_id], map: "comunidad_nombre_municipio_key")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model contrato_prestamo {
+  id                                            Int                      @id @default(autoincrement())
+  entrega_id                                    Int                      @unique(map: "contrato_prestamo_entrega_unica_key")
+  fecha_inicio                                  DateTime                 @default(dbgenerated("CURRENT_DATE")) @db.Date
+  fecha_devolucion_pactada                      DateTime                 @db.Date
+  fecha_devolucion_real                         DateTime?                @db.Date
+  fecha_extendida_hasta                         DateTime?                @db.Date
+  estado_id                                     Int
+  numero_documento                              String?                  @db.VarChar(50)
+  observaciones                                 String?
+  activo                                        Boolean                  @default(true)
+  created_at                                    DateTime                 @default(now()) @db.Timestamp(6)
+  updated_at                                    DateTime?                @db.Timestamp(6)
+  created_by                                    Int?
+  updated_by                                    Int?
+  usuario_contrato_prestamo_created_byTousuario usuario?                 @relation("contrato_prestamo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cp_created_by")
+  entrega                                       entrega                  @relation(fields: [entrega_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cp_entrega")
+  estado_contrato_prestamo                      estado_contrato_prestamo @relation(fields: [estado_id], references: [id], onUpdate: NoAction, map: "fk_cp_estado")
+  usuario_contrato_prestamo_updated_byTousuario usuario?                 @relation("contrato_prestamo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cp_updated_by")
+
+  @@index([estado_id], map: "idx_contrato_prestamo_estado", where: raw("(activo = true)"))
+  @@index([fecha_devolucion_pactada], map: "idx_contrato_prestamo_vencimiento", where: raw("(activo = true)"))
+}
+
+model departamento {
+  id                                       Int         @id @default(autoincrement())
+  nombre                                   String      @unique @db.VarChar(100)
+  activo                                   Boolean     @default(true)
+  created_at                               DateTime    @default(now()) @db.Timestamp(6)
+  updated_at                               DateTime?   @db.Timestamp(6)
+  created_by                               Int?
+  updated_by                               Int?
+  usuario_departamento_created_byTousuario usuario?    @relation("departamento_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_depto_created_by")
+  usuario_departamento_updated_byTousuario usuario?    @relation("departamento_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_depto_updated_by")
+  municipio                                municipio[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model detalle_entrega {
+  id                                          Int                     @id @default(autoincrement())
+  entrega_id                                  Int
+  detalle_inventario_lote_id                  Int
+  presentacion_despacho_id                    Int
+  cantidad_despacho_original                  Decimal                 @db.Decimal(12, 4)
+  cantidad_entregada                          Int
+  activo                                      Boolean                 @default(true)
+  created_at                                  DateTime                @default(now()) @db.Timestamp(6)
+  updated_at                                  DateTime?               @db.Timestamp(6)
+  created_by                                  Int?
+  updated_by                                  Int?
+  usuario_detalle_entrega_created_byTousuario usuario?                @relation("detalle_entrega_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_det_created_by")
+  entrega                                     entrega                 @relation(fields: [entrega_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_det_entrega")
+  detalle_inventario_lote                     detalle_inventario_lote @relation(fields: [detalle_inventario_lote_id], references: [id], onUpdate: NoAction, map: "fk_det_lote")
+  presentacion_insumo                         presentacion_insumo     @relation(fields: [presentacion_despacho_id], references: [id], onUpdate: NoAction, map: "fk_det_presentacion")
+  usuario_detalle_entrega_updated_byTousuario usuario?                @relation("detalle_entrega_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_det_updated_by")
+
+  @@index([entrega_id], map: "idx_detalle_entrega_entrega")
+  @@index([detalle_inventario_lote_id], map: "idx_detalle_entrega_lote")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model detalle_inventario_lote {
+  id                                                  Int                     @id @default(autoincrement())
+  insumo_id                                           Int
+  recepcion_lote_id                                   Int
+  presentacion_recepcion_id                           Int
+  cantidad_recepcion_original                         Decimal                 @db.Decimal(12, 4)
+  codigo_lote_fabricante                              String?                 @db.VarChar(50)
+  fecha_caducidad                                     DateTime?               @db.Date
+  cantidad_inicial                                    Int
+  cantidad_disponible                                 Int
+  observaciones                                       String?
+  activo                                              Boolean                 @default(true)
+  created_at                                          DateTime                @default(now()) @db.Timestamp(6)
+  updated_at                                          DateTime?               @db.Timestamp(6)
+  created_by                                          Int?
+  updated_by                                          Int?
+  detalle_entrega                                     detalle_entrega[]
+  usuario_detalle_inventario_lote_created_byTousuario usuario?                @relation("detalle_inventario_lote_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_detalle_lote_created_by")
+  insumo                                              insumo                  @relation(fields: [insumo_id], references: [id], onUpdate: NoAction, map: "fk_detalle_lote_insumo")
+  presentacion_insumo                                 presentacion_insumo     @relation(fields: [presentacion_recepcion_id], references: [id], onUpdate: NoAction, map: "fk_detalle_lote_presentacion")
+  recepcion_donacion_lote                             recepcion_donacion_lote @relation(fields: [recepcion_lote_id], references: [id], onUpdate: NoAction, map: "fk_detalle_lote_recepcion")
+  usuario_detalle_inventario_lote_updated_byTousuario usuario?                @relation("detalle_inventario_lote_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_detalle_lote_updated_by")
+
+  @@index([insumo_id, activo, fecha_caducidad], map: "idx_detalle_inventario_fifo", where: raw("((activo = true) AND (cantidad_disponible > 0))"))
+  @@index([recepcion_lote_id], map: "idx_detalle_inventario_recepcion")
+}
+
+model discapacidad {
+  id                                       Int                    @id @default(autoincrement())
+  nombre                                   String                 @unique @db.VarChar(100)
+  activo                                   Boolean                @default(true)
+  created_at                               DateTime               @default(now()) @db.Timestamp(6)
+  updated_at                               DateTime?              @db.Timestamp(6)
+  created_by                               Int?
+  updated_by                               Int?
+  usuario_discapacidad_created_byTousuario usuario?               @relation("discapacidad_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dis_created_by")
+  usuario_discapacidad_updated_byTousuario usuario?               @relation("discapacidad_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dis_updated_by")
+  persona_discapacidad                     persona_discapacidad[]
+}
+
+model documento_persona {
+  id                                            Int                    @id @default(autoincrement())
+  persona_id                                    Int
+  tipo_documento_id                             Int
+  numero_documento                              String?                @db.VarChar(100)
+  ruta_archivo                                  String?                @db.VarChar(500)
+  observaciones                                 String?
+  activo                                        Boolean                @default(true)
+  created_at                                    DateTime               @default(now()) @db.Timestamp(6)
+  updated_at                                    DateTime?              @db.Timestamp(6)
+  created_by                                    Int?
+  updated_by                                    Int?
+  usuario_documento_persona_created_byTousuario usuario?               @relation("documento_persona_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dp_created_by")
+  persona                                       persona                @relation(fields: [persona_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dp_persona")
+  tipo_documento_persona                        tipo_documento_persona @relation(fields: [tipo_documento_id], references: [id], onUpdate: NoAction, map: "fk_dp_tipo")
+  usuario_documento_persona_updated_byTousuario usuario?               @relation("documento_persona_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dp_updated_by")
+
+  @@index([persona_id], map: "idx_documento_persona_persona")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model encargado_menor {
+  menor_id                                      Int
+  encargado_id                                  Int
+  parentesco                                    String    @db.VarChar(50)
+  activo                                        Boolean   @default(true)
+  created_at                                    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                                    DateTime? @db.Timestamp(6)
+  created_by                                    Int?
+  updated_by                                    Int?
+  persona_encargado_menor_encargado_idTopersona persona   @relation("encargado_menor_encargado_idTopersona", fields: [encargado_id], references: [id], onUpdate: NoAction, map: "fk_em_encargado")
+  persona_encargado_menor_menor_idTopersona     persona   @relation("encargado_menor_menor_idTopersona", fields: [menor_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_em_menor")
+
+  @@id([menor_id, encargado_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model entrega {
+  id                                           Int                 @id @default(autoincrement())
+  solicitud_id                                 Int?
+  persona_id                                   Int
+  persona_receptor_id                          Int?
+  parentesco_receptor                          String?             @db.VarChar(50)
+  fecha_entrega                                DateTime            @default(dbgenerated("CURRENT_DATE")) @db.Date
+  usuario_entrega_id                           Int
+  observaciones                                String?
+  activo                                       Boolean             @default(true)
+  created_at                                   DateTime            @default(now()) @db.Timestamp(6)
+  updated_at                                   DateTime?           @db.Timestamp(6)
+  created_by                                   Int?
+  updated_by                                   Int?
+  contrato_prestamo                            contrato_prestamo?
+  detalle_entrega                              detalle_entrega[]
+  usuario_entrega_created_byTousuario          usuario?            @relation("entrega_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_entrega_created_by")
+  persona_entrega_persona_idTopersona          persona             @relation("entrega_persona_idTopersona", fields: [persona_id], references: [id], onUpdate: NoAction, map: "fk_entrega_persona")
+  persona_entrega_persona_receptor_idTopersona persona?            @relation("entrega_persona_receptor_idTopersona", fields: [persona_receptor_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_receptor")
+  solicitud_apoyo                              solicitud_apoyo?    @relation(fields: [solicitud_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_solicitud")
+  usuario_entrega_updated_byTousuario          usuario?            @relation("entrega_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_entrega_updated_by")
+  usuario_entrega_usuario_entrega_idTousuario  usuario             @relation("entrega_usuario_entrega_idTousuario", fields: [usuario_entrega_id], references: [id], onUpdate: NoAction, map: "fk_entrega_usuario")
+  evidencia_entrega                            evidencia_entrega[]
+
+  @@index([fecha_entrega], map: "idx_entrega_fecha")
+  @@index([persona_id], map: "idx_entrega_persona")
+  @@index([persona_receptor_id], map: "idx_entrega_receptor", where: raw("(persona_receptor_id IS NOT NULL)"))
+  @@index([solicitud_id], map: "idx_entrega_solicitud", where: raw("(solicitud_id IS NOT NULL)"))
+}
+
+model estado_asignacion_pendiente {
+  id                                                      Int                    @id @default(autoincrement())
+  nombre                                                  String                 @unique @db.VarChar(20)
+  activo                                                  Boolean                @default(true)
+  created_at                                              DateTime               @default(now()) @db.Timestamp(6)
+  updated_at                                              DateTime?              @db.Timestamp(6)
+  created_by                                              Int?
+  updated_by                                              Int?
+  asignacion_pendiente                                    asignacion_pendiente[]
+  usuario_estado_asignacion_pendiente_created_byTousuario usuario?               @relation("estado_asignacion_pendiente_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_eap_created_by")
+  usuario_estado_asignacion_pendiente_updated_byTousuario usuario?               @relation("estado_asignacion_pendiente_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_eap_updated_by")
+}
+
+model estado_contrato_prestamo {
+  id                                                   Int                 @id @default(autoincrement())
+  nombre                                               String              @unique @db.VarChar(20)
+  activo                                               Boolean             @default(true)
+  created_at                                           DateTime            @default(now()) @db.Timestamp(6)
+  updated_at                                           DateTime?           @db.Timestamp(6)
+  created_by                                           Int?
+  updated_by                                           Int?
+  contrato_prestamo                                    contrato_prestamo[]
+  usuario_estado_contrato_prestamo_created_byTousuario usuario?            @relation("estado_contrato_prestamo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ecp_created_by")
+  usuario_estado_contrato_prestamo_updated_byTousuario usuario?            @relation("estado_contrato_prestamo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ecp_updated_by")
+}
+
+model estado_solicitud_apoyo {
+  id                                                 Int               @id @default(autoincrement())
+  nombre                                             String            @unique @db.VarChar(30)
+  activo                                             Boolean           @default(true)
+  created_at                                         DateTime          @default(now()) @db.Timestamp(6)
+  updated_at                                         DateTime?         @db.Timestamp(6)
+  created_by                                         Int?
+  updated_by                                         Int?
+  usuario_estado_solicitud_apoyo_created_byTousuario usuario?          @relation("estado_solicitud_apoyo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_esa_created_by")
+  usuario_estado_solicitud_apoyo_updated_byTousuario usuario?          @relation("estado_solicitud_apoyo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_esa_updated_by")
+  solicitud_apoyo                                    solicitud_apoyo[]
+}
+
+model evidencia_entrega {
+  id                                            Int                    @id @default(autoincrement())
+  entrega_id                                    Int
+  tipo_evidencia_id                             Int
+  ruta_archivo                                  String                 @db.VarChar(500)
+  observaciones                                 String?
+  activo                                        Boolean                @default(true)
+  created_at                                    DateTime               @default(now()) @db.Timestamp(6)
+  updated_at                                    DateTime?              @db.Timestamp(6)
+  created_by                                    Int?
+  updated_by                                    Int?
+  usuario_evidencia_entrega_created_byTousuario usuario?               @relation("evidencia_entrega_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ee_created_by")
+  entrega                                       entrega                @relation(fields: [entrega_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ee_entrega")
+  tipo_evidencia_entrega                        tipo_evidencia_entrega @relation(fields: [tipo_evidencia_id], references: [id], onUpdate: NoAction, map: "fk_ee_tipo")
+  usuario_evidencia_entrega_updated_byTousuario usuario?               @relation("evidencia_entrega_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ee_updated_by")
+
+  @@index([entrega_id], map: "idx_evidencia_entrega_entrega")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model institucion_donante {
+  id                                              Int                       @id @default(autoincrement())
+  nombre                                          String                    @unique @db.VarChar(150)
+  telefono                                        String?                   @db.VarChar(20)
+  correo                                          String?                   @db.VarChar(100)
+  activo                                          Boolean                   @default(true)
+  created_at                                      DateTime                  @default(now()) @db.Timestamp(6)
+  updated_at                                      DateTime?                 @db.Timestamp(6)
+  created_by                                      Int?
+  updated_by                                      Int?
+  usuario_institucion_donante_created_byTousuario usuario?                  @relation("institucion_donante_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ins_created_by")
+  usuario_institucion_donante_updated_byTousuario usuario?                  @relation("institucion_donante_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ins_updated_by")
+  recepcion_donacion_lote                         recepcion_donacion_lote[]
+}
+
+model insumo {
+  id                                 Int                       @id @default(autoincrement())
+  categoria_id                       Int
+  unidad_medida_base_id              Int
+  nombre                             String                    @db.VarChar(150)
+  descripcion                        String?
+  es_perecedero                      Boolean                   @default(false)
+  activo                             Boolean                   @default(true)
+  created_at                         DateTime                  @default(now()) @db.Timestamp(6)
+  updated_at                         DateTime?                 @db.Timestamp(6)
+  created_by                         Int?
+  updated_by                         Int?
+  asignacion_pendiente               asignacion_pendiente[]
+  detalle_inventario_lote            detalle_inventario_lote[]
+  usuario_insumo_created_byTousuario usuario?                  @relation("insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ins2_created_by")
+  usuario_insumo_updated_byTousuario usuario?                  @relation("insumo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ins2_updated_by")
+  categoria_insumo                   categoria_insumo          @relation(fields: [categoria_id], references: [id], onUpdate: NoAction, map: "fk_insumo_categoria")
+  unidad_medida                      unidad_medida             @relation(fields: [unidad_medida_base_id], references: [id], onUpdate: NoAction, map: "fk_insumo_unidad_base")
+  presentacion_insumo                presentacion_insumo?
+  solicitud_apoyo                    solicitud_apoyo[]
+
+  @@unique([nombre, categoria_id], map: "insumo_nombre_categoria_key")
+}
+
+model municipio {
+  id                                    Int          @id @default(autoincrement())
+  departamento_id                       Int
+  nombre                                String       @db.VarChar(100)
+  activo                                Boolean      @default(true)
+  created_at                            DateTime     @default(now()) @db.Timestamp(6)
+  updated_at                            DateTime?    @db.Timestamp(6)
+  created_by                            Int?
+  updated_by                            Int?
+  comunidad                             comunidad[]
+  usuario_municipio_created_byTousuario usuario?     @relation("municipio_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_muni_created_by")
+  usuario_municipio_updated_byTousuario usuario?     @relation("municipio_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_muni_updated_by")
+  departamento                          departamento @relation(fields: [departamento_id], references: [id], onUpdate: NoAction, map: "fk_municipio_departamento")
+
+  @@unique([nombre, departamento_id], map: "municipio_nombre_departamento_key")
+  @@index([departamento_id], map: "idx_municipio_departamento")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model persona {
+  id                                                    Int                    @id @default(autoincrement())
+  cui_dpi                                               String?                @unique @db.VarChar(13)
+  documento_identificacion                              String?                @db.VarChar(100)
+  nombres                                               String                 @db.VarChar(100)
+  apellidos                                             String                 @db.VarChar(100)
+  fecha_nacimiento                                      DateTime               @db.Date
+  genero                                                String?                @db.VarChar(20)
+  comunidad_id                                          Int?
+  telefono                                              String?                @db.VarChar(20)
+  contacto_responsable                                  String?                @db.VarChar(200)
+  activo                                                Boolean                @default(true)
+  created_at                                            DateTime               @default(now()) @db.Timestamp(6)
+  updated_at                                            DateTime?              @db.Timestamp(6)
+  created_by                                            Int?
+  updated_by                                            Int?
+  documento_persona                                     documento_persona[]
+  encargado_menor_encargado_menor_encargado_idTopersona encargado_menor[]      @relation("encargado_menor_encargado_idTopersona")
+  encargado_menor_encargado_menor_menor_idTopersona     encargado_menor[]      @relation("encargado_menor_menor_idTopersona")
+  entrega_entrega_persona_idTopersona                   entrega[]              @relation("entrega_persona_idTopersona")
+  entrega_entrega_persona_receptor_idTopersona          entrega[]              @relation("entrega_persona_receptor_idTopersona")
+  usuario_persona_created_byTousuario                   usuario?               @relation("persona_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_per_created_by")
+  usuario_persona_updated_byTousuario                   usuario?               @relation("persona_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_per_updated_by")
+  comunidad                                             comunidad?             @relation(fields: [comunidad_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_persona_comunidad")
+  persona_discapacidad                                  persona_discapacidad[]
+  solicitud_apoyo                                       solicitud_apoyo[]
+
+  @@index([comunidad_id], map: "idx_persona_comunidad")
+  @@index([cui_dpi], map: "idx_persona_cui_dpi", where: raw("(cui_dpi IS NOT NULL)"))
+}
+
+model persona_discapacidad {
+  persona_id      Int
+  discapacidad_id Int
+  activo          Boolean      @default(true)
+  created_at      DateTime     @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?    @db.Timestamp(6)
+  created_by      Int?
+  updated_by      Int?
+  discapacidad    discapacidad @relation(fields: [discapacidad_id], references: [id], onUpdate: NoAction, map: "fk_pd_discapacidad")
+  persona         persona      @relation(fields: [persona_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pd_persona")
+
+  @@id([persona_id, discapacidad_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model presentacion_insumo {
+  id                                              Int                       @id @default(autoincrement())
+  insumo_id                                       Int                       @unique(map: "idx_presentacion_default_unica", where: raw("(es_default = true)"))
+  unidad_medida_id                                Int
+  factor_a_base                                   Decimal                   @db.Decimal(12, 4)
+  es_default                                      Boolean                   @default(false)
+  activo                                          Boolean                   @default(true)
+  created_at                                      DateTime                  @default(now()) @db.Timestamp(6)
+  updated_at                                      DateTime?                 @db.Timestamp(6)
+  created_by                                      Int?
+  updated_by                                      Int?
+  detalle_entrega                                 detalle_entrega[]
+  detalle_inventario_lote                         detalle_inventario_lote[]
+  usuario_presentacion_insumo_created_byTousuario usuario?                  @relation("presentacion_insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_pi_created_by")
+  insumo                                          insumo                    @relation(fields: [insumo_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pi_insumo")
+  unidad_medida                                   unidad_medida             @relation(fields: [unidad_medida_id], references: [id], onUpdate: NoAction, map: "fk_pi_unidad")
+  usuario_presentacion_insumo_updated_byTousuario usuario?                  @relation("presentacion_insumo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_pi_updated_by")
+
+  @@unique([insumo_id, unidad_medida_id], map: "presentacion_insumo_insumo_unidad_key")
+  @@index([insumo_id], map: "idx_presentacion_insumo")
+}
+
+model programa {
+  id                                   Int               @id @default(autoincrement())
+  nombre                               String            @unique @db.VarChar(100)
+  descripcion                          String?
+  activo                               Boolean           @default(true)
+  created_at                           DateTime          @default(now()) @db.Timestamp(6)
+  updated_at                           DateTime?         @db.Timestamp(6)
+  created_by                           Int?
+  updated_by                           Int?
+  usuario_programa_created_byTousuario usuario?          @relation("programa_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_prog_created_by")
+  usuario_programa_updated_byTousuario usuario?          @relation("programa_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_prog_updated_by")
+  solicitud_apoyo                      solicitud_apoyo[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model recepcion_donacion_lote {
+  id                                                  Int                       @id @default(autoincrement())
+  codigo_lote                                         String?                   @unique @db.VarChar(50)
+  fecha_recepcion                                     DateTime                  @default(dbgenerated("CURRENT_DATE")) @db.Date
+  institucion_id                                      Int
+  documento_respaldo                                  String?                   @db.VarChar(255)
+  observaciones_generales                             String?
+  activo                                              Boolean                   @default(true)
+  created_at                                          DateTime                  @default(now()) @db.Timestamp(6)
+  updated_at                                          DateTime?                 @db.Timestamp(6)
+  created_by                                          Int?
+  updated_by                                          Int?
+  detalle_inventario_lote                             detalle_inventario_lote[]
+  usuario_recepcion_donacion_lote_created_byTousuario usuario?                  @relation("recepcion_donacion_lote_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rec_created_by")
+  usuario_recepcion_donacion_lote_updated_byTousuario usuario?                  @relation("recepcion_donacion_lote_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rec_updated_by")
+  institucion_donante                                 institucion_donante       @relation(fields: [institucion_id], references: [id], onUpdate: NoAction, map: "fk_recepcion_institucion")
+
+  @@index([codigo_lote], map: "idx_recepcion_codigo_lote", where: raw("(codigo_lote IS NOT NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model rol {
+  id                              Int       @id @default(autoincrement())
+  nombre                          String    @unique @db.VarChar(50)
+  descripcion                     String?
+  activo                          Boolean   @default(true)
+  created_at                      DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                      DateTime? @db.Timestamp(6)
+  created_by                      Int?
+  updated_by                      Int?
+  usuario_rol_created_byTousuario usuario?  @relation("rol_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rol_created_by")
+  usuario_rol_updated_byTousuario usuario?  @relation("rol_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rol_updated_by")
+  usuario_usuario_rol_idTorol     usuario[] @relation("usuario_rol_idTorol")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model solicitud_apoyo {
+  id                                            Int                    @id @default(autoincrement())
+  persona_id                                    Int
+  programa_id                                   Int
+  insumo_solicitado_id                          Int?
+  cantidad_requerida                            Int?
+  cantidad_entregada                            Int                    @default(0)
+  fecha_solicitud                               DateTime               @default(dbgenerated("CURRENT_DATE")) @db.Date
+  receta_medica                                 String?                @db.VarChar(255)
+  requiere_aprobacion                           Boolean                @default(false)
+  aprobada                                      Boolean                @default(false)
+  estado_id                                     Int
+  fecha_aprobacion                              DateTime?              @db.Date
+  aprobado_por                                  Int?
+  observaciones_trabajo_social                  String?
+  activo                                        Boolean                @default(true)
+  created_at                                    DateTime               @default(now()) @db.Timestamp(6)
+  updated_at                                    DateTime?              @db.Timestamp(6)
+  created_by                                    Int?
+  updated_by                                    Int?
+  asignacion_pendiente                          asignacion_pendiente?
+  entrega                                       entrega[]
+  usuario_solicitud_apoyo_aprobado_porTousuario usuario?               @relation("solicitud_apoyo_aprobado_porTousuario", fields: [aprobado_por], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sol_aprobador")
+  usuario_solicitud_apoyo_created_byTousuario   usuario?               @relation("solicitud_apoyo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sol_created_by")
+  estado_solicitud_apoyo                        estado_solicitud_apoyo @relation(fields: [estado_id], references: [id], onUpdate: NoAction, map: "fk_sol_estado")
+  insumo                                        insumo?                @relation(fields: [insumo_solicitado_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_sol_insumo")
+  persona                                       persona                @relation(fields: [persona_id], references: [id], onUpdate: NoAction, map: "fk_sol_persona")
+  programa                                      programa               @relation(fields: [programa_id], references: [id], onUpdate: NoAction, map: "fk_sol_programa")
+  usuario_solicitud_apoyo_updated_byTousuario   usuario?               @relation("solicitud_apoyo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sol_updated_by")
+
+  @@index([estado_id], map: "idx_solicitud_estado", where: raw("(activo = true)"))
+  @@index([persona_id], map: "idx_solicitud_persona")
+  @@index([programa_id], map: "idx_solicitud_programa")
+}
+
+model tipo_accion_auditoria {
+  id                                                Int             @id @default(autoincrement())
+  nombre                                            String          @unique @db.VarChar(10)
+  activo                                            Boolean         @default(true)
+  created_at                                        DateTime        @default(now()) @db.Timestamp(6)
+  updated_at                                        DateTime?       @db.Timestamp(6)
+  created_by                                        Int?
+  updated_by                                        Int?
+  auditoria_log                                     auditoria_log[]
+  usuario_tipo_accion_auditoria_created_byTousuario usuario?        @relation("tipo_accion_auditoria_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_taa_created_by")
+  usuario_tipo_accion_auditoria_updated_byTousuario usuario?        @relation("tipo_accion_auditoria_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_taa_updated_by")
+}
+
+model tipo_documento_persona {
+  id                                                 Int                 @id @default(autoincrement())
+  nombre                                             String              @unique @db.VarChar(50)
+  activo                                             Boolean             @default(true)
+  created_at                                         DateTime            @default(now()) @db.Timestamp(6)
+  updated_at                                         DateTime?           @db.Timestamp(6)
+  created_by                                         Int?
+  updated_by                                         Int?
+  documento_persona                                  documento_persona[]
+  usuario_tipo_documento_persona_created_byTousuario usuario?            @relation("tipo_documento_persona_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tdp_created_by")
+  usuario_tipo_documento_persona_updated_byTousuario usuario?            @relation("tipo_documento_persona_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tdp_updated_by")
+}
+
+model tipo_evidencia_entrega {
+  id                                                 Int                 @id @default(autoincrement())
+  nombre                                             String              @unique @db.VarChar(50)
+  activo                                             Boolean             @default(true)
+  created_at                                         DateTime            @default(now()) @db.Timestamp(6)
+  updated_at                                         DateTime?           @db.Timestamp(6)
+  created_by                                         Int?
+  updated_by                                         Int?
+  evidencia_entrega                                  evidencia_entrega[]
+  usuario_tipo_evidencia_entrega_created_byTousuario usuario?            @relation("tipo_evidencia_entrega_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tee_created_by")
+  usuario_tipo_evidencia_entrega_updated_byTousuario usuario?            @relation("tipo_evidencia_entrega_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tee_updated_by")
+}
+
+model unidad_medida {
+  id                                        Int                   @id @default(autoincrement())
+  nombre                                    String                @unique @db.VarChar(30)
+  activo                                    Boolean               @default(true)
+  created_at                                DateTime              @default(now()) @db.Timestamp(6)
+  updated_at                                DateTime?             @db.Timestamp(6)
+  created_by                                Int?
+  updated_by                                Int?
+  insumo                                    insumo[]
+  presentacion_insumo                       presentacion_insumo[]
+  usuario_unidad_medida_created_byTousuario usuario?              @relation("unidad_medida_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_um_created_by")
+  usuario_unidad_medida_updated_byTousuario usuario?              @relation("unidad_medida_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_um_updated_by")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model usuario {
+  id                                                                          Int                           @id @default(autoincrement())
+  username                                                                    String                        @unique @db.VarChar(50)
+  password_hash                                                               String                        @db.VarChar(255)
+  rol_id                                                                      Int
+  ultimo_login                                                                DateTime?                     @db.Timestamp(6)
+  activo                                                                      Boolean                       @default(true)
+  created_at                                                                  DateTime                      @default(now()) @db.Timestamp(6)
+  updated_at                                                                  DateTime?                     @db.Timestamp(6)
+  created_by                                                                  Int?
+  updated_by                                                                  Int?
+  asignacion_pendiente_asignacion_pendiente_created_byTousuario               asignacion_pendiente[]        @relation("asignacion_pendiente_created_byTousuario")
+  asignacion_pendiente_asignacion_pendiente_updated_byTousuario               asignacion_pendiente[]        @relation("asignacion_pendiente_updated_byTousuario")
+  auditoria_log                                                               auditoria_log[]
+  categoria_insumo_categoria_insumo_created_byTousuario                       categoria_insumo[]            @relation("categoria_insumo_created_byTousuario")
+  categoria_insumo_categoria_insumo_updated_byTousuario                       categoria_insumo[]            @relation("categoria_insumo_updated_byTousuario")
+  comunidad_comunidad_created_byTousuario                                     comunidad[]                   @relation("comunidad_created_byTousuario")
+  comunidad_comunidad_updated_byTousuario                                     comunidad[]                   @relation("comunidad_updated_byTousuario")
+  contrato_prestamo_contrato_prestamo_created_byTousuario                     contrato_prestamo[]           @relation("contrato_prestamo_created_byTousuario")
+  contrato_prestamo_contrato_prestamo_updated_byTousuario                     contrato_prestamo[]           @relation("contrato_prestamo_updated_byTousuario")
+  departamento_departamento_created_byTousuario                               departamento[]                @relation("departamento_created_byTousuario")
+  departamento_departamento_updated_byTousuario                               departamento[]                @relation("departamento_updated_byTousuario")
+  detalle_entrega_detalle_entrega_created_byTousuario                         detalle_entrega[]             @relation("detalle_entrega_created_byTousuario")
+  detalle_entrega_detalle_entrega_updated_byTousuario                         detalle_entrega[]             @relation("detalle_entrega_updated_byTousuario")
+  detalle_inventario_lote_detalle_inventario_lote_created_byTousuario         detalle_inventario_lote[]     @relation("detalle_inventario_lote_created_byTousuario")
+  detalle_inventario_lote_detalle_inventario_lote_updated_byTousuario         detalle_inventario_lote[]     @relation("detalle_inventario_lote_updated_byTousuario")
+  discapacidad_discapacidad_created_byTousuario                               discapacidad[]                @relation("discapacidad_created_byTousuario")
+  discapacidad_discapacidad_updated_byTousuario                               discapacidad[]                @relation("discapacidad_updated_byTousuario")
+  documento_persona_documento_persona_created_byTousuario                     documento_persona[]           @relation("documento_persona_created_byTousuario")
+  documento_persona_documento_persona_updated_byTousuario                     documento_persona[]           @relation("documento_persona_updated_byTousuario")
+  entrega_entrega_created_byTousuario                                         entrega[]                     @relation("entrega_created_byTousuario")
+  entrega_entrega_updated_byTousuario                                         entrega[]                     @relation("entrega_updated_byTousuario")
+  entrega_entrega_usuario_entrega_idTousuario                                 entrega[]                     @relation("entrega_usuario_entrega_idTousuario")
+  estado_asignacion_pendiente_estado_asignacion_pendiente_created_byTousuario estado_asignacion_pendiente[] @relation("estado_asignacion_pendiente_created_byTousuario")
+  estado_asignacion_pendiente_estado_asignacion_pendiente_updated_byTousuario estado_asignacion_pendiente[] @relation("estado_asignacion_pendiente_updated_byTousuario")
+  estado_contrato_prestamo_estado_contrato_prestamo_created_byTousuario       estado_contrato_prestamo[]    @relation("estado_contrato_prestamo_created_byTousuario")
+  estado_contrato_prestamo_estado_contrato_prestamo_updated_byTousuario       estado_contrato_prestamo[]    @relation("estado_contrato_prestamo_updated_byTousuario")
+  estado_solicitud_apoyo_estado_solicitud_apoyo_created_byTousuario           estado_solicitud_apoyo[]      @relation("estado_solicitud_apoyo_created_byTousuario")
+  estado_solicitud_apoyo_estado_solicitud_apoyo_updated_byTousuario           estado_solicitud_apoyo[]      @relation("estado_solicitud_apoyo_updated_byTousuario")
+  evidencia_entrega_evidencia_entrega_created_byTousuario                     evidencia_entrega[]           @relation("evidencia_entrega_created_byTousuario")
+  evidencia_entrega_evidencia_entrega_updated_byTousuario                     evidencia_entrega[]           @relation("evidencia_entrega_updated_byTousuario")
+  institucion_donante_institucion_donante_created_byTousuario                 institucion_donante[]         @relation("institucion_donante_created_byTousuario")
+  institucion_donante_institucion_donante_updated_byTousuario                 institucion_donante[]         @relation("institucion_donante_updated_byTousuario")
+  insumo_insumo_created_byTousuario                                           insumo[]                      @relation("insumo_created_byTousuario")
+  insumo_insumo_updated_byTousuario                                           insumo[]                      @relation("insumo_updated_byTousuario")
+  municipio_municipio_created_byTousuario                                     municipio[]                   @relation("municipio_created_byTousuario")
+  municipio_municipio_updated_byTousuario                                     municipio[]                   @relation("municipio_updated_byTousuario")
+  persona_persona_created_byTousuario                                         persona[]                     @relation("persona_created_byTousuario")
+  persona_persona_updated_byTousuario                                         persona[]                     @relation("persona_updated_byTousuario")
+  presentacion_insumo_presentacion_insumo_created_byTousuario                 presentacion_insumo[]         @relation("presentacion_insumo_created_byTousuario")
+  presentacion_insumo_presentacion_insumo_updated_byTousuario                 presentacion_insumo[]         @relation("presentacion_insumo_updated_byTousuario")
+  programa_programa_created_byTousuario                                       programa[]                    @relation("programa_created_byTousuario")
+  programa_programa_updated_byTousuario                                       programa[]                    @relation("programa_updated_byTousuario")
+  recepcion_donacion_lote_recepcion_donacion_lote_created_byTousuario         recepcion_donacion_lote[]     @relation("recepcion_donacion_lote_created_byTousuario")
+  recepcion_donacion_lote_recepcion_donacion_lote_updated_byTousuario         recepcion_donacion_lote[]     @relation("recepcion_donacion_lote_updated_byTousuario")
+  rol_rol_created_byTousuario                                                 rol[]                         @relation("rol_created_byTousuario")
+  rol_rol_updated_byTousuario                                                 rol[]                         @relation("rol_updated_byTousuario")
+  solicitud_apoyo_solicitud_apoyo_aprobado_porTousuario                       solicitud_apoyo[]             @relation("solicitud_apoyo_aprobado_porTousuario")
+  solicitud_apoyo_solicitud_apoyo_created_byTousuario                         solicitud_apoyo[]             @relation("solicitud_apoyo_created_byTousuario")
+  solicitud_apoyo_solicitud_apoyo_updated_byTousuario                         solicitud_apoyo[]             @relation("solicitud_apoyo_updated_byTousuario")
+  tipo_accion_auditoria_tipo_accion_auditoria_created_byTousuario             tipo_accion_auditoria[]       @relation("tipo_accion_auditoria_created_byTousuario")
+  tipo_accion_auditoria_tipo_accion_auditoria_updated_byTousuario             tipo_accion_auditoria[]       @relation("tipo_accion_auditoria_updated_byTousuario")
+  tipo_documento_persona_tipo_documento_persona_created_byTousuario           tipo_documento_persona[]      @relation("tipo_documento_persona_created_byTousuario")
+  tipo_documento_persona_tipo_documento_persona_updated_byTousuario           tipo_documento_persona[]      @relation("tipo_documento_persona_updated_byTousuario")
+  tipo_evidencia_entrega_tipo_evidencia_entrega_created_byTousuario           tipo_evidencia_entrega[]      @relation("tipo_evidencia_entrega_created_byTousuario")
+  tipo_evidencia_entrega_tipo_evidencia_entrega_updated_byTousuario           tipo_evidencia_entrega[]      @relation("tipo_evidencia_entrega_updated_byTousuario")
+  unidad_medida_unidad_medida_created_byTousuario                             unidad_medida[]               @relation("unidad_medida_created_byTousuario")
+  unidad_medida_unidad_medida_updated_byTousuario                             unidad_medida[]               @relation("unidad_medida_updated_byTousuario")
+  usuario_usuario_created_byTousuario                                         usuario?                      @relation("usuario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_created_by")
+  other_usuario_usuario_created_byTousuario                                   usuario[]                     @relation("usuario_created_byTousuario")
+  rol_usuario_rol_idTorol                                                     rol                           @relation("usuario_rol_idTorol", fields: [rol_id], references: [id], onUpdate: NoAction, map: "fk_usuario_rol")
+  usuario_usuario_updated_byTousuario                                         usuario?                      @relation("usuario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_updated_by")
+  other_usuario_usuario_updated_byTousuario                                   usuario[]                     @relation("usuario_updated_byTousuario")
+}
