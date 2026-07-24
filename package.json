@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --import dotenv/config src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node --import dotenv/config dist/server.js",
     "prisma:pull": "prisma db pull",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
