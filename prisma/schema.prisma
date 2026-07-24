@@ -632,6 +632,9 @@ model usuario {
   recepcion_donacion_lote_recepcion_donacion_lote_updated_byTousuario         recepcion_donacion_lote[]     @relation("recepcion_donacion_lote_updated_byTousuario")
   rol_rol_created_byTousuario                                                 rol[]                         @relation("rol_created_byTousuario")
   rol_rol_updated_byTousuario                                                 rol[]                         @relation("rol_updated_byTousuario")
+  sesion_sesion_created_byTousuario                                           sesion[]                      @relation("sesion_created_byTousuario")
+  sesion_sesion_updated_byTousuario                                           sesion[]                      @relation("sesion_updated_byTousuario")
+  sesion_sesion_usuario_idTousuario                                           sesion[]                      @relation("sesion_usuario_idTousuario")
   solicitud_apoyo_solicitud_apoyo_aprobado_porTousuario                       solicitud_apoyo[]             @relation("solicitud_apoyo_aprobado_porTousuario")
   solicitud_apoyo_solicitud_apoyo_created_byTousuario                         solicitud_apoyo[]             @relation("solicitud_apoyo_created_byTousuario")
   solicitud_apoyo_solicitud_apoyo_updated_byTousuario                         solicitud_apoyo[]             @relation("solicitud_apoyo_updated_byTousuario")
@@ -648,4 +651,26 @@ model usuario {
   rol_usuario_rol_idTorol                                                     rol                           @relation("usuario_rol_idTorol", fields: [rol_id], references: [id], onUpdate: NoAction, map: "fk_usuario_rol")
   usuario_usuario_updated_byTousuario                                         usuario?                      @relation("usuario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_updated_by")
   other_usuario_usuario_updated_byTousuario                                   usuario[]                     @relation("usuario_updated_byTousuario")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sesion {
+  id                                 BigInt    @id @default(autoincrement())
+  usuario_id                         Int
+  token_hash                         String    @unique @db.VarChar(64)
+  ip_origen                          String?   @db.VarChar(45)
+  user_agent                         String?
+  ultima_actividad                   DateTime  @default(now()) @db.Timestamp(6)
+  expira_en                          DateTime  @db.Timestamp(6)
+  revocada_en                        DateTime? @db.Timestamp(6)
+  created_at                         DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                         DateTime? @db.Timestamp(6)
+  created_by                         Int?
+  updated_by                         Int?
+  usuario_sesion_created_byTousuario usuario?  @relation("sesion_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_created_by")
+  usuario_sesion_updated_byTousuario usuario?  @relation("sesion_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_updated_by")
+  usuario_sesion_usuario_idTousuario usuario   @relation("sesion_usuario_idTousuario", fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_sesion_usuario")
+
+  @@index([usuario_id], map: "idx_sesion_usuario_activas", where: raw("(revocada_en IS NULL)"))
 }
