@@ -29,10 +29,7 @@ const fechaNacimientoSchema = z
     return fecha > limite;
   }, "La fecha de nacimiento no es válida (más de 120 años)");
 
-const generoSchema = z
-  .enum(["MASCULINO", "FEMENINO", "OTRO", "PREFIERE_NO_DECIR"])
-  .nullable()
-  .optional();
+const generoSchema = z.enum(["M", "F", "NA"]).nullable().optional();
 
 const cuiDpiSchema = z
   .string()

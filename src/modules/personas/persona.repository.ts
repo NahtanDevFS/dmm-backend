@@ -71,7 +71,11 @@ export async function listarPersonas(
     i += 1;
   }
   if (busqueda) {
-    condiciones.push(`(nombres || ' ' || apellidos) % $${i}`);
+    const idxBusqueda = i;
+    condiciones.push(
+      `((nombres || ' ' || apellidos) ILIKE '%' || $${idxBusqueda} || '%'
+        OR similarity(nombres || ' ' || apellidos, $${idxBusqueda}) > 0.15)`,
+    );
     valores.push(busqueda);
     i += 1;
   }
