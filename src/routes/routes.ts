@@ -6,6 +6,7 @@ import comunidadRoutes from "../modules/comunidades/comunidad.routes.js";
 import categoriaInsumoRoutes from "../modules/categoria-insumo/categoria-insumo.routes.js";
 import personaRoutes from "../modules/personas/persona.routes.js";
 import catalogosLecturaRoutes from "../modules/catalogos-lectura/catalogos-lectura.routes.js";
+import archivosRoutes from "../lib/storage/archivos.routes.js";
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.use("/auth", authRoutes);
 router.use("/", catalogosRoutes);
 router.use("/", geografiaRoutes);
 router.use("/", catalogosLecturaRoutes);
+router.use("/", archivosRoutes);
 router.use("/comunidades", comunidadRoutes);
 router.use("/categorias-insumo", categoriaInsumoRoutes);
 router.use("/personas", personaRoutes);
