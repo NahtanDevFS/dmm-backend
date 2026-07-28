@@ -12,7 +12,11 @@ import {
   quitarDiscapacidadController,
   vincularEncargadoController,
   desvincularEncargadoController,
+  agregarContactoController,
+  editarContactoController,
+  eliminarContactoController,
 } from "./persona.controller.js";
+import documentoPersonaRoutes from "./documento-persona.routes.js";
 
 const ROLES_GESTION = ["EMPLEADO_DMM", "DIRECTORA", "ADMINISTRADOR"];
 const ROLES_LECTURA = ["EMPLEADO_DMM", "DIRECTORA", "ADMINISTRADOR"];
@@ -71,5 +75,27 @@ router.delete(
   requireRole(...ROLES_GESTION),
   desvincularEncargadoController,
 );
+
+router.post(
+  "/:id/contactos",
+  requireAuth,
+  requireRole(...ROLES_GESTION),
+  agregarContactoController,
+);
+router.patch(
+  "/:id/contactos/:contactoId",
+  requireAuth,
+  requireRole(...ROLES_GESTION),
+  editarContactoController,
+);
+router.delete(
+  "/:id/contactos/:contactoId",
+  requireAuth,
+  requireRole(...ROLES_GESTION),
+  eliminarContactoController,
+);
+
+// Sub-router de documentos (con subida de archivo), ya trae su propio requireAuth/requireRole por endpoint
+router.use("/", documentoPersonaRoutes);
 
 export default router;
