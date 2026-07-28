@@ -8,8 +8,9 @@ import {
   TAMANO_MAXIMO_BYTES,
 } from "./file-validation.js";
 
-const UPLOADS_DIR =
-  process.env.UPLOADS_DIR ?? path.join(process.cwd(), "uploads");
+const UPLOADS_DIR = path.resolve(
+  process.env.UPLOADS_DIR ?? path.join(process.cwd(), "uploads"),
+);
 
 export type CategoriaArchivo =
   | "documentos-persona"
