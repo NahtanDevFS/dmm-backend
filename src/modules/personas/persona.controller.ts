@@ -6,6 +6,8 @@ import {
   listarPersonasQuerySchema,
   agregarDiscapacidadSchema,
   vincularEncargadoSchema,
+  agregarContactoSchema,
+  editarContactoSchema,
 } from "./persona.schema.js";
 import {
   listarPersonas,
@@ -22,7 +24,16 @@ import {
   listarEncargadosDePersona,
   vincularEncargadoAPersonaExistente,
   desvincularEncargado,
+  listarContactosDePersona,
+  buscarContactoPorId,
+  agregarContacto,
+  editarContacto,
+  eliminarContacto,
 } from "./persona.repository.js";
+import {
+  existeTipoGeneroActivo,
+  existeTipoParentescoActivo,
+} from "../catalogos-lectura/catalogos-lectura.repository.js";
 
 const FIRMA_ERROR_MENOR_SIN_ENCARGADO = "debe vincularse a un encargado";
 
@@ -31,6 +42,27 @@ function esErrorMenorSinEncargado(error: unknown): boolean {
     error instanceof Error &&
     error.message.includes(FIRMA_ERROR_MENOR_SIN_ENCARGADO)
   );
+}
+
+async function validarGeneroYComunidad(datos: {
+  genero_id?: number | null;
+  comunidad_id?: number | null;
+}): Promise<string | null> {
+  if (
+    datos.genero_id !== undefined &&
+    datos.genero_id !== null &&
+    !(await existeTipoGeneroActivo(datos.genero_id))
+  ) {
+    return "El género indicado no existe o no está activo";
+  }
+  if (
+    datos.comunidad_id !== undefined &&
+    datos.comunidad_id !== null &&
+    !(await existeComunidadActiva(datos.comunidad_id))
+  ) {
+    return "La comunidad indicada no existe o no está activa";
+  }
+  return null;
 }
 
 export async function listarController(
@@ -74,12 +106,15 @@ export async function obtenerController(
       return res.status(404).json({ message: "Persona no encontrada" });
     }
 
-    const [discapacidades, encargados] = await Promise.all([
+    const [discapacidades, encargados, contactos] = await Promise.all([
       listarDiscapacidadesDePersona(id),
       listarEncargadosDePersona(id),
+      listarContactosDePersona(id),
     ]);
 
-    return res.status(200).json({ ...persona, discapacidades, encargados });
+    return res
+      .status(200)
+      .json({ ...persona, discapacidades, encargados, contactos });
   } catch (error) {
     return next(error);
   }
@@ -99,7 +134,7 @@ export async function crearController(
       });
     }
 
-    const { discapacidadIds, encargados, ...datos } = parsed.data;
+    const { discapacidadIds, encargados, contactos, ...datos } = parsed.data;
 
     if (datos.cui_dpi && (await existeCuiDpiDuplicado(datos.cui_dpi))) {
       return res.status(409).json({
@@ -107,14 +142,18 @@ export async function crearController(
       });
     }
 
-    if (
-      datos.comunidad_id !== undefined &&
-      datos.comunidad_id !== null &&
-      !(await existeComunidadActiva(datos.comunidad_id))
-    ) {
-      return res.status(400).json({
-        message: "La comunidad indicada no existe o no está activa",
-      });
+    const errorCatalogo = await validarGeneroYComunidad(datos);
+    if (errorCatalogo) {
+      return res.status(400).json({ message: errorCatalogo });
+    }
+
+    // Validar tipoParentescoId de cada encargado antes de tocar la BD
+    for (const encargado of encargados ?? []) {
+      if (!(await existeTipoParentescoActivo(encargado.tipoParentescoId))) {
+        return res.status(400).json({
+          message: "El tipo de parentesco indicado no existe o no está activo",
+        });
+      }
     }
 
     if (
@@ -133,6 +172,7 @@ export async function crearController(
       datos,
       discapacidadIds ?? [],
       encargados ?? [],
+      contactos ?? [],
     );
     return res.status(201).json(nueva);
   } catch (error) {
@@ -179,14 +219,9 @@ export async function editarController(
       });
     }
 
-    if (
-      parsed.data.comunidad_id !== undefined &&
-      parsed.data.comunidad_id !== null &&
-      !(await existeComunidadActiva(parsed.data.comunidad_id))
-    ) {
-      return res.status(400).json({
-        message: "La comunidad indicada no existe o no está activa",
-      });
+    const errorCatalogo = await validarGeneroYComunidad(parsed.data);
+    if (errorCatalogo) {
+      return res.status(400).json({ message: errorCatalogo });
     }
 
     const actualizada = await editarPersona(req.usuario!.id, id, parsed.data);
@@ -332,6 +367,12 @@ export async function vincularEncargadoController(
       });
     }
 
+    if (!(await existeTipoParentescoActivo(parsed.data.tipoParentescoId))) {
+      return res.status(400).json({
+        message: "El tipo de parentesco indicado no existe o no está activo",
+      });
+    }
+
     const persona = await buscarPersonaPorId(id);
     if (!persona) {
       return res.status(404).json({ message: "Persona no encontrada" });
@@ -372,6 +413,99 @@ export async function desvincularEncargadoController(
           "No se puede quitar este encargado: la persona es menor de edad, no tiene CUI/DPI, y quedaría sin ningún encargado vinculado.",
       });
     }
+    return next(error);
+  }
+}
+
+export async function agregarContactoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ message: "Id inválido" });
+    }
+
+    const parsed = agregarContactoSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errores: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const persona = await buscarPersonaPorId(id);
+    if (!persona) {
+      return res.status(404).json({ message: "Persona no encontrada" });
+    }
+
+    await agregarContacto(req.usuario!.id, id, parsed.data);
+    const contactos = await listarContactosDePersona(id);
+    return res.status(201).json(contactos);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function editarContactoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const id = Number(req.params.id);
+    const contactoId = Number(req.params.contactoId);
+    if (!Number.isInteger(id) || !Number.isInteger(contactoId)) {
+      return res.status(400).json({ message: "Id inválido" });
+    }
+
+    const parsed = editarContactoSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errores: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const contacto = await buscarContactoPorId(contactoId);
+    if (!contacto || contacto.persona_id !== id) {
+      return res.status(404).json({ message: "Contacto no encontrado" });
+    }
+
+    const actualizado = await editarContacto(
+      req.usuario!.id,
+      contactoId,
+      parsed.data,
+    );
+    return res.status(200).json(actualizado);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function eliminarContactoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const id = Number(req.params.id);
+    const contactoId = Number(req.params.contactoId);
+    if (!Number.isInteger(id) || !Number.isInteger(contactoId)) {
+      return res.status(400).json({ message: "Id inválido" });
+    }
+
+    const contacto = await buscarContactoPorId(contactoId);
+    if (!contacto || contacto.persona_id !== id) {
+      return res.status(404).json({ message: "Contacto no encontrado" });
+    }
+
+    await eliminarContacto(req.usuario!.id, contactoId);
+    const contactos = await listarContactosDePersona(id);
+    return res.status(200).json(contactos);
+  } catch (error) {
     return next(error);
   }
 }

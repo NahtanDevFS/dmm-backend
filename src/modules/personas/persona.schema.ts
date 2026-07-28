@@ -29,8 +29,6 @@ const fechaNacimientoSchema = z
     return fecha > limite;
   }, "La fecha de nacimiento no es válida (más de 120 años)");
 
-const generoSchema = z.enum(["M", "F", "NA"]).nullable().optional();
-
 const cuiDpiSchema = z
   .string()
   .trim()
@@ -40,38 +38,41 @@ const cuiDpiSchema = z
 
 const datosBasePersonaSchema = z.object({
   cui_dpi: cuiDpiSchema,
-  documento_identificacion: z.string().trim().max(100).nullable().optional(),
   nombres: nombresSchema,
   apellidos: apellidosSchema,
   fecha_nacimiento: fechaNacimientoSchema,
-  genero: generoSchema,
+  genero_id: z.number().int().positive().nullable().optional(),
   comunidad_id: z.number().int().positive().nullable().optional(),
   telefono: z.string().trim().max(20).nullable().optional(),
-  contacto_responsable: z.string().trim().max(200).nullable().optional(),
 });
-
-const parentescoSchema = z
-  .string()
-  .trim()
-  .min(1, "El parentesco es requerido")
-  .max(50);
 
 const encargadoSchema = z.discriminatedUnion("tipo", [
   z.object({
     tipo: z.literal("existente"),
     personaId: z.number().int().positive(),
-    parentesco: parentescoSchema,
+    tipoParentescoId: z.number().int().positive(),
   }),
   z.object({
     tipo: z.literal("nuevo"),
     datos: datosBasePersonaSchema,
-    parentesco: parentescoSchema,
+    tipoParentescoId: z.number().int().positive(),
   }),
 ]);
+
+const contactoReferenciaSchema = z.object({
+  nombre: z
+    .string()
+    .trim()
+    .min(1, "El nombre del contacto es requerido")
+    .max(150),
+  telefono: z.string().trim().max(20).nullable().optional(),
+  observaciones: z.string().trim().max(2000).nullable().optional(),
+});
 
 export const crearPersonaSchema = datosBasePersonaSchema.extend({
   discapacidadIds: z.array(z.number().int().positive()).optional(),
   encargados: z.array(encargadoSchema).optional(),
+  contactos: z.array(contactoReferenciaSchema).optional(),
 });
 
 export const editarPersonaSchema = datosBasePersonaSchema.partial();
@@ -90,3 +91,6 @@ export const agregarDiscapacidadSchema = z.object({
 });
 
 export const vincularEncargadoSchema = encargadoSchema;
+
+export const agregarContactoSchema = contactoReferenciaSchema;
+export const editarContactoSchema = contactoReferenciaSchema.partial();

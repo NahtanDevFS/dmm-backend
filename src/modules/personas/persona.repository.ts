@@ -5,28 +5,24 @@ import { withUserTransaction } from "../../db/withUserTransaction.js";
 export interface PersonaRow {
   id: number;
   cui_dpi: string | null;
-  documento_identificacion: string | null;
   nombres: string;
   apellidos: string;
   fecha_nacimiento: Date;
-  genero: string | null;
+  genero_id: number | null;
   comunidad_id: number | null;
   telefono: string | null;
-  contacto_responsable: string | null;
   activo: boolean;
 }
 
 const SELECT_PUBLICO = {
   id: true,
   cui_dpi: true,
-  documento_identificacion: true,
   nombres: true,
   apellidos: true,
   fecha_nacimiento: true,
-  genero: true,
+  genero_id: true,
   comunidad_id: true,
   telefono: true,
-  contacto_responsable: true,
   activo: true,
 } as const;
 
@@ -34,19 +30,23 @@ const COLUMNAS_PUBLICAS = Object.keys(SELECT_PUBLICO);
 
 interface DatosPersonaBase {
   cui_dpi?: string | null;
-  documento_identificacion?: string | null;
   nombres: string;
   apellidos: string;
   fecha_nacimiento: string;
-  genero?: string | null;
+  genero_id?: number | null;
   comunidad_id?: number | null;
   telefono?: string | null;
-  contacto_responsable?: string | null;
 }
 
 type EncargadoInput =
-  | { tipo: "existente"; personaId: number; parentesco: string }
-  | { tipo: "nuevo"; datos: DatosPersonaBase; parentesco: string };
+  | { tipo: "existente"; personaId: number; tipoParentescoId: number }
+  | { tipo: "nuevo"; datos: DatosPersonaBase; tipoParentescoId: number };
+
+interface ContactoReferenciaInput {
+  nombre: string;
+  telefono?: string | null;
+  observaciones?: string | null;
+}
 
 export async function listarPersonas(
   client: { query: PoolClient["query"] },
@@ -139,20 +139,17 @@ async function insertarPersona(
 ): Promise<PersonaRow> {
   const result = await client.query<PersonaRow>(
     `INSERT INTO public.persona
-       (cui_dpi, documento_identificacion, nombres, apellidos, fecha_nacimiento,
-        genero, comunidad_id, telefono, contacto_responsable, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       (cui_dpi, nombres, apellidos, fecha_nacimiento, genero_id, comunidad_id, telefono, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING ${COLUMNAS_PUBLICAS.join(", ")}`,
     [
       datos.cui_dpi ?? null,
-      datos.documento_identificacion ?? null,
       datos.nombres,
       datos.apellidos,
       datos.fecha_nacimiento,
-      datos.genero ?? null,
+      datos.genero_id ?? null,
       datos.comunidad_id ?? null,
       datos.telefono ?? null,
-      datos.contacto_responsable ?? null,
       usuarioId,
     ],
   );
@@ -164,12 +161,12 @@ async function vincularEncargado(
   usuarioId: number,
   menorId: number,
   encargadoId: number,
-  parentesco: string,
+  tipoParentescoId: number,
 ): Promise<void> {
   await client.query(
-    `INSERT INTO public.encargado_menor (menor_id, encargado_id, parentesco, created_by)
+    `INSERT INTO public.encargado_menor (menor_id, encargado_id, tipo_parentesco_id, created_by)
      VALUES ($1, $2, $3, $4)`,
-    [menorId, encargadoId, parentesco, usuarioId],
+    [menorId, encargadoId, tipoParentescoId, usuarioId],
   );
 }
 
@@ -187,17 +184,41 @@ async function vincularDiscapacidad(
   );
 }
 
+async function insertarContactoReferencia(
+  client: PoolClient,
+  usuarioId: number,
+  personaId: number,
+  contacto: ContactoReferenciaInput,
+): Promise<void> {
+  await client.query(
+    `INSERT INTO public.contacto_referencia_persona (persona_id, nombre, telefono, observaciones, created_by)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [
+      personaId,
+      contacto.nombre,
+      contacto.telefono ?? null,
+      contacto.observaciones ?? null,
+      usuarioId,
+    ],
+  );
+}
+
 export async function crearPersonaConRelaciones(
   usuarioId: number,
   datos: DatosPersonaBase,
   discapacidadIds: number[],
   encargados: EncargadoInput[],
+  contactos: ContactoReferenciaInput[],
 ): Promise<PersonaRow> {
   return withUserTransaction(usuarioId, async (client) => {
     const persona = await insertarPersona(client, usuarioId, datos);
 
     for (const discapacidadId of discapacidadIds) {
       await vincularDiscapacidad(client, usuarioId, persona.id, discapacidadId);
+    }
+
+    for (const contacto of contactos) {
+      await insertarContactoReferencia(client, usuarioId, persona.id, contacto);
     }
 
     for (const encargado of encargados) {
@@ -207,7 +228,7 @@ export async function crearPersonaConRelaciones(
           usuarioId,
           persona.id,
           encargado.personaId,
-          encargado.parentesco,
+          encargado.tipoParentescoId,
         );
       } else {
         const nuevoEncargado = await insertarPersona(
@@ -220,7 +241,7 @@ export async function crearPersonaConRelaciones(
           usuarioId,
           persona.id,
           nuevoEncargado.id,
-          encargado.parentesco,
+          encargado.tipoParentescoId,
         );
       }
     }
@@ -241,14 +262,12 @@ export async function editarPersona(
 
     const campos: (keyof DatosPersonaBase)[] = [
       "cui_dpi",
-      "documento_identificacion",
       "nombres",
       "apellidos",
       "fecha_nacimiento",
-      "genero",
+      "genero_id",
       "comunidad_id",
       "telefono",
-      "contacto_responsable",
     ];
 
     for (const campo of campos) {
@@ -343,7 +362,8 @@ export async function quitarDiscapacidadDePersona(
 
 export interface EncargadoDePersona {
   encargado_id: number;
-  parentesco: string;
+  tipo_parentesco_id: number;
+  parentesco_nombre: string;
   nombres: string;
   apellidos: string;
 }
@@ -355,7 +375,8 @@ export async function listarEncargadosDePersona(
     where: { menor_id: menorId, activo: true },
     select: {
       encargado_id: true,
-      parentesco: true,
+      tipo_parentesco_id: true,
+      tipo_parentesco: { select: { nombre: true } },
       persona_encargado_menor_encargado_idTopersona: {
         select: { nombres: true, apellidos: true },
       },
@@ -364,14 +385,16 @@ export async function listarEncargadosDePersona(
   return filas.map(
     (f: {
       encargado_id: number;
-      parentesco: string;
+      tipo_parentesco_id: number;
+      tipo_parentesco: { nombre: string };
       persona_encargado_menor_encargado_idTopersona: {
         nombres: string;
         apellidos: string;
       };
     }) => ({
       encargado_id: f.encargado_id,
-      parentesco: f.parentesco,
+      tipo_parentesco_id: f.tipo_parentesco_id,
+      parentesco_nombre: f.tipo_parentesco.nombre,
       nombres: f.persona_encargado_menor_encargado_idTopersona.nombres,
       apellidos: f.persona_encargado_menor_encargado_idTopersona.apellidos,
     }),
@@ -390,7 +413,7 @@ export async function vincularEncargadoAPersonaExistente(
         usuarioId,
         menorId,
         encargado.personaId,
-        encargado.parentesco,
+        encargado.tipoParentescoId,
       );
     } else {
       const nuevoEncargado = await insertarPersona(
@@ -403,7 +426,7 @@ export async function vincularEncargadoAPersonaExistente(
         usuarioId,
         menorId,
         nuevoEncargado.id,
-        encargado.parentesco,
+        encargado.tipoParentescoId,
       );
     }
   });
@@ -420,6 +443,102 @@ export async function desvincularEncargado(
        SET activo = false, updated_by = $1
        WHERE menor_id = $2 AND encargado_id = $3`,
       [usuarioId, menorId, encargadoId],
+    );
+  });
+}
+
+export interface ContactoReferenciaRow {
+  id: number;
+  persona_id: number;
+  nombre: string;
+  telefono: string | null;
+  observaciones: string | null;
+  activo: boolean;
+}
+
+const SELECT_PUBLICO_CONTACTO = {
+  id: true,
+  persona_id: true,
+  nombre: true,
+  telefono: true,
+  observaciones: true,
+  activo: true,
+} as const;
+
+export async function listarContactosDePersona(
+  personaId: number,
+): Promise<ContactoReferenciaRow[]> {
+  return prisma.contacto_referencia_persona.findMany({
+    where: { persona_id: personaId, activo: true },
+    select: SELECT_PUBLICO_CONTACTO,
+    orderBy: { nombre: "asc" },
+  });
+}
+
+export async function buscarContactoPorId(
+  id: number,
+): Promise<ContactoReferenciaRow | null> {
+  return prisma.contacto_referencia_persona.findUnique({
+    where: { id },
+    select: SELECT_PUBLICO_CONTACTO,
+  });
+}
+
+export async function agregarContacto(
+  usuarioId: number,
+  personaId: number,
+  contacto: ContactoReferenciaInput,
+): Promise<void> {
+  await withUserTransaction(usuarioId, async (client) => {
+    await insertarContactoReferencia(client, usuarioId, personaId, contacto);
+  });
+}
+
+export async function editarContacto(
+  usuarioId: number,
+  contactoId: number,
+  datos: Partial<ContactoReferenciaInput>,
+): Promise<ContactoReferenciaRow> {
+  return withUserTransaction(usuarioId, async (client) => {
+    const sets: string[] = [];
+    const valores: unknown[] = [];
+    let i = 1;
+
+    for (const campo of ["nombre", "telefono", "observaciones"] as const) {
+      if (campo in datos) {
+        sets.push(`${campo} = $${i}`);
+        valores.push(datos[campo]);
+        i += 1;
+      }
+    }
+
+    sets.push(`updated_by = $${i}`);
+    valores.push(usuarioId);
+    i += 1;
+
+    valores.push(contactoId);
+
+    const result = await client.query<ContactoReferenciaRow>(
+      `UPDATE public.contacto_referencia_persona
+       SET ${sets.join(", ")}
+       WHERE id = $${i}
+       RETURNING id, persona_id, nombre, telefono, observaciones, activo`,
+      valores,
+    );
+    return result.rows[0];
+  });
+}
+
+export async function eliminarContacto(
+  usuarioId: number,
+  contactoId: number,
+): Promise<void> {
+  await withUserTransaction(usuarioId, async (client) => {
+    await client.query(
+      `UPDATE public.contacto_referencia_persona
+       SET activo = false, updated_by = $1
+       WHERE id = $2`,
+      [usuarioId, contactoId],
     );
   });
 }

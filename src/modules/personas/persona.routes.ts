@@ -12,6 +12,9 @@ import {
   quitarDiscapacidadController,
   vincularEncargadoController,
   desvincularEncargadoController,
+  agregarContactoController,
+  editarContactoController,
+  eliminarContactoController,
 } from "./persona.controller.js";
 
 const ROLES_GESTION = ["EMPLEADO_DMM", "DIRECTORA", "ADMINISTRADOR"];
@@ -70,6 +73,25 @@ router.delete(
   requireAuth,
   requireRole(...ROLES_GESTION),
   desvincularEncargadoController,
+);
+
+router.post(
+  "/:id/contactos",
+  requireAuth,
+  requireRole(...ROLES_GESTION),
+  agregarContactoController,
+);
+router.patch(
+  "/:id/contactos/:contactoId",
+  requireAuth,
+  requireRole(...ROLES_GESTION),
+  editarContactoController,
+);
+router.delete(
+  "/:id/contactos/:contactoId",
+  requireAuth,
+  requireRole(...ROLES_GESTION),
+  eliminarContactoController,
 );
 
 export default router;
