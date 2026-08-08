@@ -4,6 +4,7 @@ import {
   listarTiposParentesco,
   listarTiposDocumentoPersona,
   listarTiposEvidenciaEntrega,
+  listarEstadosSolicitud,
 } from "./catalogos-lectura.repository.js";
 
 export async function listarTiposGeneroController(
@@ -53,6 +54,19 @@ export async function listarTiposEvidenciaEntregaController(
   try {
     const tipos = await listarTiposEvidenciaEntrega();
     return res.status(200).json(tipos);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listarEstadosSolicitudController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const estados = await listarEstadosSolicitud();
+    return res.status(200).json(estados);
   } catch (error) {
     return next(error);
   }

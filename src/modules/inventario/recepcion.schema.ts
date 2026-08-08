@@ -56,7 +56,9 @@ export const darBajaLoteSchema = z.object({
 export const semaforoQuerySchema = z.object({
   insumoId: z.coerce.number().int().positive().optional(),
   semaforo: z
-    .enum(["VENCIDO", "ROJO", "AMARILLO", "VERDE", "GRIS"])
+    .enum(["VENCIDO", "ROJO", "AMARILLO", "VERDE", "GRIS"], {
+      error: "El semáforo debe ser VENCIDO, ROJO, AMARILLO, VERDE o GRIS",
+    })
     .optional(),
 });
 
