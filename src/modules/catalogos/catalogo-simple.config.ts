@@ -2,6 +2,13 @@ export interface CatalogoSimpleConfig {
   slug: string;
   prismaModel: "discapacidad" | "programa" | "institucion_donante";
   tableName: string;
+  /**
+   * No todas las tablas de catálogo tienen columna `descripcion`: hoy solo
+   * `programa` la tiene. Cuando es `false` la columna se omite del select,
+   * del insert, del update y del schema de validación — antes se asumía
+   * presente en todos y rompía con `no existe la columna «descripcion»`.
+   */
+  tieneDescripcion: boolean;
   dependencia: {
     tablaDependiente: string;
     columnaFk: string;
@@ -19,6 +26,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
     slug: "discapacidades",
     prismaModel: "discapacidad",
     tableName: "discapacidad",
+    tieneDescripcion: false,
     dependencia: {
       tablaDependiente: "persona_discapacidad",
       columnaFk: "discapacidad_id",
@@ -30,6 +38,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
     slug: "programas",
     prismaModel: "programa",
     tableName: "programa",
+    tieneDescripcion: true,
     dependencia: {
       tablaDependiente: "solicitud_apoyo",
       columnaFk: "programa_id",
@@ -41,6 +50,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
     slug: "instituciones-donantes",
     prismaModel: "institucion_donante",
     tableName: "institucion_donante",
+    tieneDescripcion: false,
     dependencia: {
       tablaDependiente: "recepcion_donacion_lote",
       columnaFk: "institucion_id",
