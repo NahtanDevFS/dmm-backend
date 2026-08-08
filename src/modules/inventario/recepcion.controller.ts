@@ -37,6 +37,7 @@ import {
   type ContextoError,
 } from "../../lib/errores/postgres.js";
 import { guardarArchivo } from "../../lib/storage/storage.service.js";
+import { paginar } from "../../lib/paginacion.js";
 
 /**
  * Traduce el error con el contexto del módulo (nombres de insumo y presentación
@@ -87,11 +88,13 @@ export async function listarController(
         errores: parsed.error.flatten().fieldErrors,
       });
     }
-    const recepciones = await listarRecepciones({
+    const { total, filas } = await listarRecepciones({
       institucionId: parsed.data.institucionId,
       incluirInactivas: parsed.data.incluirInactivas,
+      limite: parsed.data.limite,
+      desplazamiento: parsed.data.desplazamiento,
     });
-    return res.status(200).json(recepciones);
+    return res.status(200).json(paginar(filas, total, parsed.data));
   } catch (error) {
     return next(error);
   }

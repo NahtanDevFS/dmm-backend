@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginacionShape } from "../../lib/paginacion.js";
 
 const fechaSchema = z
   .string()
@@ -38,6 +39,7 @@ export const listarContratosQuerySchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  ...paginacionShape,
 });
 
 export const aplicarMultaSchema = z.object({

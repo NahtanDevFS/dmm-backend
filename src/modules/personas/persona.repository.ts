@@ -54,8 +54,10 @@ export async function listarPersonas(
     busqueda?: string;
     comunidadId?: number;
     incluirInactivos: boolean;
+    limite: number;
+    desplazamiento: number;
   },
-): Promise<PersonaRow[]> {
+): Promise<{ total: number; filas: PersonaRow[] }> {
   const { busqueda, comunidadId, incluirInactivos } = params;
 
   const condiciones: string[] = [];
@@ -86,11 +88,20 @@ export async function listarPersonas(
     : `ORDER BY apellidos ASC, nombres ASC`;
   if (busqueda) valores.push(busqueda);
 
-  const result = await client.query<PersonaRow>(
-    `SELECT ${COLUMNAS_PUBLICAS.join(", ")} FROM public.persona ${where} ${orderBy} LIMIT 100`,
-    valores,
+  // El conteo reutiliza las condiciones pero no el ORDER BY: cuando hay busqueda,
+  // el ultimo parametro es solo para la similitud del orden y aqui no aplica.
+  const totalResult = await client.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM public.persona ${where}`,
+    busqueda ? valores.slice(0, -1) : valores,
   );
-  return result.rows;
+
+  const result = await client.query<PersonaRow>(
+    `SELECT ${COLUMNAS_PUBLICAS.join(", ")} FROM public.persona ${where} ${orderBy}
+     LIMIT $${valores.length + 1} OFFSET $${valores.length + 2}`,
+    [...valores, params.limite, params.desplazamiento],
+  );
+
+  return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
 export async function buscarPersonaPorId(

@@ -65,17 +65,28 @@ export async function listarInsumos(params: {
   categoriaId?: number;
   busqueda?: string;
   incluirInactivos: boolean;
-}): Promise<InsumoRow[]> {
+  limite: number;
+  desplazamiento: number;
+}): Promise<{ total: number; filas: InsumoRow[] }> {
   const { categoriaId, busqueda, incluirInactivos } = params;
-  return prisma.insumo.findMany({
-    where: {
-      ...(incluirInactivos ? {} : { activo: true }),
-      ...(categoriaId !== undefined ? { categoria_id: categoriaId } : {}),
-      ...(busqueda ? { nombre: { contains: busqueda, mode: "insensitive" } } : {}),
-    },
-    orderBy: { nombre: "asc" },
-    select: SELECT_PUBLICO,
-  });
+  const where = {
+    ...(incluirInactivos ? {} : { activo: true }),
+    ...(categoriaId !== undefined ? { categoria_id: categoriaId } : {}),
+    ...(busqueda ? { nombre: { contains: busqueda, mode: "insensitive" as const } } : {}),
+  };
+
+  const [total, filas] = await Promise.all([
+    prisma.insumo.count({ where }),
+    prisma.insumo.findMany({
+      where,
+      orderBy: { nombre: "asc" },
+      select: SELECT_PUBLICO,
+      take: params.limite,
+      skip: params.desplazamiento,
+    }),
+  ]);
+
+  return { total, filas };
 }
 
 export async function buscarInsumoPorId(

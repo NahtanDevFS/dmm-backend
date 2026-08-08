@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { paginar } from "../../lib/paginacion.js";
 import { pool } from "../../db/pool.js";
 import {
   crearPersonaSchema,
@@ -79,12 +80,14 @@ export async function listarController(
       });
     }
 
-    const personas = await listarPersonas(pool, {
+    const { total, filas } = await listarPersonas(pool, {
       busqueda: parsedQuery.data.busqueda,
       comunidadId: parsedQuery.data.comunidadId,
       incluirInactivos: parsedQuery.data.incluirInactivos,
+      limite: parsedQuery.data.limite,
+      desplazamiento: parsedQuery.data.desplazamiento,
     });
-    return res.status(200).json(personas);
+    return res.status(200).json(paginar(filas, total, parsedQuery.data));
   } catch (error) {
     return next(error);
   }

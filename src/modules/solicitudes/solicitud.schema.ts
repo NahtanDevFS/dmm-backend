@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginacionShape } from "../../lib/paginacion.js";
 
 const fechaSchema = z
   .string()
@@ -84,6 +85,7 @@ export const listarSolicitudesQuerySchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  ...paginacionShape,
 });
 
 export const crearRecetaSchema = z.object({
