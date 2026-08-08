@@ -100,6 +100,45 @@ const MENSAJES_POR_CONSTRAINT: Record<string, ErrorTraducido> = {
     message: "La fecha de emisión de la receta no puede ser futura.",
   },
 
+  // ── préstamos y multas
+  contrato_origen_check: {
+    status: 400,
+    message:
+      "Un contrato debe originarse en una entrega o ser la renovación de otro contrato, no ambas cosas.",
+  },
+  contrato_prestamo_fechas_check: {
+    status: 400,
+    message:
+      "La fecha de devolución pactada no puede ser anterior a la fecha de inicio del préstamo.",
+  },
+  contrato_prestamo_devolucion_real_check: {
+    status: 400,
+    message:
+      "La fecha de devolución real no puede ser anterior al inicio del préstamo.",
+  },
+  contrato_prestamo_detalle_entrega_unica_key: {
+    status: 409,
+    message: "Ese renglón de entrega ya tiene un contrato de préstamo.",
+  },
+  contrato_prestamo_anterior_unico_key: {
+    status: 409,
+    message:
+      "Ese contrato ya fue renovado. Renueve el último contrato de la cadena.",
+  },
+  multa_prestamo_monto_check: {
+    status: 400,
+    message: "El monto de la multa no puede ser negativo.",
+  },
+  multa_prestamo_fecha_valida_check: {
+    status: 400,
+    message: "La fecha de aplicación de la multa no puede ser futura.",
+  },
+  multa_prestamo_pago_coherente_check: {
+    status: 400,
+    message:
+      "Los datos de pago son incoherentes: una multa pagada requiere fecha de pago.",
+  },
+
   // ── catálogos
   institucion_donante_correo_valido_check: {
     status: 400,

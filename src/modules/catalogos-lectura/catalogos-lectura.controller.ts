@@ -5,6 +5,8 @@ import {
   listarTiposDocumentoPersona,
   listarTiposEvidenciaEntrega,
   listarEstadosSolicitud,
+  listarEstadosContrato,
+  listarTiposMulta,
 } from "./catalogos-lectura.repository.js";
 
 export async function listarTiposGeneroController(
@@ -67,6 +69,30 @@ export async function listarEstadosSolicitudController(
   try {
     const estados = await listarEstadosSolicitud();
     return res.status(200).json(estados);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listarEstadosContratoController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    return res.status(200).json(await listarEstadosContrato());
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listarTiposMultaController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    return res.status(200).json(await listarTiposMulta());
   } catch (error) {
     return next(error);
   }

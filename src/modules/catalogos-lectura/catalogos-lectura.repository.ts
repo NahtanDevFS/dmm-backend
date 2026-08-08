@@ -30,6 +30,20 @@ export interface EstadoSolicitudRow {
   nombre: string;
 }
 
+export interface EstadoContratoRow {
+  id: number;
+  nombre: string;
+  activo: boolean;
+}
+
+/** El monto sugerido se devuelve como string: es NUMERIC en la base. */
+export interface TipoMultaRow {
+  id: number;
+  nombre: string;
+  monto_sugerido: unknown;
+  activo: boolean;
+}
+
 export async function listarTiposGenero(): Promise<TipoGeneroRow[]> {
   return prisma.tipo_genero.findMany({
     where: { activo: true },
@@ -70,6 +84,22 @@ export async function listarEstadosSolicitud(): Promise<EstadoSolicitudRow[]> {
   return prisma.estado_solicitud_apoyo.findMany({
     orderBy: { id: "asc" },
     select: { id: true, nombre: true },
+  });
+}
+
+export async function listarEstadosContrato(): Promise<EstadoContratoRow[]> {
+  return prisma.estado_contrato_prestamo.findMany({
+    where: { activo: true },
+    orderBy: { id: "asc" },
+    select: { id: true, nombre: true, activo: true },
+  });
+}
+
+export async function listarTiposMulta(): Promise<TipoMultaRow[]> {
+  return prisma.tipo_multa_prestamo.findMany({
+    where: { activo: true },
+    orderBy: { nombre: "asc" },
+    select: { id: true, nombre: true, monto_sugerido: true, activo: true },
   });
 }
 
