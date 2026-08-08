@@ -59,16 +59,27 @@ const COLUMNAS_LOTE = `id, insumo_id, recepcion_lote_id, presentacion_recepcion_
 export async function listarRecepciones(params: {
   institucionId?: number;
   incluirInactivas: boolean;
-}): Promise<RecepcionRow[]> {
+  limite: number;
+  desplazamiento: number;
+}): Promise<{ total: number; filas: RecepcionRow[] }> {
   const { institucionId, incluirInactivas } = params;
-  return prisma.recepcion_donacion_lote.findMany({
-    where: {
-      ...(incluirInactivas ? {} : { activo: true }),
-      ...(institucionId !== undefined ? { institucion_id: institucionId } : {}),
-    },
-    orderBy: [{ fecha_recepcion: "desc" }, { id: "desc" }],
-    select: SELECT_RECEPCION,
-  });
+  const where = {
+    ...(incluirInactivas ? {} : { activo: true }),
+    ...(institucionId !== undefined ? { institucion_id: institucionId } : {}),
+  };
+
+  const [total, filas] = await Promise.all([
+    prisma.recepcion_donacion_lote.count({ where }),
+    prisma.recepcion_donacion_lote.findMany({
+      where,
+      orderBy: [{ fecha_recepcion: "desc" }, { id: "desc" }],
+      select: SELECT_RECEPCION,
+      take: params.limite,
+      skip: params.desplazamiento,
+    }),
+  ]);
+
+  return { total, filas };
 }
 
 export async function buscarRecepcionPorId(

@@ -35,6 +35,7 @@ import {
   eliminarRecetaMedica,
 } from "./receta-medica.repository.js";
 import { guardarArchivo } from "../../lib/storage/storage.service.js";
+import { paginar } from "../../lib/paginacion.js";
 import {
   traducirErrorPostgres,
   type ContextoError,
@@ -117,13 +118,15 @@ export async function listarController(
         errores: parsed.error.flatten().fieldErrors,
       });
     }
-    const filas = await listarSolicitudesActivas({
+    const { total, filas } = await listarSolicitudesActivas({
       personaId: parsed.data.personaId,
       programaId: parsed.data.programaId,
       estadoLinea: parsed.data.estadoLinea,
       soloPendientesAprobacion: parsed.data.soloPendientesAprobacion,
+      limite: parsed.data.limite,
+      desplazamiento: parsed.data.desplazamiento,
     });
-    return res.status(200).json(filas);
+    return res.status(200).json(paginar(filas, total, parsed.data));
   } catch (error) {
     return next(error);
   }

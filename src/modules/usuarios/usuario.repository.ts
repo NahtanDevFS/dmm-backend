@@ -26,7 +26,9 @@ export async function listarUsuarios(params: {
   rolId?: number;
   busqueda?: string;
   incluirInactivos: boolean;
-}): Promise<Record<string, unknown>[]> {
+  limite: number;
+  desplazamiento: number;
+}): Promise<{ total: number; filas: Record<string, unknown>[] }> {
   const condiciones: string[] = [];
   const valores: unknown[] = [];
 
@@ -41,16 +43,25 @@ export async function listarUsuarios(params: {
   }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
+
+  const totalResult = await pool.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM public.usuario u
+     JOIN public.rol r ON r.id = u.rol_id ${where}`,
+    valores,
+  );
+
   const result = await pool.query(
     `SELECT u.id, u.username, u.rol_id, r.nombre AS rol_nombre,
             u.ultimo_login, u.activo
      FROM public.usuario u
      JOIN public.rol r ON r.id = u.rol_id
      ${where}
-     ORDER BY u.username`,
-    valores,
+     ORDER BY u.username
+     LIMIT $${valores.length + 1} OFFSET $${valores.length + 2}`,
+    [...valores, params.limite, params.desplazamiento],
   );
-  return result.rows;
+
+  return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
 export async function buscarUsuarioPorId(

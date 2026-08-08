@@ -81,7 +81,9 @@ export async function listarSolicitudesActivas(params: {
   programaId?: number;
   estadoLinea?: string;
   soloPendientesAprobacion: boolean;
-}): Promise<Record<string, unknown>[]> {
+  limite: number;
+  desplazamiento: number;
+}): Promise<{ total: number; filas: Record<string, unknown>[] }> {
   const condiciones: string[] = [];
   const valores: unknown[] = [];
 
@@ -102,12 +104,20 @@ export async function listarSolicitudesActivas(params: {
   }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
-  const result = await pool.query(
-    `SELECT * FROM public.v_solicitudes_activas ${where}
-     ORDER BY fecha_solicitud DESC, solicitud_id DESC, detalle_solicitud_id`,
+
+  const totalResult = await pool.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM public.v_solicitudes_activas ${where}`,
     valores,
   );
-  return result.rows;
+
+  const result = await pool.query(
+    `SELECT * FROM public.v_solicitudes_activas ${where}
+     ORDER BY fecha_solicitud DESC, solicitud_id DESC, detalle_solicitud_id
+     LIMIT $${valores.length + 1} OFFSET $${valores.length + 2}`,
+    [...valores, params.limite, params.desplazamiento],
+  );
+
+  return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
 /** Lista de espera: líneas en PENDIENTE_ADQUISICION o PENDIENTE_ENTREGA_PARCIAL. */

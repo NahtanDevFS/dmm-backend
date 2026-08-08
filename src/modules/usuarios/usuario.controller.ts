@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
+import { paginar } from "../../lib/paginacion.js";
 import {
   crearUsuarioSchema,
   editarUsuarioSchema,
@@ -69,13 +70,14 @@ export async function listarController(
         errores: parsed.error.flatten().fieldErrors,
       });
     }
-    return res.status(200).json(
-      await listarUsuarios({
-        rolId: parsed.data.rolId,
-        busqueda: parsed.data.busqueda,
-        incluirInactivos: parsed.data.incluirInactivos,
-      }),
-    );
+    const { total, filas } = await listarUsuarios({
+      rolId: parsed.data.rolId,
+      busqueda: parsed.data.busqueda,
+      incluirInactivos: parsed.data.incluirInactivos,
+      limite: parsed.data.limite,
+      desplazamiento: parsed.data.desplazamiento,
+    });
+    return res.status(200).json(paginar(filas, total, parsed.data));
   } catch (error) {
     return next(error);
   }

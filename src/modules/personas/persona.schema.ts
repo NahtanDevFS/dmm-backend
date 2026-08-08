@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginacionShape } from "../../lib/paginacion.js";
 
 const nombresSchema = z
   .string()
@@ -84,6 +85,7 @@ export const listarPersonasQuerySchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  ...paginacionShape,
 });
 
 export const agregarDiscapacidadSchema = z.object({

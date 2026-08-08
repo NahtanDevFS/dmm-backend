@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginacionShape } from "../../lib/paginacion.js";
 
 export const listarAuditoriaQuerySchema = z.object({
   tabla: z.string().trim().min(1).max(50).optional(),
@@ -17,18 +18,6 @@ export const listarAuditoriaQuerySchema = z.object({
     .string()
     .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha 'hasta' inválida")
     .optional(),
-  // La tabla ya pasa de 1900 filas y solo crece: la paginación no es opcional.
-  limite: z.coerce
-    .number()
-    .int()
-    .min(1, "El límite debe ser al menos 1")
-    .max(200, "El límite máximo es 200")
-    .optional()
-    .transform((v) => v ?? 50),
-  desplazamiento: z.coerce
-    .number()
-    .int()
-    .min(0)
-    .optional()
-    .transform((v) => v ?? 0),
+  // Mismo sobre y mismos topes que el resto de los listados del sistema.
+  ...paginacionShape,
 });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginacionShape } from "../../lib/paginacion.js";
 
 /**
  * Requisitos mínimos de contraseña. No los impone la base de datos (guarda un
@@ -59,4 +60,5 @@ export const listarUsuariosQuerySchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  ...paginacionShape,
 });
