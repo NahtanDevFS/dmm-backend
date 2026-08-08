@@ -4,6 +4,7 @@ import catalogosRoutes from "../modules/catalogos/catalogos.routes.js";
 import geografiaRoutes from "../modules/geografia/geografia.routes.js";
 import comunidadRoutes from "../modules/comunidades/comunidad.routes.js";
 import personaRoutes from "../modules/personas/persona.routes.js";
+import insumoRoutes from "../modules/insumos/insumo.routes.js";
 import catalogosLecturaRoutes from "../modules/catalogos-lectura/catalogos-lectura.routes.js";
 import archivosRoutes from "../lib/storage/archivos.routes.js";
 
@@ -18,6 +19,7 @@ router.use("/", archivosRoutes);
 // simple y lo sirve catalogosRoutes por su entrada en catalogo-simple.config.
 router.use("/comunidades", comunidadRoutes);
 router.use("/personas", personaRoutes);
+router.use("/insumos", insumoRoutes);
 
 // Aquí se irán agregando las rutas de los demás módulos
 // router.use('/beneficiarios', beneficiariosRoutes);
