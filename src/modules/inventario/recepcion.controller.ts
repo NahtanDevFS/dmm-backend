@@ -35,22 +35,20 @@ import {
 import {
   traducirErrorPostgres,
   type ContextoError,
-} from "./errores-postgres.js";
-import {
-  guardarArchivo,
-  ArchivoInvalidoError,
-} from "../../lib/storage/storage.service.js";
+} from "../../lib/errores/postgres.js";
+import { guardarArchivo } from "../../lib/storage/storage.service.js";
 
-/** Centraliza el manejo de errores de escritura del módulo. */
-function responderError(
+/**
+ * Traduce el error con el contexto del módulo (nombres de insumo y presentación
+ * en vez de los ids crudos que interpolan los mensajes de los triggers). El
+ * resto de los errores los resuelve el errorHandler global sin contexto.
+ */
+function responderErrorConContexto(
   error: unknown,
   res: Response,
   next: NextFunction,
-  contexto?: ContextoError,
+  contexto: ContextoError,
 ): Response | void {
-  if (error instanceof ArchivoInvalidoError) {
-    return res.status(400).json({ message: error.message });
-  }
   const traducido = traducirErrorPostgres(error, contexto);
   if (traducido) {
     return res.status(traducido.status).json({ message: traducido.message });
@@ -149,7 +147,7 @@ export async function crearController(
     const nueva = await crearRecepcion(req.usuario!.id, parsed.data);
     return res.status(201).json(nueva);
   } catch (error) {
-    return responderError(error, res, next);
+    return next(error);
   }
 }
 
@@ -188,7 +186,7 @@ export async function editarController(
     );
     return res.status(200).json(actualizada);
   } catch (error) {
-    return responderError(error, res, next);
+    return next(error);
   }
 }
 
@@ -227,7 +225,7 @@ export async function desactivarController(
     );
     return res.status(200).json(actualizada);
   } catch (error) {
-    return responderError(error, res, next);
+    return next(error);
   }
 }
 
@@ -248,7 +246,7 @@ export async function reactivarController(
     );
     return res.status(200).json(actualizada);
   } catch (error) {
-    return responderError(error, res, next);
+    return next(error);
   }
 }
 
@@ -303,7 +301,7 @@ export async function crearLoteController(
     // Solo se valida lo que las FK no cubren: que los registros estén activos.
     // La coherencia presentación↔insumo, la caducidad y el código de fabricante
     // obligatorios los valida trg_calcular_recepcion_lote y no se reimplementan
-    // aquí; sus excepciones se traducen en responderError.
+    // aquí; sus excepciones se traducen al responder.
     const insumo = await buscarInsumoActivo(parsed.data.insumo_id);
     if (!insumo) {
       return res
@@ -344,10 +342,10 @@ export async function crearLoteController(
       );
       return res.status(201).json(nuevo);
     } catch (error) {
-      return responderError(error, res, next, contexto);
+      return responderErrorConContexto(error, res, next, contexto);
     }
   } catch (error) {
-    return responderError(error, res, next);
+    return next(error);
   }
 }
 
@@ -384,7 +382,7 @@ export async function darBajaLoteController(
     const actualizado = await buscarLotePorId(loteId);
     return res.status(200).json(actualizado);
   } catch (error) {
-    return responderError(error, res, next);
+    return next(error);
   }
 }
 
@@ -466,7 +464,7 @@ export async function subirDocumentoController(
 
     return res.status(201).json(nuevo);
   } catch (error) {
-    return responderError(error, res, next);
+    return next(error);
   }
 }
 

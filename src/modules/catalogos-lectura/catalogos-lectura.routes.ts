@@ -5,6 +5,9 @@ import {
   listarTiposParentescoController,
   listarTiposDocumentoPersonaController,
   listarTiposEvidenciaEntregaController,
+  listarEstadosSolicitudController,
+  listarEstadosContratoController,
+  listarTiposMultaController,
 } from "./catalogos-lectura.controller.js";
 
 const router = Router();
@@ -21,5 +24,16 @@ router.get(
   requireAuth,
   listarTiposEvidenciaEntregaController,
 );
+router.get(
+  "/estados-solicitud",
+  requireAuth,
+  listarEstadosSolicitudController,
+);
+router.get(
+  "/estados-contrato-prestamo",
+  requireAuth,
+  listarEstadosContratoController,
+);
+router.get("/tipos-multa-prestamo", requireAuth, listarTiposMultaController);
 
 export default router;
