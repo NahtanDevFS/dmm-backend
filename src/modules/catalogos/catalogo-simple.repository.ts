@@ -1,24 +1,33 @@
 import type { PoolClient } from "pg";
 import prisma from "../../db/prisma.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
-import type { CatalogoSimpleConfig } from "./catalogo-simple.config.js";
+import type {
+  CatalogoSimpleConfig,
+  DependenciaCatalogo,
+} from "./catalogo-simple.config.js";
 
 export interface CatalogoSimpleRow {
   id: number;
   nombre: string;
-  descripcion: string | null;
+  descripcion?: string | null;
   activo: boolean;
   [campoExtra: string]: unknown;
 }
 
-function columnasPublicas(config: CatalogoSimpleConfig): string[] {
+/**
+ * Campos que el catálogo acepta al crear/editar, en orden: `nombre`,
+ * `descripcion` (solo si la tabla la tiene) y los campos extra de la config.
+ */
+function camposEditables(config: CatalogoSimpleConfig): string[] {
   return [
-    "id",
     "nombre",
-    "descripcion",
-    "activo",
+    ...(config.tieneDescripcion ? ["descripcion"] : []),
     ...(config.camposExtra ?? []).map((c) => c.nombre),
   ];
+}
+
+function columnasPublicas(config: CatalogoSimpleConfig): string[] {
+  return ["id", ...camposEditables(config), "activo"];
 }
 
 function selectPublico(config: CatalogoSimpleConfig): Record<string, true> {
@@ -60,20 +69,28 @@ export async function existeNombreDuplicado(
   return true;
 }
 
-export async function tieneDependenciasActivas(
+/**
+ * Devuelve la primera dependencia que impide desactivar el registro, o `null`
+ * si ninguna lo bloquea. Se devuelve la dependencia completa (y no un booleano)
+ * para que el controller pueda responder con el mensaje de esa tabla en
+ * concreto: un catálogo puede tener varias, como `unidad_medida`.
+ */
+export async function buscarDependenciaBloqueante(
   config: CatalogoSimpleConfig,
   id: number,
   client: PoolClient,
-): Promise<boolean> {
-  if (!config.dependencia) return false;
-  const { tablaDependiente, columnaFk } = config.dependencia;
-  const result = await client.query(
-    `SELECT 1 FROM public.${tablaDependiente}
-     WHERE ${columnaFk} = $1 AND activo = true
-     LIMIT 1`,
-    [id],
-  );
-  return (result.rowCount ?? 0) > 0;
+): Promise<DependenciaCatalogo | null> {
+  for (const dependencia of config.dependencias) {
+    const { tablaDependiente, columnaFk } = dependencia;
+    const result = await client.query(
+      `SELECT 1 FROM public.${tablaDependiente}
+       WHERE ${columnaFk} = $1 AND activo = true
+       LIMIT 1`,
+      [id],
+    );
+    if ((result.rowCount ?? 0) > 0) return dependencia;
+  }
+  return null;
 }
 
 export async function crearCatalogoSimple(
@@ -82,19 +99,9 @@ export async function crearCatalogoSimple(
   datos: { nombre: string; descripcion?: string | null; [k: string]: unknown },
 ): Promise<CatalogoSimpleRow> {
   return withUserTransaction(usuarioId, async (client) => {
-    const camposExtra = config.camposExtra ?? [];
-    const columnas = [
-      "nombre",
-      "descripcion",
-      "created_by",
-      ...camposExtra.map((c) => c.nombre),
-    ];
-    const valores = [
-      datos.nombre,
-      datos.descripcion ?? null,
-      usuarioId,
-      ...camposExtra.map((c) => datos[c.nombre] ?? null),
-    ];
+    const campos = camposEditables(config);
+    const columnas = [...campos, "created_by"];
+    const valores = [...campos.map((c) => datos[c] ?? null), usuarioId];
     const placeholders = valores.map((_, i) => `$${i + 1}`).join(", ");
 
     const result = await client.query<CatalogoSimpleRow>(
@@ -114,18 +121,11 @@ export async function editarCatalogoSimple(
   datos: { nombre?: string; descripcion?: string | null; [k: string]: unknown },
 ): Promise<CatalogoSimpleRow> {
   return withUserTransaction(usuarioId, async (client) => {
-    const camposExtra = config.camposExtra ?? [];
-    const camposEditables = [
-      "nombre",
-      "descripcion",
-      ...camposExtra.map((c) => c.nombre),
-    ];
-
     const sets: string[] = [];
     const valores: unknown[] = [];
     let i = 1;
 
-    for (const campo of camposEditables) {
+    for (const campo of camposEditables(config)) {
       if (campo in datos) {
         sets.push(`${campo} = $${i}`);
         valores.push(datos[campo]);

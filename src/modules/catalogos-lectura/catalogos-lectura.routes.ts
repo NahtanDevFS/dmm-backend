@@ -4,6 +4,7 @@ import {
   listarTiposGeneroController,
   listarTiposParentescoController,
   listarTiposDocumentoPersonaController,
+  listarTiposEvidenciaEntregaController,
 } from "./catalogos-lectura.controller.js";
 
 const router = Router();
@@ -14,6 +15,11 @@ router.get(
   "/tipos-documento-persona",
   requireAuth,
   listarTiposDocumentoPersonaController,
+);
+router.get(
+  "/tipos-evidencia-entrega",
+  requireAuth,
+  listarTiposEvidenciaEntregaController,
 );
 
 export default router;
