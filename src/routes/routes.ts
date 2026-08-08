@@ -8,6 +8,7 @@ import insumoRoutes from "../modules/insumos/insumo.routes.js";
 import recepcionRoutes from "../modules/inventario/recepcion.routes.js";
 import inventarioRoutes from "../modules/inventario/inventario.routes.js";
 import solicitudRoutes from "../modules/solicitudes/solicitud.routes.js";
+import entregaRoutes from "../modules/entregas/entrega.routes.js";
 import catalogosLecturaRoutes from "../modules/catalogos-lectura/catalogos-lectura.routes.js";
 import archivosRoutes from "../lib/storage/archivos.routes.js";
 
@@ -26,6 +27,7 @@ router.use("/insumos", insumoRoutes);
 router.use("/recepciones", recepcionRoutes);
 router.use("/inventario", inventarioRoutes);
 router.use("/solicitudes", solicitudRoutes);
+router.use("/entregas", entregaRoutes);
 
 // Aquí se irán agregando las rutas de los demás módulos
 // router.use('/beneficiarios', beneficiariosRoutes);
