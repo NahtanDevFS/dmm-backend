@@ -7,6 +7,9 @@ import prisma from "../db/prisma.js";
 import { sesionInactiva } from "../modules/auth/session.utils.js";
 import { COOKIE_NAME } from "../modules/auth/auth.controller.js";
 
+/** Cada cuánto se refresca `ultima_actividad` como máximo. */
+const LATIDO_MINIMO_MS = 60_000;
+
 export async function requireAuth(
   req: Request,
   res: Response,
@@ -59,9 +62,25 @@ export async function requireAuth(
     };
     req.sesion = { id: sesion.id };
 
-    actualizarUltimaActividad(sesion.id, usuario.id).catch((err) => {
-      console.error("Error actualizando ultima_actividad de sesion:", err);
-    });
+    /**
+     * El latido no se escribe en cada petición. Sin este freno, cada `GET` de
+     * un catálogo dispara un UPDATE con su transacción, y como `sesion` está
+     * auditada, también una fila en `auditoria_log`: más de la mitad de la
+     * bitácora era este latido.
+     *
+     * El precio es que `ultima_actividad` puede quedar hasta un minuto
+     * desactualizada, así que en el peor caso la sesión expira a los 29 minutos
+     * de inactividad en vez de a los 30. Contra una ventana de media hora es
+     * irrelevante.
+     */
+    if (
+      Date.now() - sesion.ultima_actividad.getTime() >
+      LATIDO_MINIMO_MS
+    ) {
+      actualizarUltimaActividad(sesion.id, usuario.id).catch((err) => {
+        console.error("Error actualizando ultima_actividad de sesion:", err);
+      });
+    }
 
     return next();
   } catch (error) {

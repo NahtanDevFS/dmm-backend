@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { paginar } from "../../lib/paginacion.js";
 import {
   crearInsumoSchema,
   editarInsumoSchema,
@@ -35,12 +36,14 @@ export async function listarController(
       });
     }
 
-    const insumos = await listarInsumos({
+    const { total, filas } = await listarInsumos({
       categoriaId: parsed.data.categoriaId,
       busqueda: parsed.data.busqueda,
       incluirInactivos: parsed.data.incluirInactivos,
+      limite: parsed.data.limite,
+      desplazamiento: parsed.data.desplazamiento,
     });
-    return res.status(200).json(insumos);
+    return res.status(200).json(paginar(filas, total, parsed.data));
   } catch (error) {
     return next(error);
   }

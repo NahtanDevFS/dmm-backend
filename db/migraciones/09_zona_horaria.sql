@@ -1,0 +1,40 @@
+-- ============================================================================
+-- 09_zona_horaria.sql
+--
+-- PROBLEMA
+-- La sesion de Postgres corre en GMT, no en America/Guatemala. Verificado en la
+-- base local:
+--
+--   current_setting('TimeZone') -> GMT
+--   CURRENT_DATE                -> 2026-08-08
+--   fecha real en Guatemala     -> 2026-08-07 (21:49 hora local)
+--
+-- Guatemala es UTC-6, asi que entre las 18:00 y la medianoche local todo
+-- DEFAULT CURRENT_DATE graba la fecha del dia siguiente. Afecta a:
+--   entrega.fecha_entrega
+--   recepcion_donacion_lote.fecha_recepcion
+--   solicitud_apoyo.fecha_solicitud y fecha_aprobacion
+--   contrato_prestamo.fecha_inicio y fecha_devolucion_real
+--   multa_prestamo.fecha_aplicacion
+-- y desplaza fn_semaforo_caducidad y el calculo de dias de retraso.
+--
+-- Una entrega registrada a las 7 de la noche queda fechada al dia siguiente, y
+-- los reportes por fecha la cuentan en el dia equivocado.
+--
+-- SOLUCION
+-- Se fija en la base y no en el backend, porque la logica que usa CURRENT_DATE
+-- vive en triggers y stored procedures: cualquier conexion (backend, pgAdmin,
+-- un cron futuro) debe ver la misma fecha.
+--
+-- OJO: aplica a las sesiones NUEVAS. Hay que reconectar despues de correrla
+-- (reiniciar el backend y cerrar/reabrir pgAdmin).
+--
+-- OJO 2: no corrige los registros ya grabados con la fecha corrida. Si ya hay
+-- datos reales en produccion, revisar antes que registros de las tablas de
+-- arriba tienen fecha del dia siguiente al de su created_at.
+-- ============================================================================
+
+ALTER DATABASE "DMM" SET timezone = 'America/Guatemala';
+
+-- Verificacion: reconectar y comprobar que coinciden.
+--   SELECT current_setting('TimeZone'), CURRENT_DATE, now();

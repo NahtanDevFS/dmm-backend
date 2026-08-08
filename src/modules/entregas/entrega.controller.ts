@@ -26,6 +26,7 @@ import {
   eliminarEvidenciaEntrega,
 } from "./evidencia-entrega.repository.js";
 import { guardarArchivo } from "../../lib/storage/storage.service.js";
+import { paginar } from "../../lib/paginacion.js";
 import {
   traducirErrorPostgres,
   type ContextoError,
@@ -75,15 +76,16 @@ export async function listarController(
         errores: parsed.error.flatten().fieldErrors,
       });
     }
-    return res.status(200).json(
-      await listarEntregas({
-        personaId: parsed.data.personaId,
-        insumoId: parsed.data.insumoId,
-        desde: parsed.data.desde,
-        hasta: parsed.data.hasta,
-        incluirAnuladas: parsed.data.incluirAnuladas,
-      }),
-    );
+    const { total, filas } = await listarEntregas({
+      personaId: parsed.data.personaId,
+      insumoId: parsed.data.insumoId,
+      desde: parsed.data.desde,
+      hasta: parsed.data.hasta,
+      incluirAnuladas: parsed.data.incluirAnuladas,
+      limite: parsed.data.limite,
+      desplazamiento: parsed.data.desplazamiento,
+    });
+    return res.status(200).json(paginar(filas, total, parsed.data));
   } catch (error) {
     return next(error);
   }

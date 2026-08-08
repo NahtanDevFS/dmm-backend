@@ -5,6 +5,7 @@ import {
   listarTablasAuditadas,
   historialDeRegistro,
 } from "./auditoria.repository.js";
+import { paginar } from "../../lib/paginacion.js";
 
 export async function listarController(
   req: Request,
@@ -28,15 +29,7 @@ export async function listarController(
     }
 
     const { total, filas } = await listarAuditoria(d);
-
-    return res.status(200).json({
-      total,
-      limite: d.limite,
-      desplazamiento: d.desplazamiento,
-      // Le ahorra al frontend calcular si debe pedir otra página.
-      hay_mas: d.desplazamiento + filas.length < total,
-      datos: filas,
-    });
+    return res.status(200).json(paginar(filas, total, d));
   } catch (error) {
     return next(error);
   }

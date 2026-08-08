@@ -61,7 +61,9 @@ export async function listarContratos(params: {
   estado?: string;
   personaId?: number;
   incluirInactivos: boolean;
-}): Promise<Record<string, unknown>[]> {
+  limite: number;
+  desplazamiento: number;
+}): Promise<{ total: number; filas: Record<string, unknown>[] }> {
   const condiciones: string[] = [];
   const valores: unknown[] = [];
 
@@ -76,6 +78,18 @@ export async function listarContratos(params: {
   }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
+
+  const totalResult = await pool.query<{ n: number }>(
+    `${CTE_RAIZ}
+     SELECT count(*)::int AS n
+     FROM public.contrato_prestamo cp
+     JOIN public.estado_contrato_prestamo ecp ON ecp.id = cp.estado_id
+     LEFT JOIN cadena ca ON ca.id = cp.id
+     LEFT JOIN public.detalle_entrega de ON de.id = ca.detalle_entrega_id
+     LEFT JOIN public.entrega e ON e.id = de.entrega_id
+     ${where}`,
+    valores,
+  );
 
   const result = await pool.query(
     `${CTE_RAIZ}
@@ -116,10 +130,12 @@ export async function listarContratos(params: {
        GROUP BY contrato_prestamo_id
      ) m ON m.contrato_prestamo_id = cp.id
      ${where}
-     ORDER BY cp.fecha_devolucion_pactada, cp.id`,
-    valores,
+     ORDER BY cp.fecha_devolucion_pactada, cp.id
+     LIMIT $${valores.length + 1} OFFSET $${valores.length + 2}`,
+    [...valores, params.limite, params.desplazamiento],
   );
-  return result.rows;
+
+  return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
 /**

@@ -34,6 +34,7 @@ import {
   anularMulta,
 } from "./multa.repository.js";
 import { guardarArchivo } from "../../lib/storage/storage.service.js";
+import { paginar } from "../../lib/paginacion.js";
 
 async function resolverContrato(
   req: Request,
@@ -86,13 +87,14 @@ export async function listarController(
         errores: parsed.error.flatten().fieldErrors,
       });
     }
-    return res.status(200).json(
-      await listarContratos({
-        estado: parsed.data.estado,
-        personaId: parsed.data.personaId,
-        incluirInactivos: parsed.data.incluirInactivos,
-      }),
-    );
+    const { total, filas } = await listarContratos({
+      estado: parsed.data.estado,
+      personaId: parsed.data.personaId,
+      incluirInactivos: parsed.data.incluirInactivos,
+      limite: parsed.data.limite,
+      desplazamiento: parsed.data.desplazamiento,
+    });
+    return res.status(200).json(paginar(filas, total, parsed.data));
   } catch (error) {
     return next(error);
   }

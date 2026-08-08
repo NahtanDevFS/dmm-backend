@@ -64,7 +64,9 @@ export async function listarEntregas(params: {
   desde?: string;
   hasta?: string;
   incluirAnuladas: boolean;
-}): Promise<Record<string, unknown>[]> {
+  limite: number;
+  desplazamiento: number;
+}): Promise<{ total: number; filas: Record<string, unknown>[] }> {
   const condiciones: string[] = [];
   const valores: unknown[] = [];
 
@@ -92,6 +94,13 @@ export async function listarEntregas(params: {
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
 
+  // Se cuentan entregas, no renglones: el listado agrupa por entrega, asi que
+  // contar sobre el join daria un total inflado.
+  const totalResult = await pool.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM public.entrega e ${where}`,
+    valores,
+  );
+
   const result = await pool.query(
     `SELECT e.id,
             e.fecha_entrega,
@@ -116,10 +125,12 @@ export async function listarEntregas(params: {
      LEFT JOIN public.insumo i    ON i.id = dl.insumo_id
      ${where}
      GROUP BY e.id, p.nombres, p.apellidos, pr.nombres, pr.apellidos, tp.nombre, u.username
-     ORDER BY e.fecha_entrega DESC, e.id DESC`,
-    valores,
+     ORDER BY e.fecha_entrega DESC, e.id DESC
+     LIMIT $${valores.length + 1} OFFSET $${valores.length + 2}`,
+    [...valores, params.limite, params.desplazamiento],
   );
-  return result.rows;
+
+  return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
 /** Renglones de la entrega: de qué lote salió cada cantidad. */

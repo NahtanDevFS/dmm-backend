@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginacionShape } from "../../lib/paginacion.js";
 
 export const crearInsumoSchema = z.object({
   categoria_id: z.number().int().positive("categoria_id es requerido"),
@@ -29,4 +30,5 @@ export const listarInsumosQuerySchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  ...paginacionShape,
 });
