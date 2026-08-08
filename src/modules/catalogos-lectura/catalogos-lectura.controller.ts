@@ -3,6 +3,7 @@ import {
   listarTiposGenero,
   listarTiposParentesco,
   listarTiposDocumentoPersona,
+  listarTiposEvidenciaEntrega,
 } from "./catalogos-lectura.repository.js";
 
 export async function listarTiposGeneroController(
@@ -38,6 +39,19 @@ export async function listarTiposDocumentoPersonaController(
 ) {
   try {
     const tipos = await listarTiposDocumentoPersona();
+    return res.status(200).json(tipos);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listarTiposEvidenciaEntregaController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const tipos = await listarTiposEvidenciaEntrega();
     return res.status(200).json(tipos);
   } catch (error) {
     return next(error);

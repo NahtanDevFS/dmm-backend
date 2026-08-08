@@ -18,6 +18,12 @@ export interface TipoDocumentoPersonaRow {
   activo: boolean;
 }
 
+export interface TipoEvidenciaEntregaRow {
+  id: number;
+  nombre: string;
+  activo: boolean;
+}
+
 export async function listarTiposGenero(): Promise<TipoGeneroRow[]> {
   return prisma.tipo_genero.findMany({
     where: { activo: true },
@@ -44,6 +50,16 @@ export async function listarTiposDocumentoPersona(): Promise<
   });
 }
 
+export async function listarTiposEvidenciaEntrega(): Promise<
+  TipoEvidenciaEntregaRow[]
+> {
+  return prisma.tipo_evidencia_entrega.findMany({
+    where: { activo: true },
+    orderBy: { nombre: "asc" },
+    select: { id: true, nombre: true, activo: true },
+  });
+}
+
 export async function existeTipoGeneroActivo(id: number): Promise<boolean> {
   const tipo = await prisma.tipo_genero.findUnique({
     where: { id },
@@ -64,6 +80,16 @@ export async function existeTipoDocumentoPersonaActivo(
   id: number,
 ): Promise<boolean> {
   const tipo = await prisma.tipo_documento_persona.findUnique({
+    where: { id },
+    select: { activo: true },
+  });
+  return tipo?.activo === true;
+}
+
+export async function existeTipoEvidenciaEntregaActivo(
+  id: number,
+): Promise<boolean> {
+  const tipo = await prisma.tipo_evidencia_entrega.findUnique({
     where: { id },
     select: { activo: true },
   });
