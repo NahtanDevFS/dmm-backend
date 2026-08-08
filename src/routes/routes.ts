@@ -5,6 +5,8 @@ import geografiaRoutes from "../modules/geografia/geografia.routes.js";
 import comunidadRoutes from "../modules/comunidades/comunidad.routes.js";
 import personaRoutes from "../modules/personas/persona.routes.js";
 import insumoRoutes from "../modules/insumos/insumo.routes.js";
+import recepcionRoutes from "../modules/inventario/recepcion.routes.js";
+import inventarioRoutes from "../modules/inventario/inventario.routes.js";
 import catalogosLecturaRoutes from "../modules/catalogos-lectura/catalogos-lectura.routes.js";
 import archivosRoutes from "../lib/storage/archivos.routes.js";
 
@@ -20,6 +22,8 @@ router.use("/", archivosRoutes);
 router.use("/comunidades", comunidadRoutes);
 router.use("/personas", personaRoutes);
 router.use("/insumos", insumoRoutes);
+router.use("/recepciones", recepcionRoutes);
+router.use("/inventario", inventarioRoutes);
 
 // Aquí se irán agregando las rutas de los demás módulos
 // router.use('/beneficiarios', beneficiariosRoutes);
