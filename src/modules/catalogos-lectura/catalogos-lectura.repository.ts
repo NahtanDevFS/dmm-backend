@@ -24,6 +24,12 @@ export interface TipoEvidenciaEntregaRow {
   activo: boolean;
 }
 
+/** `estado_solicitud_apoyo` no tiene columna `activo`: es un catálogo cerrado. */
+export interface EstadoSolicitudRow {
+  id: number;
+  nombre: string;
+}
+
 export async function listarTiposGenero(): Promise<TipoGeneroRow[]> {
   return prisma.tipo_genero.findMany({
     where: { activo: true },
@@ -57,6 +63,13 @@ export async function listarTiposEvidenciaEntrega(): Promise<
     where: { activo: true },
     orderBy: { nombre: "asc" },
     select: { id: true, nombre: true, activo: true },
+  });
+}
+
+export async function listarEstadosSolicitud(): Promise<EstadoSolicitudRow[]> {
+  return prisma.estado_solicitud_apoyo.findMany({
+    orderBy: { id: "asc" },
+    select: { id: true, nombre: true },
   });
 }
 
