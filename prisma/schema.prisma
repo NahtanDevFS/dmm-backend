@@ -26,9 +26,6 @@ model auditoria_log {
 model categoria_insumo {
   id                                           Int       @id @default(autoincrement())
   nombre                                       String    @unique @db.VarChar(100)
-  requiere_fecha_caducidad                     Boolean   @default(false)
-  requiere_codigo_fabricante                   Boolean   @default(false)
-  bloquea_solicitud_sin_stock                  Boolean   @default(false)
   activo                                       Boolean   @default(true)
   created_at                                   DateTime  @default(now()) @db.Timestamp(6)
   updated_at                                   DateTime? @db.Timestamp(6)
@@ -138,15 +135,19 @@ model detalle_inventario_lote {
   updated_at                                          DateTime?               @db.Timestamp(6)
   created_by                                          Int?
   updated_by                                          Int?
+  unidades_por_presentacion_lote                      Decimal                 @db.Decimal(12, 4)
+  marca_id                                            Int?
   detalle_entrega                                     detalle_entrega[]
   usuario_detalle_inventario_lote_created_byTousuario usuario?                @relation("detalle_inventario_lote_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_detalle_lote_created_by")
   insumo                                              insumo                  @relation(fields: [insumo_id], references: [id], onUpdate: NoAction, map: "fk_detalle_lote_insumo")
   presentacion_insumo                                 presentacion_insumo     @relation(fields: [presentacion_recepcion_id], references: [id], onUpdate: NoAction, map: "fk_detalle_lote_presentacion")
   recepcion_donacion_lote                             recepcion_donacion_lote @relation(fields: [recepcion_lote_id], references: [id], onUpdate: NoAction, map: "fk_detalle_lote_recepcion")
   usuario_detalle_inventario_lote_updated_byTousuario usuario?                @relation("detalle_inventario_lote_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_detalle_lote_updated_by")
+  marca_insumo                                        marca_insumo?           @relation(fields: [marca_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_dil_marca")
 
   @@index([insumo_id, activo, fecha_caducidad], map: "idx_detalle_inventario_fifo", where: raw("((activo = true) AND (cantidad_disponible > 0))"))
   @@index([recepcion_lote_id], map: "idx_detalle_inventario_recepcion")
+  @@index([marca_id], map: "idx_detalle_inventario_marca", where: raw("(marca_id IS NOT NULL)"))
 }
 
 model discapacidad {
@@ -298,12 +299,14 @@ model insumo {
   unidad_medida_base_id              Int
   nombre                             String                    @db.VarChar(150)
   descripcion                        String?
-  es_perecedero                      Boolean                   @default(false)
   activo                             Boolean                   @default(true)
   created_at                         DateTime                  @default(now()) @db.Timestamp(6)
   updated_at                         DateTime?                 @db.Timestamp(6)
   created_by                         Int?
   updated_by                         Int?
+  requiere_fecha_caducidad           Boolean                   @default(false)
+  requiere_codigo_fabricante         Boolean                   @default(false)
+  bloquea_solicitud_sin_stock        Boolean                   @default(false)
   detalle_inventario_lote            detalle_inventario_lote[]
   detalle_solicitud_apoyo            detalle_solicitud_apoyo[]
   usuario_insumo_created_byTousuario usuario?                  @relation("insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ins2_created_by")
@@ -385,7 +388,6 @@ model presentacion_insumo {
   id                                              Int                       @id @default(autoincrement())
   insumo_id                                       Int                       @unique(map: "idx_presentacion_default_unica", where: raw("(es_default = true)"))
   unidad_medida_id                                Int
-  factor_a_base                                   Decimal                   @db.Decimal(12, 4)
   es_default                                      Boolean                   @default(false)
   activo                                          Boolean                   @default(true)
   created_at                                      DateTime                  @default(now()) @db.Timestamp(6)
@@ -585,6 +587,8 @@ model usuario {
   institucion_donante_institucion_donante_updated_byTousuario                 institucion_donante[]         @relation("institucion_donante_updated_byTousuario")
   insumo_insumo_created_byTousuario                                           insumo[]                      @relation("insumo_created_byTousuario")
   insumo_insumo_updated_byTousuario                                           insumo[]                      @relation("insumo_updated_byTousuario")
+  marca_insumo_marca_insumo_created_byTousuario                               marca_insumo[]                @relation("marca_insumo_created_byTousuario")
+  marca_insumo_marca_insumo_updated_byTousuario                               marca_insumo[]                @relation("marca_insumo_updated_byTousuario")
   multa_prestamo_multa_prestamo_created_byTousuario                           multa_prestamo[]              @relation("multa_prestamo_created_byTousuario")
   multa_prestamo_multa_prestamo_updated_byTousuario                           multa_prestamo[]              @relation("multa_prestamo_updated_byTousuario")
   municipio_municipio_created_byTousuario                                     municipio[]                   @relation("municipio_created_byTousuario")
@@ -798,4 +802,17 @@ model tipo_parentesco {
   entrega                                     entrega[]
   usuario_tipo_parentesco_created_byTousuario usuario?          @relation("tipo_parentesco_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tp_created_by")
   usuario_tipo_parentesco_updated_byTousuario usuario?          @relation("tipo_parentesco_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tp_updated_by")
+}
+
+model marca_insumo {
+  id                                       Int                       @id @default(autoincrement())
+  nombre                                   String                    @unique @db.VarChar(150)
+  activo                                   Boolean                   @default(true)
+  created_at                               DateTime                  @default(now()) @db.Timestamp(6)
+  updated_at                               DateTime?                 @db.Timestamp(6)
+  created_by                               Int?
+  updated_by                               Int?
+  detalle_inventario_lote                  detalle_inventario_lote[]
+  usuario_marca_insumo_created_byTousuario usuario?                  @relation("marca_insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_mi_created_by")
+  usuario_marca_insumo_updated_byTousuario usuario?                  @relation("marca_insumo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_mi_updated_by")
 }

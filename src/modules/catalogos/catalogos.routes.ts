@@ -10,7 +10,5 @@ for (const config of Object.values(CATALOGOS_SIMPLES)) {
 
 // Catálogos con reglas propias (fuera del molde genérico)
 //   router.use("/comunidades", comunidadRoutes);
-//   router.use("/roles", rolRoutes);
-//   router.use("/categorias-insumo", categoriaInsumoRoutes);
 
 export default router;

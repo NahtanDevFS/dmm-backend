@@ -1,6 +1,10 @@
 export interface CatalogoSimpleConfig {
   slug: string;
-  prismaModel: "discapacidad" | "programa" | "institucion_donante";
+  prismaModel:
+    | "discapacidad"
+    | "programa"
+    | "institucion_donante"
+    | "categoria_insumo";
   tableName: string;
   /**
    * No todas las tablas de catálogo tienen columna `descripcion`: hoy solo
@@ -44,6 +48,22 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
       columnaFk: "programa_id",
       mensajeBloqueo:
         "No se puede desactivar: existen solicitudes de apoyo activas asociadas a este programa.",
+    },
+  },
+  // Antes era un módulo a medida por sus 3 flags booleanos. El esquema v3 los
+  // movió a `insumo` (los leen fn_calcular_recepcion_lote y
+  // fn_validar_stock_linea_solicitud), así que la tabla quedó como un catálogo
+  // simple más y encaja en este molde.
+  "categorias-insumo": {
+    slug: "categorias-insumo",
+    prismaModel: "categoria_insumo",
+    tableName: "categoria_insumo",
+    tieneDescripcion: false,
+    dependencia: {
+      tablaDependiente: "insumo",
+      columnaFk: "categoria_id",
+      mensajeBloqueo:
+        "No se puede desactivar: existen insumos activos asignados a esta categoría.",
     },
   },
   "instituciones-donantes": {
