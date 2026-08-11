@@ -3,6 +3,10 @@ import {
   listarTiposGenero,
   listarTiposParentesco,
   listarTiposDocumentoPersona,
+  listarTiposEvidenciaEntrega,
+  listarEstadosSolicitud,
+  listarEstadosContrato,
+  listarTiposMulta,
 } from "./catalogos-lectura.repository.js";
 
 export async function listarTiposGeneroController(
@@ -39,6 +43,56 @@ export async function listarTiposDocumentoPersonaController(
   try {
     const tipos = await listarTiposDocumentoPersona();
     return res.status(200).json(tipos);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listarTiposEvidenciaEntregaController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const tipos = await listarTiposEvidenciaEntrega();
+    return res.status(200).json(tipos);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listarEstadosSolicitudController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const estados = await listarEstadosSolicitud();
+    return res.status(200).json(estados);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listarEstadosContratoController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    return res.status(200).json(await listarEstadosContrato());
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listarTiposMultaController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    return res.status(200).json(await listarTiposMulta());
   } catch (error) {
     return next(error);
   }

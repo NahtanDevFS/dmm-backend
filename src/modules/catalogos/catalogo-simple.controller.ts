@@ -9,7 +9,7 @@ import {
   listarCatalogoSimple,
   buscarCatalogoSimplePorId,
   existeNombreDuplicado,
-  tieneDependenciasActivas,
+  buscarDependenciaBloqueante,
   crearCatalogoSimple,
   editarCatalogoSimple,
   cambiarEstadoCatalogoSimple,
@@ -131,11 +131,13 @@ export function createCatalogoSimpleController(config: CatalogoSimpleConfig) {
       //bloquear si hay dependientes activos, indicando la causa
       const client = await pool.connect();
       try {
-        const bloqueado = await tieneDependenciasActivas(config, id, client);
-        if (bloqueado) {
-          return res.status(409).json({
-            message: config.dependencia?.mensajeBloqueo,
-          });
+        const bloqueante = await buscarDependenciaBloqueante(
+          config,
+          id,
+          client,
+        );
+        if (bloqueante) {
+          return res.status(409).json({ message: bloqueante.mensajeBloqueo });
         }
       } finally {
         client.release();

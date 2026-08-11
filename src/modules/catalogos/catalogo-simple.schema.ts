@@ -7,11 +7,17 @@ const baseShape = {
     .trim()
     .min(1, "El nombre es requerido")
     .max(150, "El nombre es demasiado largo"),
-  descripcion: z.string().trim().max(2000).nullable().optional(),
 };
 
 export function buildCrearSchema(config: CatalogoSimpleConfig) {
   let schema = z.object(baseShape);
+
+  // `descripcion` solo se acepta si la tabla realmente tiene la columna.
+  if (config.tieneDescripcion) {
+    schema = schema.extend({
+      descripcion: z.string().trim().max(2000).nullable().optional(),
+    }) as typeof schema;
+  }
 
   for (const campo of config.camposExtra ?? []) {
     const base = z.string().trim().max(200);

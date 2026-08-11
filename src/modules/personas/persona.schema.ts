@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginacionShape } from "../../lib/paginacion.js";
 
 const nombresSchema = z
   .string()
@@ -54,7 +55,6 @@ const encargadoSchema = z.discriminatedUnion("tipo", [
   }),
   z.object({
     tipo: z.literal("nuevo"),
-    datos: datosBasePersonaSchema,
     tipoParentescoId: z.number().int().positive(),
   }),
 ]);
@@ -84,6 +84,7 @@ export const listarPersonasQuerySchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  ...paginacionShape,
 });
 
 export const agregarDiscapacidadSchema = z.object({

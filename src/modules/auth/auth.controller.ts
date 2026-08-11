@@ -80,4 +80,16 @@ export async function logoutController(
   }
 }
 
+/**
+ * Devuelve la sesión vigente. Sin este endpoint el frontend no puede recuperar
+ * quién está autenticado al recargar la página: la cookie es HttpOnly, así que
+ * JavaScript no puede leerla ni deducir el usuario de ella.
+ *
+ * requireAuth ya validó la sesión y colgó req.usuario, así que aquí solo se
+ * devuelve lo mismo que entrega el login.
+ */
+export async function meController(req: Request, res: Response) {
+  return res.status(200).json({ usuario: req.usuario });
+}
+
 export { COOKIE_NAME };
