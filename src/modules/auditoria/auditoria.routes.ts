@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
 import { requireRole } from "../../middlewares/role.middleware.js";
+import { SOLO_ADMIN } from "../../config/roles.js";
 import {
   listarController,
   tablasController,
@@ -15,18 +16,16 @@ import {
  * Reservado a ADMINISTRADOR: el log contiene el contenido completo de cada fila
  * modificada de todo el sistema.
  */
-const SOLO_ADMIN = ["ADMINISTRADOR"];
-
 const router = Router();
 
 // Antes de las rutas con parámetros para que "tablas" no se lea como una tabla.
-router.get("/tablas", requireAuth, requireRole(...SOLO_ADMIN), tablasController);
+router.get("/tablas", requireAuth, requireRole(SOLO_ADMIN), tablasController);
 
-router.get("/", requireAuth, requireRole(...SOLO_ADMIN), listarController);
+router.get("/", requireAuth, requireRole(SOLO_ADMIN), listarController);
 router.get(
   "/:tabla/:registroId",
   requireAuth,
-  requireRole(...SOLO_ADMIN),
+  requireRole(SOLO_ADMIN),
   historialController,
 );
 

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
 import { requireRole } from "../../middlewares/role.middleware.js";
+import { REPORTES } from "../../config/roles.js";
 import {
   personasAtendidasController,
   stockPorCategoriaController,
@@ -15,26 +16,24 @@ import {
  * EMPLEADO_DMM queda fuera a propósito: la matriz de roles reserva los reportes
  * para dirección, alcaldía y administración.
  */
-const ROLES_REPORTES = ["DIRECTORA", "ALCALDE", "ADMINISTRADOR"];
-
 const router = Router();
 
 router.get(
   "/personas-atendidas",
   requireAuth,
-  requireRole(...ROLES_REPORTES),
+  requireRole(REPORTES),
   personasAtendidasController,
 );
 router.get(
   "/stock-por-categoria",
   requireAuth,
-  requireRole(...ROLES_REPORTES),
+  requireRole(REPORTES),
   stockPorCategoriaController,
 );
 router.get(
   "/poblacion-beneficiada",
   requireAuth,
-  requireRole(...ROLES_REPORTES),
+  requireRole(REPORTES),
   poblacionBeneficiadaController,
 );
 

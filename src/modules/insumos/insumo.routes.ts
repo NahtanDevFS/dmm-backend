@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
 import { requireRole } from "../../middlewares/role.middleware.js";
+import { DIRECCION, OPERACION } from "../../config/roles.js";
 import {
   listarController,
   obtenerController,
@@ -16,30 +17,28 @@ import presentacionRoutes from "./presentacion-insumo.routes.js";
 // operación diaria: la gestión queda con los mismos roles que el resto de
 // catálogos. Lo operativo (recepción de donaciones, entregas) sí incluirá a
 // EMPLEADO_DMM.
-const ROLES_GESTION = ["DIRECTORA", "ADMINISTRADOR"];
-
 const router = Router();
 
-router.get("/", requireAuth, listarController);
-router.get("/:id", requireAuth, obtenerController);
-router.get("/:id/stock", requireAuth, obtenerStockController);
-router.post("/", requireAuth, requireRole(...ROLES_GESTION), crearController);
-router.patch(
-  "/:id",
+router.get("/", requireAuth, requireRole(OPERACION), listarController);
+router.get("/:id", requireAuth, requireRole(OPERACION), obtenerController);
+router.get(
+  "/:id/stock",
   requireAuth,
-  requireRole(...ROLES_GESTION),
-  editarController,
+  requireRole(OPERACION),
+  obtenerStockController,
 );
+router.post("/", requireAuth, requireRole(DIRECCION), crearController);
+router.patch("/:id", requireAuth, requireRole(DIRECCION), editarController);
 router.patch(
   "/:id/desactivar",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(DIRECCION),
   desactivarController,
 );
 router.patch(
   "/:id/reactivar",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(DIRECCION),
   reactivarController,
 );
 
