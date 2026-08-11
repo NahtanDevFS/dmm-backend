@@ -2,9 +2,12 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Las pruebas hablan con la base de datos real: precargan el .env igual que
-    // los scripts dev/start, para no duplicar la configuración de conexión.
-    setupFiles: ["dotenv/config"],
+    // Precargan el .env igual que los scripts dev/start, y además apuntan el
+    // pool de la aplicación a la base de PRUEBAS: src/db/pool.ts lee
+    // DATABASE_URL, así que sin esto las pruebas escribirían en la base de
+    // desarrollo. tests/helpers/bd.ts verifica además que el nombre contenga
+    // "test" antes de vaciar nada.
+    setupFiles: ["dotenv/config", "./tests/setup.ts"],
     include: ["tests/**/*.test.ts"],
     // Sin paralelismo: varias pruebas escriben y leen las mismas tablas, y
     // ejecutarlas a la vez volvería los resultados dependientes del orden.

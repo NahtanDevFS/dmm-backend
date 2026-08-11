@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { pool } from "../src/db/pool.js";
+import {
+  poolOwner,
+  cerrarPools,
+  sembrarCatalogosDeSistema,
+} from "./helpers/bd.js";
 import { withUserTransaction } from "../src/db/withUserTransaction.js";
 
 /**
@@ -11,39 +16,53 @@ import { withUserTransaction } from "../src/db/withUserTransaction.js";
  * que `fn_auditoria` lo lea. Con la base simulada no se comprobaría nada útil.
  *
  * Trabaja sobre un registro propio de la tabla `discapacidad` — un catálogo
- * simple sin dependencias — y lo borra al terminar.
+ * simple sin dependencias.
+ *
+ * La limpieza usa `poolOwner`, no el pool de la aplicación: desde la migración
+ * 12 el rol `dmm_app` no tiene DELETE en ninguna tabla y `auditoria_log` es de
+ * solo lectura para él. Que este borrado FALLE con el pool de la aplicación es
+ * justamente la protección funcionando, no un defecto.
  */
 
 const NOMBRE_PRUEBA = "ZZ Prueba withUserTransaction";
 let usuarioId: number;
 
 async function limpiar(): Promise<void> {
-  await pool.query(`DELETE FROM public.auditoria_log
+  await poolOwner.query(`DELETE FROM public.auditoria_log
                     WHERE tabla_afectada = 'discapacidad'
                       AND registro_id IN (
                         SELECT id FROM public.discapacidad WHERE nombre LIKE 'ZZ Prueba withUserTransaction%'
                       )`);
-  await pool.query(
+  await poolOwner.query(
     `DELETE FROM public.discapacidad WHERE nombre LIKE 'ZZ Prueba withUserTransaction%'`,
   );
 }
 
 beforeAll(async () => {
-  const usuario = await pool.query<{ id: number }>(
-    `SELECT id FROM public.usuario WHERE activo = true ORDER BY id LIMIT 1`,
+  await limpiar();
+  await sembrarCatalogosDeSistema();
+  // Se crea el usuario en vez de buscar uno existente: la base de pruebas se
+  // vacía entre suites, así que no se puede depender de que haya alguno.
+  const usuario = await poolOwner.query<{ id: number }>(
+    `INSERT INTO public.usuario (username, password_hash, rol_id, activo)
+     SELECT 'test_with_user_transaction', 'x', r.id, true
+       FROM public.rol r WHERE r.nombre = 'ADMINISTRADOR'
+     ON CONFLICT (username) DO UPDATE SET activo = true
+     RETURNING id`,
   );
-  if (usuario.rows.length === 0) {
+  if (!usuario.rows[0]) {
     throw new Error(
-      "La prueba necesita al menos un usuario activo en la base de datos.",
+      "No se pudo crear el usuario de prueba: falta el rol ADMINISTRADOR en la " +
+        "base de pruebas. Corra sembrarCatalogosDeSistema() o el script del esquema.",
     );
   }
   usuarioId = usuario.rows[0].id;
-  await limpiar();
 });
 
 afterAll(async () => {
   await limpiar();
   await pool.end();
+  await cerrarPools();
 });
 
 describe("withUserTransaction", () => {
