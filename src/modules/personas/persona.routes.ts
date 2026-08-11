@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
 import { requireRole } from "../../middlewares/role.middleware.js";
+import { OPERACION } from "../../config/roles.js";
 import {
   listarController,
   obtenerController,
@@ -18,80 +19,67 @@ import {
 } from "./persona.controller.js";
 import documentoPersonaRoutes from "./documento-persona.routes.js";
 
-const ROLES_GESTION = ["EMPLEADO_DMM", "DIRECTORA", "ADMINISTRADOR"];
-const ROLES_LECTURA = ["EMPLEADO_DMM", "DIRECTORA", "ADMINISTRADOR"];
-
 const router = Router();
 
-router.get("/", requireAuth, requireRole(...ROLES_LECTURA), listarController);
-router.get(
-  "/:id",
-  requireAuth,
-  requireRole(...ROLES_LECTURA),
-  obtenerController,
-);
-router.post("/", requireAuth, requireRole(...ROLES_GESTION), crearController);
-router.patch(
-  "/:id",
-  requireAuth,
-  requireRole(...ROLES_GESTION),
-  editarController,
-);
+router.get("/", requireAuth, requireRole(OPERACION), listarController);
+router.get("/:id", requireAuth, requireRole(OPERACION), obtenerController);
+router.post("/", requireAuth, requireRole(OPERACION), crearController);
+router.patch("/:id", requireAuth, requireRole(OPERACION), editarController);
 router.patch(
   "/:id/desactivar",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   desactivarController,
 );
 router.patch(
   "/:id/reactivar",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   reactivarController,
 );
 
 router.post(
   "/:id/discapacidades",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   agregarDiscapacidadController,
 );
 router.delete(
   "/:id/discapacidades/:discapacidadId",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   quitarDiscapacidadController,
 );
 
 router.post(
   "/:id/encargados",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   vincularEncargadoController,
 );
 router.delete(
   "/:id/encargados/:encargadoId",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   desvincularEncargadoController,
 );
 
 router.post(
   "/:id/contactos",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   agregarContactoController,
 );
 router.patch(
   "/:id/contactos/:contactoId",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   editarContactoController,
 );
 router.delete(
   "/:id/contactos/:contactoId",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   eliminarContactoController,
 );
 

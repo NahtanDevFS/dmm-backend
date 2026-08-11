@@ -1,3 +1,6 @@
+import type { Rol } from "../../config/roles.js";
+import { LECTURA_CATALOGOS_REPORTE, OPERACION } from "../../config/roles.js";
+
 export interface DependenciaCatalogo {
   tablaDependiente: string;
   columnaFk: string;
@@ -22,6 +25,13 @@ export interface CatalogoSimpleConfig {
    */
   tieneDescripcion: boolean;
   /**
+   * Quien puede LEER el catalogo. La gestion siempre es DIRECCION; lo que varia
+   * es la lectura: los catalogos que alimentan un filtro de reportes
+   * (discapacidad, programa, categoria de insumo) los necesita tambien ALCALDE,
+   * que por lo demas no entra a ningun modulo de negocio.
+   */
+  rolesLectura: Rol[];
+  /**
    * Tablas que impiden desactivar el registro si tienen filas activas
    * apuntándolo (RF-CAT-03). Se evalúan en orden y gana el primer bloqueo,
    * así que conviene poner primero la dependencia más explicativa para el
@@ -41,6 +51,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
     prismaModel: "discapacidad",
     tableName: "discapacidad",
     tieneDescripcion: false,
+    rolesLectura: LECTURA_CATALOGOS_REPORTE,
     dependencias: [
       {
         tablaDependiente: "persona_discapacidad",
@@ -55,6 +66,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
     prismaModel: "programa",
     tableName: "programa",
     tieneDescripcion: true,
+    rolesLectura: LECTURA_CATALOGOS_REPORTE,
     dependencias: [
       {
         tablaDependiente: "solicitud_apoyo",
@@ -73,6 +85,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
     prismaModel: "categoria_insumo",
     tableName: "categoria_insumo",
     tieneDescripcion: false,
+    rolesLectura: LECTURA_CATALOGOS_REPORTE,
     dependencias: [
       {
         tablaDependiente: "insumo",
@@ -89,6 +102,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
     prismaModel: "marca_insumo",
     tableName: "marca_insumo",
     tieneDescripcion: false,
+    rolesLectura: OPERACION,
     dependencias: [
       {
         tablaDependiente: "detalle_inventario_lote",
@@ -105,6 +119,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
     prismaModel: "unidad_medida",
     tableName: "unidad_medida",
     tieneDescripcion: false,
+    rolesLectura: OPERACION,
     dependencias: [
       {
         tablaDependiente: "insumo",
@@ -125,6 +140,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
     prismaModel: "institucion_donante",
     tableName: "institucion_donante",
     tieneDescripcion: false,
+    rolesLectura: OPERACION,
     dependencias: [
       {
         tablaDependiente: "recepcion_donacion_lote",

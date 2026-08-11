@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
+import { requireRole } from "../../middlewares/role.middleware.js";
+import { SOLO_ADMIN } from "../../config/roles.js";
 import { listarRolesController } from "./usuario.controller.js";
 
 /**
@@ -10,6 +12,7 @@ import { listarRolesController } from "./usuario.controller.js";
  */
 const router = Router();
 
-router.get("/", requireAuth, listarRolesController);
+// Solo ADMINISTRADOR: su unico consumidor es el select de gestion de usuarios.
+router.get("/", requireAuth, requireRole(SOLO_ADMIN), listarRolesController);
 
 export default router;

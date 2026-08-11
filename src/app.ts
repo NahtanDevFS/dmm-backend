@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import routes from "./routes/routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { limiteGeneral } from "./middlewares/rate-limit.middleware.js";
+import { verificarRutasProtegidas } from "./lib/rutas-protegidas.js";
 
 const app = express();
 
@@ -50,5 +51,12 @@ app.use("/api", limiteGeneral);
 app.use("/api", routes);
 
 app.use(errorHandler);
+
+/**
+ * Se ejecuta al importar el modulo, antes de que el servidor escuche: si alguna
+ * ruta de /api quedo sin requireRole, el proceso no arranca. Ver el motivo en
+ * src/lib/rutas-protegidas.ts.
+ */
+verificarRutasProtegidas(routes);
 
 export default app;

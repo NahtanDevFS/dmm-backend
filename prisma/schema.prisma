@@ -21,6 +21,9 @@ model auditoria_log {
   usuario               usuario?              @relation(fields: [usuario_id], references: [id], onUpdate: NoAction, map: "fk_auditoria_usuario")
 
   @@index([tipo_accion_id], map: "idx_auditoria_tipo_accion")
+  @@index([fecha_hora(sort: Desc)], map: "idx_auditoria_fecha")
+  @@index([tabla_afectada, registro_id], map: "idx_auditoria_tabla_registro")
+  @@index([usuario_id], map: "idx_auditoria_usuario", where: raw("(usuario_id IS NOT NULL)"))
 }
 
 model categoria_insumo {

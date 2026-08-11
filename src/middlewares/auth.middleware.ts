@@ -73,10 +73,7 @@ export async function requireAuth(
      * de inactividad en vez de a los 30. Contra una ventana de media hora es
      * irrelevante.
      */
-    if (
-      Date.now() - sesion.ultima_actividad.getTime() >
-      LATIDO_MINIMO_MS
-    ) {
+    if (Date.now() - sesion.ultima_actividad.getTime() > LATIDO_MINIMO_MS) {
       actualizarUltimaActividad(sesion.id, usuario.id).catch((err) => {
         console.error("Error actualizando ultima_actividad de sesion:", err);
       });

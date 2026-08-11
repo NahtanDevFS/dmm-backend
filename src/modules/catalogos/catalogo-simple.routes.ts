@@ -1,10 +1,9 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
 import { requireRole } from "../../middlewares/role.middleware.js";
+import { DIRECCION } from "../../config/roles.js";
 import type { CatalogoSimpleConfig } from "./catalogo-simple.config.js";
 import { createCatalogoSimpleController } from "./catalogo-simple.controller.js";
-
-const ROLES_GESTION = ["DIRECTORA", "ADMINISTRADOR"];
 
 export function createCatalogoSimpleRouter(
   config: CatalogoSimpleConfig,
@@ -12,30 +11,30 @@ export function createCatalogoSimpleRouter(
   const router = Router();
   const controller = createCatalogoSimpleController(config);
 
-  router.get("/", requireAuth, controller.listar);
-  router.get("/:id", requireAuth, controller.obtener);
-  router.post(
+  router.get(
     "/",
     requireAuth,
-    requireRole(...ROLES_GESTION),
-    controller.crear,
+    requireRole(config.rolesLectura),
+    controller.listar,
   );
-  router.patch(
+  router.get(
     "/:id",
     requireAuth,
-    requireRole(...ROLES_GESTION),
-    controller.editar,
+    requireRole(config.rolesLectura),
+    controller.obtener,
   );
+  router.post("/", requireAuth, requireRole(DIRECCION), controller.crear);
+  router.patch("/:id", requireAuth, requireRole(DIRECCION), controller.editar);
   router.patch(
     "/:id/desactivar",
     requireAuth,
-    requireRole(...ROLES_GESTION),
+    requireRole(DIRECCION),
     controller.desactivar,
   );
   router.patch(
     "/:id/reactivar",
     requireAuth,
-    requireRole(...ROLES_GESTION),
+    requireRole(DIRECCION),
     controller.reactivar,
   );
 
