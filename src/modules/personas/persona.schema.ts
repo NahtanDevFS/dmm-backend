@@ -55,6 +55,9 @@ const encargadoSchema = z.discriminatedUnion("tipo", [
   }),
   z.object({
     tipo: z.literal("nuevo"),
+    // Datos de la persona del encargado que se va a crear en la misma
+    // transaccion. Sin este campo, persona.repository lee `encargado.datos`
+    // sobre undefined al vincular un encargado nuevo (RF-BEN-03).
     datos: datosBasePersonaSchema,
     tipoParentescoId: z.number().int().positive(),
   }),

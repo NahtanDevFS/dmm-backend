@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
-import { requireRole } from "../../middlewares/role.middleware.js";
+import {
+  requireRole,
+  permitirSinRol,
+} from "../../middlewares/role.middleware.js";
+import { SOLO_ADMIN } from "../../config/roles.js";
 import {
   listarController,
   obtenerController,
@@ -14,34 +18,39 @@ import {
 
 // Gestionar usuarios es exclusivo de ADMINISTRADOR (matriz de roles): incluye
 // crear cuentas y cambiar el rol de otros, que es control de acceso puro.
-const SOLO_ADMIN = ["ADMINISTRADOR"];
-
 const router = Router();
 
 // Cambiar la propia contraseña no es administrar usuarios: lo hace cualquiera
 // con sesión, y va antes de "/:id" para que "mi-password" no se lea como un id.
-router.patch("/mi-password", requireAuth, cambiarPasswordPropiaController);
+router.patch(
+  "/mi-password",
+  requireAuth,
+  permitirSinRol(
+    "Cambiar la propia contraseña no es administrar usuarios: exige la contraseña actual y solo afecta a quien la pide.",
+  ),
+  cambiarPasswordPropiaController,
+);
 
-router.get("/", requireAuth, requireRole(...SOLO_ADMIN), listarController);
-router.get("/:id", requireAuth, requireRole(...SOLO_ADMIN), obtenerController);
-router.post("/", requireAuth, requireRole(...SOLO_ADMIN), crearController);
-router.patch("/:id", requireAuth, requireRole(...SOLO_ADMIN), editarController);
+router.get("/", requireAuth, requireRole(SOLO_ADMIN), listarController);
+router.get("/:id", requireAuth, requireRole(SOLO_ADMIN), obtenerController);
+router.post("/", requireAuth, requireRole(SOLO_ADMIN), crearController);
+router.patch("/:id", requireAuth, requireRole(SOLO_ADMIN), editarController);
 router.patch(
   "/:id/desactivar",
   requireAuth,
-  requireRole(...SOLO_ADMIN),
+  requireRole(SOLO_ADMIN),
   desactivarController,
 );
 router.patch(
   "/:id/reactivar",
   requireAuth,
-  requireRole(...SOLO_ADMIN),
+  requireRole(SOLO_ADMIN),
   reactivarController,
 );
 router.patch(
   "/:id/password",
   requireAuth,
-  requireRole(...SOLO_ADMIN),
+  requireRole(SOLO_ADMIN),
   resetearPasswordController,
 );
 

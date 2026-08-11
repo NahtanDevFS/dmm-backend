@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
 import { requireRole } from "../../middlewares/role.middleware.js";
+import { OPERACION } from "../../config/roles.js";
 import { uploadMemoria } from "../../lib/storage/upload.middleware.js";
 import {
   listarController,
@@ -18,52 +19,55 @@ import {
 
 // Recibir donaciones es operación diaria, a diferencia de los catálogos:
 // EMPLEADO_DMM entra aquí (matriz de roles, módulo INV).
-const ROLES_GESTION = ["EMPLEADO_DMM", "DIRECTORA", "ADMINISTRADOR"];
-
 const router = Router();
 
-router.get("/", requireAuth, listarController);
-router.get("/:id", requireAuth, obtenerController);
-router.post("/", requireAuth, requireRole(...ROLES_GESTION), crearController);
-router.patch(
-  "/:id",
-  requireAuth,
-  requireRole(...ROLES_GESTION),
-  editarController,
-);
+router.get("/", requireAuth, requireRole(OPERACION), listarController);
+router.get("/:id", requireAuth, requireRole(OPERACION), obtenerController);
+router.post("/", requireAuth, requireRole(OPERACION), crearController);
+router.patch("/:id", requireAuth, requireRole(OPERACION), editarController);
 router.patch(
   "/:id/desactivar",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   desactivarController,
 );
 router.patch(
   "/:id/reactivar",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   reactivarController,
 );
 
-router.get("/:id/lotes", requireAuth, listarLotesController);
+router.get(
+  "/:id/lotes",
+  requireAuth,
+  requireRole(OPERACION),
+  listarLotesController,
+);
 router.post(
   "/:id/lotes",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   crearLoteController,
 );
 
-router.get("/:id/documentos", requireAuth, listarDocumentosController);
+router.get(
+  "/:id/documentos",
+  requireAuth,
+  requireRole(OPERACION),
+  listarDocumentosController,
+);
 router.post(
   "/:id/documentos",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   uploadMemoria.single("archivo"),
   subirDocumentoController,
 );
 router.delete(
   "/:id/documentos/:documentoId",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   eliminarDocumentoController,
 );
 

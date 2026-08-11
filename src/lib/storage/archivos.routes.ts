@@ -2,6 +2,8 @@ import type { Request, Response, NextFunction } from "express";
 import path from "node:path";
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
+import { requireRole } from "../../middlewares/role.middleware.js";
+import { OPERACION } from "../../config/roles.js";
 
 /**
  * SIEMPRE resuelto a ruta absoluta con path.resolve, aunque
@@ -20,9 +22,11 @@ const UPLOADS_DIR = path.resolve(
  * Sirve un archivo ya guardado por su ruta relativa (la misma que se
  * persiste en documento_persona.ruta_archivo, etc.).
  *
- * Protegido por requireAuth: estos archivos incluyen documentos de
- * identificación de beneficiarios, no deben ser accesibles sin
- * autenticación aunque alguien adivine o filtre la ruta.
+ * Protegido por requireAuth + requireRole(OPERACION): estos archivos
+ * incluyen documentos de identificación de beneficiarios y evidencias
+ * fotográficas de entrega. No deben ser accesibles sin autenticación
+ * aunque alguien adivine o filtre la ruta, y ALCALDE queda fuera igual
+ * que del resto de los módulos de negocio.
  *
  * Express 5 (path-to-regexp v8) exige que los wildcards tengan
  * nombre (`*nombre`), ya no acepta un `*` anónimo como en Express 4.
@@ -68,6 +72,11 @@ async function servirArchivoController(
 
 const router = Router();
 
-router.get("/archivos/*rutaArchivo", requireAuth, servirArchivoController);
+router.get(
+  "/archivos/*rutaArchivo",
+  requireAuth,
+  requireRole(OPERACION),
+  servirArchivoController,
+);
 
 export default router;

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
 import { requireRole } from "../../middlewares/role.middleware.js";
+import { OPERACION } from "../../config/roles.js";
 import { uploadMemoria } from "../../lib/storage/upload.middleware.js";
 import {
   listarDocumentosController,
@@ -8,22 +9,26 @@ import {
   eliminarDocumentoController,
 } from "./documento-persona.controller.js";
 
-const ROLES_GESTION = ["EMPLEADO_DMM", "DIRECTORA", "ADMINISTRADOR"];
-
 const router = Router();
 
-router.get("/:id/documentos", requireAuth, listarDocumentosController);
+// Documentos de identificacion: lectura restringida a OPERACION, no a cualquier autenticado
+router.get(
+  "/:id/documentos",
+  requireAuth,
+  requireRole(OPERACION),
+  listarDocumentosController,
+);
 router.post(
   "/:id/documentos",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   uploadMemoria.single("archivo"),
   subirDocumentoController,
 );
 router.delete(
   "/:id/documentos/:documentoId",
   requireAuth,
-  requireRole(...ROLES_GESTION),
+  requireRole(OPERACION),
   eliminarDocumentoController,
 );
 
