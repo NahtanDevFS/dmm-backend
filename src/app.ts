@@ -40,7 +40,28 @@ const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim());
 
-app.use(cors({ origin: corsOrigins, credentials: true }));
+app.use(
+  cors({
+    origin: corsOrigins,
+    credentials: true,
+    /**
+     * Los limitadores emiten `RateLimit` y `RateLimit-Policy`
+     * (standardHeaders: "draft-8"), pero ninguna de las dos está en la lista
+     * blanca de CORS, así que el navegador se las oculta a JavaScript cuando
+     * el frontend corre en otro origen.
+     *
+     * Exponerlas permite que la pantalla de acceso avise cuántos intentos
+     * quedan antes del bloqueo temporal. La alternativa era que el cliente
+     * llevara la cuenta por su lado, y habría sido falsa: el límite se lleva
+     * aquí por IP y usuario, de modo que una recarga, otra pestaña o cambiar
+     * de nombre de usuario darían un número distinto al real.
+     *
+     * No filtra nada que el atacante no pueda medir ya contando sus propios
+     * intentos fallidos.
+     */
+    exposedHeaders: ["RateLimit", "RateLimit-Policy"],
+  }),
+);
 app.use(cookieParser());
 // Límite de tamaño explícito: por defecto express.json admite 100 kb, pero
 // dejarlo escrito evita que un cambio de versión lo mueva sin que nadie lo note.

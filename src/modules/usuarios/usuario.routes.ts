@@ -4,7 +4,7 @@ import {
   requireRole,
   permitirSinRol,
 } from "../../middlewares/role.middleware.js";
-import { SOLO_ADMIN } from "../../config/roles.js";
+import { ADMINISTRACION } from "../../config/roles.js";
 import {
   listarController,
   obtenerController,
@@ -31,26 +31,26 @@ router.patch(
   cambiarPasswordPropiaController,
 );
 
-router.get("/", requireAuth, requireRole(SOLO_ADMIN), listarController);
-router.get("/:id", requireAuth, requireRole(SOLO_ADMIN), obtenerController);
-router.post("/", requireAuth, requireRole(SOLO_ADMIN), crearController);
-router.patch("/:id", requireAuth, requireRole(SOLO_ADMIN), editarController);
+router.get("/", requireAuth, requireRole(ADMINISTRACION), listarController);
+router.get("/:id", requireAuth, requireRole(ADMINISTRACION), obtenerController);
+router.post("/", requireAuth, requireRole(ADMINISTRACION), crearController);
+router.patch("/:id", requireAuth, requireRole(ADMINISTRACION), editarController);
 router.patch(
   "/:id/desactivar",
   requireAuth,
-  requireRole(SOLO_ADMIN),
+  requireRole(ADMINISTRACION),
   desactivarController,
 );
 router.patch(
   "/:id/reactivar",
   requireAuth,
-  requireRole(SOLO_ADMIN),
+  requireRole(ADMINISTRACION),
   reactivarController,
 );
 router.patch(
   "/:id/password",
   requireAuth,
-  requireRole(SOLO_ADMIN),
+  requireRole(ADMINISTRACION),
   resetearPasswordController,
 );
 

@@ -70,5 +70,19 @@ export const LECTURA_CATALOGOS_REPORTE: Rol[] = [
   ROL.ADMINISTRADOR,
 ];
 
-//Gestión de usuarios y consulta de la bitácora de auditoría
-export const SOLO_ADMIN: Rol[] = [ROL.ADMINISTRADOR];
+/*
+Administración del sistema: gestión de usuarios, catálogo de roles y consulta
+de la bitácora de auditoría.
+
+Incluye a DIRECTORA por decisión de la DMM: en una dirección municipal pequeña
+no hay un área de sistemas aparte, y es la directora quien de hecho administra
+el sistema —da de alta al personal, restablece contraseñas y responde por lo
+que se registra—. Antes se llamaba SOLO_ADMIN y era exclusivo de
+ADMINISTRADOR; el nombre se cambió porque «solo admin» habría dejado de ser
+cierto y un conjunto que miente es peor que no tener conjunto.
+
+Consecuencia asumida: los dos roles quedan equivalentes en poder, porque quien
+gestiona usuarios puede crear otra cuenta de administrador. Siguen en pie los
+guardas que impiden cambiarse el propio rol y desactivarse a uno mismo.
+*/
+export const ADMINISTRACION: Rol[] = [ROL.DIRECTORA, ROL.ADMINISTRADOR];
