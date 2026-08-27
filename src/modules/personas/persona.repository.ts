@@ -76,7 +76,9 @@ export async function listarPersonas(
     const idxBusqueda = i;
     condiciones.push(
       `((nombres || ' ' || apellidos) ILIKE '%' || $${idxBusqueda} || '%'
-        OR similarity(nombres || ' ' || apellidos, $${idxBusqueda}) > 0.15)`,
+        OR similarity(nombres || ' ' || apellidos, $${idxBusqueda}) > 0.15
+        OR regexp_replace(cui_dpi, '\\s', '', 'g')
+             ILIKE '%' || regexp_replace($${idxBusqueda}, '\\s', '', 'g') || '%')`,
     );
     valores.push(busqueda);
     i += 1;
@@ -84,7 +86,10 @@ export async function listarPersonas(
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
   const orderBy = busqueda
-    ? `ORDER BY similarity(nombres || ' ' || apellidos, $${i}) DESC`
+    ? `ORDER BY
+         (regexp_replace(cui_dpi, '\\s', '', 'g')
+            ILIKE '%' || regexp_replace($${i}, '\\s', '', 'g') || '%') DESC,
+         similarity(nombres || ' ' || apellidos, $${i}) DESC`
     : `ORDER BY apellidos ASC, nombres ASC`;
   if (busqueda) valores.push(busqueda);
 
