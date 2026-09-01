@@ -27,15 +27,16 @@ model auditoria_log {
 }
 
 model categoria_insumo {
-  id                                           Int       @id @default(autoincrement())
-  nombre                                       String    @unique @db.VarChar(100)
-  activo                                       Boolean   @default(true)
-  created_at                                   DateTime  @default(now()) @db.Timestamp(6)
-  updated_at                                   DateTime? @db.Timestamp(6)
+  id                                           Int                           @id @default(autoincrement())
+  nombre                                       String                        @unique @db.VarChar(100)
+  activo                                       Boolean                       @default(true)
+  created_at                                   DateTime                      @default(now()) @db.Timestamp(6)
+  updated_at                                   DateTime?                     @db.Timestamp(6)
   created_by                                   Int?
   updated_by                                   Int?
-  usuario_categoria_insumo_created_byTousuario usuario?  @relation("categoria_insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cat_created_by")
-  usuario_categoria_insumo_updated_byTousuario usuario?  @relation("categoria_insumo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cat_updated_by")
+  usuario_categoria_insumo_created_byTousuario usuario?                      @relation("categoria_insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cat_created_by")
+  usuario_categoria_insumo_updated_byTousuario usuario?                      @relation("categoria_insumo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cat_updated_by")
+  categoria_insumo_formulario                  categoria_insumo_formulario[]
   insumo                                       insumo[]
 }
 
@@ -355,6 +356,9 @@ model persona {
   updated_at                                            DateTime?                     @db.Timestamp(6)
   created_by                                            Int?
   updated_by                                            Int?
+  direccion                                             String?                       @db.VarChar(255)
+  grado_academico                                       String?                       @db.VarChar(100)
+  ocupacion                                             String?                       @db.VarChar(100)
   contacto_referencia_persona                           contacto_referencia_persona[]
   documento_persona                                     documento_persona[]
   encargado_menor_encargado_menor_encargado_idTopersona encargado_menor[]             @relation("encargado_menor_encargado_idTopersona")
@@ -544,95 +548,113 @@ model unidad_medida {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model usuario {
-  id                                                                          Int                           @id @default(autoincrement())
-  username                                                                    String                        @unique @db.VarChar(50)
-  password_hash                                                               String                        @db.VarChar(255)
-  rol_id                                                                      Int
-  ultimo_login                                                                DateTime?                     @db.Timestamp(6)
-  activo                                                                      Boolean                       @default(true)
-  created_at                                                                  DateTime                      @default(now()) @db.Timestamp(6)
-  updated_at                                                                  DateTime?                     @db.Timestamp(6)
-  created_by                                                                  Int?
-  updated_by                                                                  Int?
-  auditoria_log                                                               auditoria_log[]
-  categoria_insumo_categoria_insumo_created_byTousuario                       categoria_insumo[]            @relation("categoria_insumo_created_byTousuario")
-  categoria_insumo_categoria_insumo_updated_byTousuario                       categoria_insumo[]            @relation("categoria_insumo_updated_byTousuario")
-  comunidad_comunidad_created_byTousuario                                     comunidad[]                   @relation("comunidad_created_byTousuario")
-  comunidad_comunidad_updated_byTousuario                                     comunidad[]                   @relation("comunidad_updated_byTousuario")
-  contacto_referencia_persona_contacto_referencia_persona_created_byTousuario contacto_referencia_persona[] @relation("contacto_referencia_persona_created_byTousuario")
-  contacto_referencia_persona_contacto_referencia_persona_updated_byTousuario contacto_referencia_persona[] @relation("contacto_referencia_persona_updated_byTousuario")
-  contrato_prestamo_contrato_prestamo_created_byTousuario                     contrato_prestamo[]           @relation("contrato_prestamo_created_byTousuario")
-  contrato_prestamo_contrato_prestamo_updated_byTousuario                     contrato_prestamo[]           @relation("contrato_prestamo_updated_byTousuario")
-  departamento_departamento_created_byTousuario                               departamento[]                @relation("departamento_created_byTousuario")
-  departamento_departamento_updated_byTousuario                               departamento[]                @relation("departamento_updated_byTousuario")
-  detalle_entrega_detalle_entrega_created_byTousuario                         detalle_entrega[]             @relation("detalle_entrega_created_byTousuario")
-  detalle_entrega_detalle_entrega_updated_byTousuario                         detalle_entrega[]             @relation("detalle_entrega_updated_byTousuario")
-  detalle_inventario_lote_detalle_inventario_lote_created_byTousuario         detalle_inventario_lote[]     @relation("detalle_inventario_lote_created_byTousuario")
-  detalle_inventario_lote_detalle_inventario_lote_updated_byTousuario         detalle_inventario_lote[]     @relation("detalle_inventario_lote_updated_byTousuario")
-  detalle_solicitud_apoyo_detalle_solicitud_apoyo_created_byTousuario         detalle_solicitud_apoyo[]     @relation("detalle_solicitud_apoyo_created_byTousuario")
-  detalle_solicitud_apoyo_detalle_solicitud_apoyo_updated_byTousuario         detalle_solicitud_apoyo[]     @relation("detalle_solicitud_apoyo_updated_byTousuario")
-  discapacidad_discapacidad_created_byTousuario                               discapacidad[]                @relation("discapacidad_created_byTousuario")
-  discapacidad_discapacidad_updated_byTousuario                               discapacidad[]                @relation("discapacidad_updated_byTousuario")
-  documento_persona_documento_persona_created_byTousuario                     documento_persona[]           @relation("documento_persona_created_byTousuario")
-  documento_persona_documento_persona_updated_byTousuario                     documento_persona[]           @relation("documento_persona_updated_byTousuario")
-  documento_recepcion_documento_recepcion_created_byTousuario                 documento_recepcion[]         @relation("documento_recepcion_created_byTousuario")
-  documento_recepcion_documento_recepcion_updated_byTousuario                 documento_recepcion[]         @relation("documento_recepcion_updated_byTousuario")
-  entrega_entrega_created_byTousuario                                         entrega[]                     @relation("entrega_created_byTousuario")
-  entrega_entrega_updated_byTousuario                                         entrega[]                     @relation("entrega_updated_byTousuario")
-  entrega_entrega_usuario_entrega_idTousuario                                 entrega[]                     @relation("entrega_usuario_entrega_idTousuario")
-  estado_contrato_prestamo_estado_contrato_prestamo_created_byTousuario       estado_contrato_prestamo[]    @relation("estado_contrato_prestamo_created_byTousuario")
-  estado_contrato_prestamo_estado_contrato_prestamo_updated_byTousuario       estado_contrato_prestamo[]    @relation("estado_contrato_prestamo_updated_byTousuario")
-  estado_solicitud_apoyo_estado_solicitud_apoyo_created_byTousuario           estado_solicitud_apoyo[]      @relation("estado_solicitud_apoyo_created_byTousuario")
-  estado_solicitud_apoyo_estado_solicitud_apoyo_updated_byTousuario           estado_solicitud_apoyo[]      @relation("estado_solicitud_apoyo_updated_byTousuario")
-  evidencia_entrega_evidencia_entrega_created_byTousuario                     evidencia_entrega[]           @relation("evidencia_entrega_created_byTousuario")
-  evidencia_entrega_evidencia_entrega_updated_byTousuario                     evidencia_entrega[]           @relation("evidencia_entrega_updated_byTousuario")
-  institucion_donante_institucion_donante_created_byTousuario                 institucion_donante[]         @relation("institucion_donante_created_byTousuario")
-  institucion_donante_institucion_donante_updated_byTousuario                 institucion_donante[]         @relation("institucion_donante_updated_byTousuario")
-  insumo_insumo_created_byTousuario                                           insumo[]                      @relation("insumo_created_byTousuario")
-  insumo_insumo_updated_byTousuario                                           insumo[]                      @relation("insumo_updated_byTousuario")
-  marca_insumo_marca_insumo_created_byTousuario                               marca_insumo[]                @relation("marca_insumo_created_byTousuario")
-  marca_insumo_marca_insumo_updated_byTousuario                               marca_insumo[]                @relation("marca_insumo_updated_byTousuario")
-  multa_prestamo_multa_prestamo_created_byTousuario                           multa_prestamo[]              @relation("multa_prestamo_created_byTousuario")
-  multa_prestamo_multa_prestamo_updated_byTousuario                           multa_prestamo[]              @relation("multa_prestamo_updated_byTousuario")
-  municipio_municipio_created_byTousuario                                     municipio[]                   @relation("municipio_created_byTousuario")
-  municipio_municipio_updated_byTousuario                                     municipio[]                   @relation("municipio_updated_byTousuario")
-  persona_persona_created_byTousuario                                         persona[]                     @relation("persona_created_byTousuario")
-  persona_persona_updated_byTousuario                                         persona[]                     @relation("persona_updated_byTousuario")
-  presentacion_insumo_presentacion_insumo_created_byTousuario                 presentacion_insumo[]         @relation("presentacion_insumo_created_byTousuario")
-  presentacion_insumo_presentacion_insumo_updated_byTousuario                 presentacion_insumo[]         @relation("presentacion_insumo_updated_byTousuario")
-  programa_programa_created_byTousuario                                       programa[]                    @relation("programa_created_byTousuario")
-  programa_programa_updated_byTousuario                                       programa[]                    @relation("programa_updated_byTousuario")
-  recepcion_donacion_lote_recepcion_donacion_lote_created_byTousuario         recepcion_donacion_lote[]     @relation("recepcion_donacion_lote_created_byTousuario")
-  recepcion_donacion_lote_recepcion_donacion_lote_updated_byTousuario         recepcion_donacion_lote[]     @relation("recepcion_donacion_lote_updated_byTousuario")
-  receta_medica_receta_medica_created_byTousuario                             receta_medica[]               @relation("receta_medica_created_byTousuario")
-  receta_medica_receta_medica_updated_byTousuario                             receta_medica[]               @relation("receta_medica_updated_byTousuario")
-  rol_rol_created_byTousuario                                                 rol[]                         @relation("rol_created_byTousuario")
-  rol_rol_updated_byTousuario                                                 rol[]                         @relation("rol_updated_byTousuario")
-  sesion_sesion_created_byTousuario                                           sesion[]                      @relation("sesion_created_byTousuario")
-  sesion_sesion_updated_byTousuario                                           sesion[]                      @relation("sesion_updated_byTousuario")
-  sesion_sesion_usuario_idTousuario                                           sesion[]                      @relation("sesion_usuario_idTousuario")
-  solicitud_apoyo_solicitud_apoyo_aprobado_porTousuario                       solicitud_apoyo[]             @relation("solicitud_apoyo_aprobado_porTousuario")
-  solicitud_apoyo_solicitud_apoyo_created_byTousuario                         solicitud_apoyo[]             @relation("solicitud_apoyo_created_byTousuario")
-  solicitud_apoyo_solicitud_apoyo_updated_byTousuario                         solicitud_apoyo[]             @relation("solicitud_apoyo_updated_byTousuario")
-  tipo_accion_auditoria_tipo_accion_auditoria_created_byTousuario             tipo_accion_auditoria[]       @relation("tipo_accion_auditoria_created_byTousuario")
-  tipo_accion_auditoria_tipo_accion_auditoria_updated_byTousuario             tipo_accion_auditoria[]       @relation("tipo_accion_auditoria_updated_byTousuario")
-  tipo_documento_persona_tipo_documento_persona_created_byTousuario           tipo_documento_persona[]      @relation("tipo_documento_persona_created_byTousuario")
-  tipo_documento_persona_tipo_documento_persona_updated_byTousuario           tipo_documento_persona[]      @relation("tipo_documento_persona_updated_byTousuario")
-  tipo_evidencia_entrega_tipo_evidencia_entrega_created_byTousuario           tipo_evidencia_entrega[]      @relation("tipo_evidencia_entrega_created_byTousuario")
-  tipo_evidencia_entrega_tipo_evidencia_entrega_updated_byTousuario           tipo_evidencia_entrega[]      @relation("tipo_evidencia_entrega_updated_byTousuario")
-  tipo_genero_tipo_genero_created_byTousuario                                 tipo_genero[]                 @relation("tipo_genero_created_byTousuario")
-  tipo_genero_tipo_genero_updated_byTousuario                                 tipo_genero[]                 @relation("tipo_genero_updated_byTousuario")
-  tipo_multa_prestamo_tipo_multa_prestamo_created_byTousuario                 tipo_multa_prestamo[]         @relation("tipo_multa_prestamo_created_byTousuario")
-  tipo_multa_prestamo_tipo_multa_prestamo_updated_byTousuario                 tipo_multa_prestamo[]         @relation("tipo_multa_prestamo_updated_byTousuario")
-  tipo_parentesco_tipo_parentesco_created_byTousuario                         tipo_parentesco[]             @relation("tipo_parentesco_created_byTousuario")
-  tipo_parentesco_tipo_parentesco_updated_byTousuario                         tipo_parentesco[]             @relation("tipo_parentesco_updated_byTousuario")
-  unidad_medida_unidad_medida_created_byTousuario                             unidad_medida[]               @relation("unidad_medida_created_byTousuario")
-  unidad_medida_unidad_medida_updated_byTousuario                             unidad_medida[]               @relation("unidad_medida_updated_byTousuario")
-  usuario_usuario_created_byTousuario                                         usuario?                      @relation("usuario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_created_by")
-  other_usuario_usuario_created_byTousuario                                   usuario[]                     @relation("usuario_created_byTousuario")
-  rol_usuario_rol_idTorol                                                     rol                           @relation("usuario_rol_idTorol", fields: [rol_id], references: [id], onUpdate: NoAction, map: "fk_usuario_rol")
-  usuario_usuario_updated_byTousuario                                         usuario?                      @relation("usuario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_updated_by")
-  other_usuario_usuario_updated_byTousuario                                   usuario[]                     @relation("usuario_updated_byTousuario")
+  id                                                                                                Int                                      @id @default(autoincrement())
+  username                                                                                          String                                   @unique @db.VarChar(50)
+  password_hash                                                                                     String                                   @db.VarChar(255)
+  rol_id                                                                                            Int
+  ultimo_login                                                                                      DateTime?                                @db.Timestamp(6)
+  activo                                                                                            Boolean                                  @default(true)
+  created_at                                                                                        DateTime                                 @default(now()) @db.Timestamp(6)
+  updated_at                                                                                        DateTime?                                @db.Timestamp(6)
+  created_by                                                                                        Int?
+  updated_by                                                                                        Int?
+  auditoria_log                                                                                     auditoria_log[]
+  catalogo_catalogo_created_byTousuario                                                             catalogo[]                               @relation("catalogo_created_byTousuario")
+  catalogo_catalogo_updated_byTousuario                                                             catalogo[]                               @relation("catalogo_updated_byTousuario")
+  catalogo_valor_catalogo_valor_created_byTousuario                                                 catalogo_valor[]                         @relation("catalogo_valor_created_byTousuario")
+  catalogo_valor_catalogo_valor_updated_byTousuario                                                 catalogo_valor[]                         @relation("catalogo_valor_updated_byTousuario")
+  categoria_insumo_categoria_insumo_created_byTousuario                                             categoria_insumo[]                       @relation("categoria_insumo_created_byTousuario")
+  categoria_insumo_categoria_insumo_updated_byTousuario                                             categoria_insumo[]                       @relation("categoria_insumo_updated_byTousuario")
+  categoria_insumo_formulario_categoria_insumo_formulario_created_byTousuario                       categoria_insumo_formulario[]            @relation("categoria_insumo_formulario_created_byTousuario")
+  categoria_insumo_formulario_categoria_insumo_formulario_updated_byTousuario                       categoria_insumo_formulario[]            @relation("categoria_insumo_formulario_updated_byTousuario")
+  comunidad_comunidad_created_byTousuario                                                           comunidad[]                              @relation("comunidad_created_byTousuario")
+  comunidad_comunidad_updated_byTousuario                                                           comunidad[]                              @relation("comunidad_updated_byTousuario")
+  contacto_referencia_persona_contacto_referencia_persona_created_byTousuario                       contacto_referencia_persona[]            @relation("contacto_referencia_persona_created_byTousuario")
+  contacto_referencia_persona_contacto_referencia_persona_updated_byTousuario                       contacto_referencia_persona[]            @relation("contacto_referencia_persona_updated_byTousuario")
+  contrato_prestamo_contrato_prestamo_created_byTousuario                                           contrato_prestamo[]                      @relation("contrato_prestamo_created_byTousuario")
+  contrato_prestamo_contrato_prestamo_updated_byTousuario                                           contrato_prestamo[]                      @relation("contrato_prestamo_updated_byTousuario")
+  departamento_departamento_created_byTousuario                                                     departamento[]                           @relation("departamento_created_byTousuario")
+  departamento_departamento_updated_byTousuario                                                     departamento[]                           @relation("departamento_updated_byTousuario")
+  detalle_entrega_detalle_entrega_created_byTousuario                                               detalle_entrega[]                        @relation("detalle_entrega_created_byTousuario")
+  detalle_entrega_detalle_entrega_updated_byTousuario                                               detalle_entrega[]                        @relation("detalle_entrega_updated_byTousuario")
+  detalle_inventario_lote_detalle_inventario_lote_created_byTousuario                               detalle_inventario_lote[]                @relation("detalle_inventario_lote_created_byTousuario")
+  detalle_inventario_lote_detalle_inventario_lote_updated_byTousuario                               detalle_inventario_lote[]                @relation("detalle_inventario_lote_updated_byTousuario")
+  detalle_solicitud_apoyo_detalle_solicitud_apoyo_created_byTousuario                               detalle_solicitud_apoyo[]                @relation("detalle_solicitud_apoyo_created_byTousuario")
+  detalle_solicitud_apoyo_detalle_solicitud_apoyo_updated_byTousuario                               detalle_solicitud_apoyo[]                @relation("detalle_solicitud_apoyo_updated_byTousuario")
+  detalle_solicitud_formulario_detalle_solicitud_formulario_created_byTousuario                     detalle_solicitud_formulario[]           @relation("detalle_solicitud_formulario_created_byTousuario")
+  detalle_solicitud_formulario_detalle_solicitud_formulario_updated_byTousuario                     detalle_solicitud_formulario[]           @relation("detalle_solicitud_formulario_updated_byTousuario")
+  detalle_solicitud_formulario_respuesta_detalle_solicitud_formulario_respuesta_created_byTousuario detalle_solicitud_formulario_respuesta[] @relation("detalle_solicitud_formulario_respuesta_created_byTousuario")
+  detalle_solicitud_formulario_respuesta_detalle_solicitud_formulario_respuesta_updated_byTousuario detalle_solicitud_formulario_respuesta[] @relation("detalle_solicitud_formulario_respuesta_updated_byTousuario")
+  discapacidad_discapacidad_created_byTousuario                                                     discapacidad[]                           @relation("discapacidad_created_byTousuario")
+  discapacidad_discapacidad_updated_byTousuario                                                     discapacidad[]                           @relation("discapacidad_updated_byTousuario")
+  documento_persona_documento_persona_created_byTousuario                                           documento_persona[]                      @relation("documento_persona_created_byTousuario")
+  documento_persona_documento_persona_updated_byTousuario                                           documento_persona[]                      @relation("documento_persona_updated_byTousuario")
+  documento_recepcion_documento_recepcion_created_byTousuario                                       documento_recepcion[]                    @relation("documento_recepcion_created_byTousuario")
+  documento_recepcion_documento_recepcion_updated_byTousuario                                       documento_recepcion[]                    @relation("documento_recepcion_updated_byTousuario")
+  entrega_entrega_created_byTousuario                                                               entrega[]                                @relation("entrega_created_byTousuario")
+  entrega_entrega_updated_byTousuario                                                               entrega[]                                @relation("entrega_updated_byTousuario")
+  entrega_entrega_usuario_entrega_idTousuario                                                       entrega[]                                @relation("entrega_usuario_entrega_idTousuario")
+  estado_contrato_prestamo_estado_contrato_prestamo_created_byTousuario                             estado_contrato_prestamo[]               @relation("estado_contrato_prestamo_created_byTousuario")
+  estado_contrato_prestamo_estado_contrato_prestamo_updated_byTousuario                             estado_contrato_prestamo[]               @relation("estado_contrato_prestamo_updated_byTousuario")
+  estado_solicitud_apoyo_estado_solicitud_apoyo_created_byTousuario                                 estado_solicitud_apoyo[]                 @relation("estado_solicitud_apoyo_created_byTousuario")
+  estado_solicitud_apoyo_estado_solicitud_apoyo_updated_byTousuario                                 estado_solicitud_apoyo[]                 @relation("estado_solicitud_apoyo_updated_byTousuario")
+  evidencia_entrega_evidencia_entrega_created_byTousuario                                           evidencia_entrega[]                      @relation("evidencia_entrega_created_byTousuario")
+  evidencia_entrega_evidencia_entrega_updated_byTousuario                                           evidencia_entrega[]                      @relation("evidencia_entrega_updated_byTousuario")
+  formulario_formulario_created_byTousuario                                                         formulario[]                             @relation("formulario_created_byTousuario")
+  formulario_formulario_updated_byTousuario                                                         formulario[]                             @relation("formulario_updated_byTousuario")
+  formulario_campo_formulario_campo_created_byTousuario                                             formulario_campo[]                       @relation("formulario_campo_created_byTousuario")
+  formulario_campo_formulario_campo_updated_byTousuario                                             formulario_campo[]                       @relation("formulario_campo_updated_byTousuario")
+  formulario_campo_opcion_formulario_campo_opcion_created_byTousuario                               formulario_campo_opcion[]                @relation("formulario_campo_opcion_created_byTousuario")
+  formulario_campo_opcion_formulario_campo_opcion_updated_byTousuario                               formulario_campo_opcion[]                @relation("formulario_campo_opcion_updated_byTousuario")
+  institucion_donante_institucion_donante_created_byTousuario                                       institucion_donante[]                    @relation("institucion_donante_created_byTousuario")
+  institucion_donante_institucion_donante_updated_byTousuario                                       institucion_donante[]                    @relation("institucion_donante_updated_byTousuario")
+  insumo_insumo_created_byTousuario                                                                 insumo[]                                 @relation("insumo_created_byTousuario")
+  insumo_insumo_updated_byTousuario                                                                 insumo[]                                 @relation("insumo_updated_byTousuario")
+  marca_insumo_marca_insumo_created_byTousuario                                                     marca_insumo[]                           @relation("marca_insumo_created_byTousuario")
+  marca_insumo_marca_insumo_updated_byTousuario                                                     marca_insumo[]                           @relation("marca_insumo_updated_byTousuario")
+  multa_prestamo_multa_prestamo_created_byTousuario                                                 multa_prestamo[]                         @relation("multa_prestamo_created_byTousuario")
+  multa_prestamo_multa_prestamo_updated_byTousuario                                                 multa_prestamo[]                         @relation("multa_prestamo_updated_byTousuario")
+  municipio_municipio_created_byTousuario                                                           municipio[]                              @relation("municipio_created_byTousuario")
+  municipio_municipio_updated_byTousuario                                                           municipio[]                              @relation("municipio_updated_byTousuario")
+  persona_persona_created_byTousuario                                                               persona[]                                @relation("persona_created_byTousuario")
+  persona_persona_updated_byTousuario                                                               persona[]                                @relation("persona_updated_byTousuario")
+  presentacion_insumo_presentacion_insumo_created_byTousuario                                       presentacion_insumo[]                    @relation("presentacion_insumo_created_byTousuario")
+  presentacion_insumo_presentacion_insumo_updated_byTousuario                                       presentacion_insumo[]                    @relation("presentacion_insumo_updated_byTousuario")
+  programa_programa_created_byTousuario                                                             programa[]                               @relation("programa_created_byTousuario")
+  programa_programa_updated_byTousuario                                                             programa[]                               @relation("programa_updated_byTousuario")
+  recepcion_donacion_lote_recepcion_donacion_lote_created_byTousuario                               recepcion_donacion_lote[]                @relation("recepcion_donacion_lote_created_byTousuario")
+  recepcion_donacion_lote_recepcion_donacion_lote_updated_byTousuario                               recepcion_donacion_lote[]                @relation("recepcion_donacion_lote_updated_byTousuario")
+  receta_medica_receta_medica_created_byTousuario                                                   receta_medica[]                          @relation("receta_medica_created_byTousuario")
+  receta_medica_receta_medica_updated_byTousuario                                                   receta_medica[]                          @relation("receta_medica_updated_byTousuario")
+  rol_rol_created_byTousuario                                                                       rol[]                                    @relation("rol_created_byTousuario")
+  rol_rol_updated_byTousuario                                                                       rol[]                                    @relation("rol_updated_byTousuario")
+  sesion_sesion_created_byTousuario                                                                 sesion[]                                 @relation("sesion_created_byTousuario")
+  sesion_sesion_updated_byTousuario                                                                 sesion[]                                 @relation("sesion_updated_byTousuario")
+  sesion_sesion_usuario_idTousuario                                                                 sesion[]                                 @relation("sesion_usuario_idTousuario")
+  solicitud_apoyo_solicitud_apoyo_aprobado_porTousuario                                             solicitud_apoyo[]                        @relation("solicitud_apoyo_aprobado_porTousuario")
+  solicitud_apoyo_solicitud_apoyo_created_byTousuario                                               solicitud_apoyo[]                        @relation("solicitud_apoyo_created_byTousuario")
+  solicitud_apoyo_solicitud_apoyo_updated_byTousuario                                               solicitud_apoyo[]                        @relation("solicitud_apoyo_updated_byTousuario")
+  tipo_accion_auditoria_tipo_accion_auditoria_created_byTousuario                                   tipo_accion_auditoria[]                  @relation("tipo_accion_auditoria_created_byTousuario")
+  tipo_accion_auditoria_tipo_accion_auditoria_updated_byTousuario                                   tipo_accion_auditoria[]                  @relation("tipo_accion_auditoria_updated_byTousuario")
+  tipo_dato_campo_formulario_tipo_dato_campo_formulario_created_byTousuario                         tipo_dato_campo_formulario[]             @relation("tipo_dato_campo_formulario_created_byTousuario")
+  tipo_dato_campo_formulario_tipo_dato_campo_formulario_updated_byTousuario                         tipo_dato_campo_formulario[]             @relation("tipo_dato_campo_formulario_updated_byTousuario")
+  tipo_documento_persona_tipo_documento_persona_created_byTousuario                                 tipo_documento_persona[]                 @relation("tipo_documento_persona_created_byTousuario")
+  tipo_documento_persona_tipo_documento_persona_updated_byTousuario                                 tipo_documento_persona[]                 @relation("tipo_documento_persona_updated_byTousuario")
+  tipo_evidencia_entrega_tipo_evidencia_entrega_created_byTousuario                                 tipo_evidencia_entrega[]                 @relation("tipo_evidencia_entrega_created_byTousuario")
+  tipo_evidencia_entrega_tipo_evidencia_entrega_updated_byTousuario                                 tipo_evidencia_entrega[]                 @relation("tipo_evidencia_entrega_updated_byTousuario")
+  tipo_genero_tipo_genero_created_byTousuario                                                       tipo_genero[]                            @relation("tipo_genero_created_byTousuario")
+  tipo_genero_tipo_genero_updated_byTousuario                                                       tipo_genero[]                            @relation("tipo_genero_updated_byTousuario")
+  tipo_multa_prestamo_tipo_multa_prestamo_created_byTousuario                                       tipo_multa_prestamo[]                    @relation("tipo_multa_prestamo_created_byTousuario")
+  tipo_multa_prestamo_tipo_multa_prestamo_updated_byTousuario                                       tipo_multa_prestamo[]                    @relation("tipo_multa_prestamo_updated_byTousuario")
+  tipo_parentesco_tipo_parentesco_created_byTousuario                                               tipo_parentesco[]                        @relation("tipo_parentesco_created_byTousuario")
+  tipo_parentesco_tipo_parentesco_updated_byTousuario                                               tipo_parentesco[]                        @relation("tipo_parentesco_updated_byTousuario")
+  unidad_medida_unidad_medida_created_byTousuario                                                   unidad_medida[]                          @relation("unidad_medida_created_byTousuario")
+  unidad_medida_unidad_medida_updated_byTousuario                                                   unidad_medida[]                          @relation("unidad_medida_updated_byTousuario")
+  usuario_usuario_created_byTousuario                                                               usuario?                                 @relation("usuario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_created_by")
+  other_usuario_usuario_created_byTousuario                                                         usuario[]                                @relation("usuario_created_byTousuario")
+  rol_usuario_rol_idTorol                                                                           rol                                      @relation("usuario_rol_idTorol", fields: [rol_id], references: [id], onUpdate: NoAction, map: "fk_usuario_rol")
+  usuario_usuario_updated_byTousuario                                                               usuario?                                 @relation("usuario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_updated_by")
+  other_usuario_usuario_updated_byTousuario                                                         usuario[]                                @relation("usuario_updated_byTousuario")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -678,25 +700,26 @@ model contacto_referencia_persona {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model detalle_solicitud_apoyo {
-  id                                                  Int                    @id @default(autoincrement())
+  id                                                  Int                            @id @default(autoincrement())
   solicitud_id                                        Int
   insumo_id                                           Int
   cantidad_requerida                                  Int
-  cantidad_entregada                                  Int                    @default(0)
+  cantidad_entregada                                  Int                            @default(0)
   estado_id                                           Int
-  fecha_asignacion                                    DateTime?              @db.Date
-  activo                                              Boolean                @default(true)
-  created_at                                          DateTime               @default(now()) @db.Timestamp(6)
-  updated_at                                          DateTime?              @db.Timestamp(6)
+  fecha_asignacion                                    DateTime?                      @db.Date
+  activo                                              Boolean                        @default(true)
+  created_at                                          DateTime                       @default(now()) @db.Timestamp(6)
+  updated_at                                          DateTime?                      @db.Timestamp(6)
   created_by                                          Int?
   updated_by                                          Int?
   receta_medica_id                                    Int?
-  usuario_detalle_solicitud_apoyo_created_byTousuario usuario?               @relation("detalle_solicitud_apoyo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dsa_created_by")
-  estado_solicitud_apoyo                              estado_solicitud_apoyo @relation(fields: [estado_id], references: [id], onUpdate: NoAction, map: "fk_dsa_estado")
-  insumo                                              insumo                 @relation(fields: [insumo_id], references: [id], onUpdate: NoAction, map: "fk_dsa_insumo")
-  receta_medica                                       receta_medica?         @relation(fields: [receta_medica_id], references: [id], onUpdate: NoAction, map: "fk_dsa_receta")
-  solicitud_apoyo                                     solicitud_apoyo        @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dsa_solicitud")
-  usuario_detalle_solicitud_apoyo_updated_byTousuario usuario?               @relation("detalle_solicitud_apoyo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dsa_updated_by")
+  usuario_detalle_solicitud_apoyo_created_byTousuario usuario?                       @relation("detalle_solicitud_apoyo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dsa_created_by")
+  estado_solicitud_apoyo                              estado_solicitud_apoyo         @relation(fields: [estado_id], references: [id], onUpdate: NoAction, map: "fk_dsa_estado")
+  insumo                                              insumo                         @relation(fields: [insumo_id], references: [id], onUpdate: NoAction, map: "fk_dsa_insumo")
+  receta_medica                                       receta_medica?                 @relation(fields: [receta_medica_id], references: [id], onUpdate: NoAction, map: "fk_dsa_receta")
+  solicitud_apoyo                                     solicitud_apoyo                @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dsa_solicitud")
+  usuario_detalle_solicitud_apoyo_updated_byTousuario usuario?                       @relation("detalle_solicitud_apoyo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dsa_updated_by")
+  detalle_solicitud_formulario                        detalle_solicitud_formulario[]
   entrega                                             entrega[]
 
   @@unique([solicitud_id, insumo_id], map: "detalle_solicitud_insumo_unico_key")
@@ -818,4 +841,179 @@ model marca_insumo {
   detalle_inventario_lote                  detalle_inventario_lote[]
   usuario_marca_insumo_created_byTousuario usuario?                  @relation("marca_insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_mi_created_by")
   usuario_marca_insumo_updated_byTousuario usuario?                  @relation("marca_insumo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_mi_updated_by")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model catalogo {
+  id                                   Int                @id @default(autoincrement())
+  nombre                               String             @unique @db.VarChar(150)
+  activo                               Boolean            @default(true)
+  created_at                           DateTime           @default(now()) @db.Timestamp(6)
+  updated_at                           DateTime?          @db.Timestamp(6)
+  created_by                           Int?
+  updated_by                           Int?
+  usuario_catalogo_created_byTousuario usuario?           @relation("catalogo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cat2_created_by")
+  usuario_catalogo_updated_byTousuario usuario?           @relation("catalogo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cat2_updated_by")
+  catalogo_valor                       catalogo_valor[]
+  formulario_campo                     formulario_campo[]
+}
+
+model catalogo_valor {
+  id                                         Int       @id @default(autoincrement())
+  catalogo_id                                Int
+  etiqueta                                   String    @db.VarChar(150)
+  orden                                      Int
+  activo                                     Boolean   @default(true)
+  created_at                                 DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                                 DateTime? @db.Timestamp(6)
+  created_by                                 Int?
+  updated_by                                 Int?
+  catalogo                                   catalogo  @relation(fields: [catalogo_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_catv_catalogo")
+  usuario_catalogo_valor_created_byTousuario usuario?  @relation("catalogo_valor_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_catv_created_by")
+  usuario_catalogo_valor_updated_byTousuario usuario?  @relation("catalogo_valor_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_catv_updated_by")
+
+  @@unique([catalogo_id, orden], map: "catalogo_valor_orden_unico_key")
+  @@index([catalogo_id], map: "idx_catalogo_valor_catalogo")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model categoria_insumo_formulario {
+  id                                                      Int              @id @default(autoincrement())
+  categoria_insumo_id                                     Int
+  formulario_id                                           Int
+  orden                                                   Int              @default(0)
+  activo                                                  Boolean          @default(true)
+  created_at                                              DateTime         @default(now()) @db.Timestamp(6)
+  updated_at                                              DateTime?        @db.Timestamp(6)
+  created_by                                              Int?
+  updated_by                                              Int?
+  categoria_insumo                                        categoria_insumo @relation(fields: [categoria_insumo_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cif_categoria")
+  usuario_categoria_insumo_formulario_created_byTousuario usuario?         @relation("categoria_insumo_formulario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cif_created_by")
+  formulario                                              formulario       @relation(fields: [formulario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cif_formulario")
+  usuario_categoria_insumo_formulario_updated_byTousuario usuario?         @relation("categoria_insumo_formulario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cif_updated_by")
+
+  @@unique([categoria_insumo_id, formulario_id], map: "cif_categoria_formulario_unico_key")
+  @@index([categoria_insumo_id], map: "idx_cif_categoria")
+  @@index([formulario_id], map: "idx_cif_formulario")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model detalle_solicitud_formulario {
+  id                                                       Int                                      @id @default(autoincrement())
+  detalle_solicitud_id                                     Int
+  formulario_id                                            Int
+  completado                                               Boolean                                  @default(false)
+  activo                                                   Boolean                                  @default(true)
+  created_at                                               DateTime                                 @default(now()) @db.Timestamp(6)
+  updated_at                                               DateTime?                                @db.Timestamp(6)
+  created_by                                               Int?
+  updated_by                                               Int?
+  usuario_detalle_solicitud_formulario_created_byTousuario usuario?                                 @relation("detalle_solicitud_formulario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dsf_created_by")
+  formulario                                               formulario                               @relation(fields: [formulario_id], references: [id], onUpdate: NoAction, map: "fk_dsf_formulario")
+  detalle_solicitud_apoyo                                  detalle_solicitud_apoyo                  @relation(fields: [detalle_solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dsf_linea")
+  usuario_detalle_solicitud_formulario_updated_byTousuario usuario?                                 @relation("detalle_solicitud_formulario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dsf_updated_by")
+  detalle_solicitud_formulario_respuesta                   detalle_solicitud_formulario_respuesta[]
+
+  @@unique([detalle_solicitud_id, formulario_id], map: "dsf_linea_formulario_unico_key")
+  @@index([detalle_solicitud_id], map: "idx_dsf_linea")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model detalle_solicitud_formulario_respuesta {
+  id                                                                 Int                          @id @default(autoincrement())
+  detalle_solicitud_formulario_id                                    Int
+  formulario_campo_id                                                Int
+  numero_fila                                                        Int                          @default(1)
+  valor_texto                                                        String?
+  activo                                                             Boolean                      @default(true)
+  created_at                                                         DateTime                     @default(now()) @db.Timestamp(6)
+  updated_at                                                         DateTime?                    @db.Timestamp(6)
+  created_by                                                         Int?
+  updated_by                                                         Int?
+  formulario_campo                                                   formulario_campo             @relation(fields: [formulario_campo_id], references: [id], onUpdate: NoAction, map: "fk_dsfr_campo")
+  usuario_detalle_solicitud_formulario_respuesta_created_byTousuario usuario?                     @relation("detalle_solicitud_formulario_respuesta_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dsfr_created_by")
+  detalle_solicitud_formulario                                       detalle_solicitud_formulario @relation(fields: [detalle_solicitud_formulario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dsfr_detalle_formulario")
+  usuario_detalle_solicitud_formulario_respuesta_updated_byTousuario usuario?                     @relation("detalle_solicitud_formulario_respuesta_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dsfr_updated_by")
+
+  @@unique([detalle_solicitud_formulario_id, formulario_campo_id, numero_fila], map: "dsfr_respuesta_unica_key")
+  @@index([formulario_campo_id], map: "idx_dsfr_campo")
+  @@index([detalle_solicitud_formulario_id], map: "idx_dsfr_detalle_formulario")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model formulario {
+  id                                     Int                            @id @default(autoincrement())
+  nombre                                 String                         @unique @db.VarChar(150)
+  descripcion                            String?
+  activo                                 Boolean                        @default(true)
+  created_at                             DateTime                       @default(now()) @db.Timestamp(6)
+  updated_at                             DateTime?                      @db.Timestamp(6)
+  created_by                             Int?
+  updated_by                             Int?
+  categoria_insumo_formulario            categoria_insumo_formulario[]
+  detalle_solicitud_formulario           detalle_solicitud_formulario[]
+  usuario_formulario_created_byTousuario usuario?                       @relation("formulario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_form_created_by")
+  usuario_formulario_updated_byTousuario usuario?                       @relation("formulario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_form_updated_by")
+  formulario_campo                       formulario_campo[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model formulario_campo {
+  id                                           Int                                      @id @default(autoincrement())
+  formulario_id                                Int
+  etiqueta                                     String                                   @db.VarChar(200)
+  tipo_dato_id                                 Int
+  catalogo_id                                  Int?
+  obligatorio                                  Boolean                                  @default(false)
+  orden                                        Int
+  grupo_repetible                              String?                                  @db.VarChar(100)
+  ayuda                                        String?
+  activo                                       Boolean                                  @default(true)
+  created_at                                   DateTime                                 @default(now()) @db.Timestamp(6)
+  updated_at                                   DateTime?                                @db.Timestamp(6)
+  created_by                                   Int?
+  updated_by                                   Int?
+  detalle_solicitud_formulario_respuesta       detalle_solicitud_formulario_respuesta[]
+  catalogo                                     catalogo?                                @relation(fields: [catalogo_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_fc_catalogo")
+  usuario_formulario_campo_created_byTousuario usuario?                                 @relation("formulario_campo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fc_created_by")
+  formulario                                   formulario                               @relation(fields: [formulario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_fc_formulario")
+  tipo_dato_campo_formulario                   tipo_dato_campo_formulario               @relation(fields: [tipo_dato_id], references: [id], onUpdate: NoAction, map: "fk_fc_tipo_dato")
+  usuario_formulario_campo_updated_byTousuario usuario?                                 @relation("formulario_campo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fc_updated_by")
+  formulario_campo_opcion                      formulario_campo_opcion[]
+
+  @@unique([formulario_id, orden], map: "formulario_campo_orden_unico_key")
+  @@index([catalogo_id], map: "idx_formulario_campo_catalogo")
+  @@index([formulario_id], map: "idx_formulario_campo_formulario")
+}
+
+model formulario_campo_opcion {
+  id                                                  Int              @id @default(autoincrement())
+  formulario_campo_id                                 Int
+  etiqueta                                            String           @db.VarChar(150)
+  orden                                               Int
+  activo                                              Boolean          @default(true)
+  created_at                                          DateTime         @default(now()) @db.Timestamp(6)
+  updated_at                                          DateTime?        @db.Timestamp(6)
+  created_by                                          Int?
+  updated_by                                          Int?
+  formulario_campo                                    formulario_campo @relation(fields: [formulario_campo_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_fco_campo")
+  usuario_formulario_campo_opcion_created_byTousuario usuario?         @relation("formulario_campo_opcion_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fco_created_by")
+  usuario_formulario_campo_opcion_updated_byTousuario usuario?         @relation("formulario_campo_opcion_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fco_updated_by")
+
+  @@unique([formulario_campo_id, orden], map: "fco_orden_unico_key")
+  @@index([formulario_campo_id], map: "idx_formulario_campo_opcion_campo")
+}
+
+model tipo_dato_campo_formulario {
+  id                                                     Int                @id @default(autoincrement())
+  nombre                                                 String             @unique @db.VarChar(30)
+  activo                                                 Boolean            @default(true)
+  created_at                                             DateTime           @default(now()) @db.Timestamp(6)
+  updated_at                                             DateTime?          @db.Timestamp(6)
+  created_by                                             Int?
+  updated_by                                             Int?
+  formulario_campo                                       formulario_campo[]
+  usuario_tipo_dato_campo_formulario_created_byTousuario usuario?           @relation("tipo_dato_campo_formulario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tdcf_created_by")
+  usuario_tipo_dato_campo_formulario_updated_byTousuario usuario?           @relation("tipo_dato_campo_formulario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tdcf_updated_by")
 }

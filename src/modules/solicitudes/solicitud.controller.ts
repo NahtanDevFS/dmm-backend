@@ -40,6 +40,7 @@ import {
   traducirErrorPostgres,
   type ContextoError,
 } from "../../lib/errores/postgres.js";
+import { tieneFormulariosPendientes } from "../formularios/formulario.repository.js";
 
 /**
  * Traduce el error con el nombre del insumo, para que los mensajes de los
@@ -91,7 +92,11 @@ async function resolverLinea(
   }
   const linea = await buscarLineaPorId(lineaId);
   if (!linea) {
-    return { ok: false, status: 404, message: "Línea de solicitud no encontrada" };
+    return {
+      ok: false,
+      status: 404,
+      message: "Línea de solicitud no encontrada",
+    };
   }
   if (linea.solicitud_id !== base.id) {
     return {
@@ -287,9 +292,7 @@ export async function aprobarController(
 
     const solicitud = (await buscarSolicitudPorId(ruta.id))!;
     if (!solicitud.activo) {
-      return res
-        .status(409)
-        .json({ message: "La solicitud está desactivada" });
+      return res.status(409).json({ message: "La solicitud está desactivada" });
     }
     if (!solicitud.requiere_aprobacion) {
       return res.status(409).json({
@@ -298,6 +301,20 @@ export async function aprobarController(
     }
     if (solicitud.aprobada) {
       return res.status(200).json(solicitud); // idempotente
+    }
+
+    // Formularios exigidos por la categoría de cada línea (equipo, típicamente):
+    // ninguno puede quedar incompleto antes de aprobar. Ver migración 15 y
+    // formulario.repository.ts. Las líneas de medicina/comida no tienen
+    // categoria_insumo_formulario asociada, así que no las afecta este chequeo.
+    const lineas = await listarLineasDeSolicitud(ruta.id, false);
+    for (const linea of lineas) {
+      if (await tieneFormulariosPendientes(linea.id)) {
+        return res.status(409).json({
+          message:
+            "No se puede aprobar: hay al menos una línea con un formulario exigido todavía sin completar.",
+        });
+      }
     }
 
     const actualizada = await aprobarSolicitud(req.usuario!.id, ruta.id);
