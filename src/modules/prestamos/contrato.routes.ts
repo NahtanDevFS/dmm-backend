@@ -12,12 +12,14 @@ import {
   editarController,
   devolucionController,
   marcarVencidosController,
-  subirDocumentoController,
   listarMultasController,
   aplicarMultaController,
   editarMultaController,
   pagarMultaController,
   anularMultaController,
+  listarEvidenciasContratoController,
+  subirEvidenciaContratoController,
+  eliminarEvidenciaContratoController,
 } from "./contrato.controller.js";
 
 // Prestar y recibir equipo es operación diaria.
@@ -54,13 +56,6 @@ router.post(
   requireRole(OPERACION),
   devolucionController,
 );
-router.post(
-  "/:id/documento",
-  requireAuth,
-  requireRole(OPERACION),
-  uploadMemoria.single("archivo"),
-  subirDocumentoController,
-);
 
 router.get(
   "/:id/multas",
@@ -91,6 +86,26 @@ router.post(
   requireAuth,
   requireRole(DIRECCION),
   anularMultaController,
+);
+
+router.get(
+  "/:id/evidencias",
+  requireAuth,
+  requireRole(OPERACION),
+  listarEvidenciasContratoController,
+);
+router.post(
+  "/:id/evidencias",
+  requireAuth,
+  requireRole(OPERACION),
+  uploadMemoria.single("archivo"),
+  subirEvidenciaContratoController,
+);
+router.delete(
+  "/:id/evidencias/:evidenciaId",
+  requireAuth,
+  requireRole(OPERACION),
+  eliminarEvidenciaContratoController,
 );
 
 export default router;

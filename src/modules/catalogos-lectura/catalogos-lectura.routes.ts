@@ -7,6 +7,7 @@ import {
   listarTiposParentescoController,
   listarTiposDocumentoPersonaController,
   listarTiposEvidenciaEntregaController,
+  listarTiposEvidenciaContratoController,
   listarEstadosSolicitudController,
   listarEstadosContratoController,
   listarTiposMultaController,
@@ -40,6 +41,12 @@ router.get(
   requireAuth,
   requireRole(OPERACION),
   listarTiposEvidenciaEntregaController,
+);
+router.get(
+  "/tipos-evidencia-contrato",
+  requireAuth,
+  requireRole(OPERACION),
+  listarTiposEvidenciaContratoController,
 );
 router.get(
   "/estados-solicitud",

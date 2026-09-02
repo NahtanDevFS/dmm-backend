@@ -60,25 +60,25 @@ model comunidad {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model contrato_prestamo {
-  id                                            Int                      @id @default(autoincrement())
-  detalle_entrega_id                            Int?                     @unique(map: "contrato_prestamo_detalle_entrega_unica_key")
-  contrato_anterior_id                          Int?                     @unique(map: "contrato_prestamo_anterior_unico_key")
-  fecha_inicio                                  DateTime                 @default(dbgenerated("CURRENT_DATE")) @db.Date
-  fecha_devolucion_pactada                      DateTime                 @db.Date
-  fecha_devolucion_real                         DateTime?                @db.Date
+  id                                            Int                           @id @default(autoincrement())
+  detalle_entrega_id                            Int?                          @unique(map: "contrato_prestamo_detalle_entrega_unica_key")
+  contrato_anterior_id                          Int?                          @unique(map: "contrato_prestamo_anterior_unico_key")
+  fecha_inicio                                  DateTime                      @default(dbgenerated("CURRENT_DATE")) @db.Date
+  fecha_devolucion_pactada                      DateTime                      @db.Date
+  fecha_devolucion_real                         DateTime?                     @db.Date
   estado_id                                     Int
-  ruta_documento_firmado                        String?                  @db.VarChar(500)
-  activo                                        Boolean                  @default(true)
-  created_at                                    DateTime                 @default(now()) @db.Timestamp(6)
-  updated_at                                    DateTime?                @db.Timestamp(6)
+  activo                                        Boolean                       @default(true)
+  created_at                                    DateTime                      @default(now()) @db.Timestamp(6)
+  updated_at                                    DateTime?                     @db.Timestamp(6)
   created_by                                    Int?
   updated_by                                    Int?
-  contrato_prestamo                             contrato_prestamo?       @relation("contrato_prestamoTocontrato_prestamo", fields: [contrato_anterior_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_cp_contrato_anterior")
-  other_contrato_prestamo                       contrato_prestamo?       @relation("contrato_prestamoTocontrato_prestamo")
-  usuario_contrato_prestamo_created_byTousuario usuario?                 @relation("contrato_prestamo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cp_created_by")
-  detalle_entrega                               detalle_entrega?         @relation(fields: [detalle_entrega_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_cp_detalle_entrega")
-  estado_contrato_prestamo                      estado_contrato_prestamo @relation(fields: [estado_id], references: [id], onUpdate: NoAction, map: "fk_cp_estado")
-  usuario_contrato_prestamo_updated_byTousuario usuario?                 @relation("contrato_prestamo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cp_updated_by")
+  contrato_prestamo                             contrato_prestamo?            @relation("contrato_prestamoTocontrato_prestamo", fields: [contrato_anterior_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_cp_contrato_anterior")
+  other_contrato_prestamo                       contrato_prestamo?            @relation("contrato_prestamoTocontrato_prestamo")
+  usuario_contrato_prestamo_created_byTousuario usuario?                      @relation("contrato_prestamo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cp_created_by")
+  detalle_entrega                               detalle_entrega?              @relation(fields: [detalle_entrega_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_cp_detalle_entrega")
+  estado_contrato_prestamo                      estado_contrato_prestamo      @relation(fields: [estado_id], references: [id], onUpdate: NoAction, map: "fk_cp_estado")
+  usuario_contrato_prestamo_updated_byTousuario usuario?                      @relation("contrato_prestamo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cp_updated_by")
+  evidencia_contrato_prestamo                   evidencia_contrato_prestamo[]
   multa_prestamo                                multa_prestamo[]
 
   @@index([estado_id], map: "idx_contrato_prestamo_estado", where: raw("(activo = true)"))
@@ -598,6 +598,8 @@ model usuario {
   estado_contrato_prestamo_estado_contrato_prestamo_updated_byTousuario                             estado_contrato_prestamo[]               @relation("estado_contrato_prestamo_updated_byTousuario")
   estado_solicitud_apoyo_estado_solicitud_apoyo_created_byTousuario                                 estado_solicitud_apoyo[]                 @relation("estado_solicitud_apoyo_created_byTousuario")
   estado_solicitud_apoyo_estado_solicitud_apoyo_updated_byTousuario                                 estado_solicitud_apoyo[]                 @relation("estado_solicitud_apoyo_updated_byTousuario")
+  evidencia_contrato_prestamo_evidencia_contrato_prestamo_created_byTousuario                       evidencia_contrato_prestamo[]            @relation("evidencia_contrato_prestamo_created_byTousuario")
+  evidencia_contrato_prestamo_evidencia_contrato_prestamo_updated_byTousuario                       evidencia_contrato_prestamo[]            @relation("evidencia_contrato_prestamo_updated_byTousuario")
   evidencia_entrega_evidencia_entrega_created_byTousuario                                           evidencia_entrega[]                      @relation("evidencia_entrega_created_byTousuario")
   evidencia_entrega_evidencia_entrega_updated_byTousuario                                           evidencia_entrega[]                      @relation("evidencia_entrega_updated_byTousuario")
   formulario_formulario_created_byTousuario                                                         formulario[]                             @relation("formulario_created_byTousuario")
@@ -640,6 +642,8 @@ model usuario {
   tipo_dato_campo_formulario_tipo_dato_campo_formulario_updated_byTousuario                         tipo_dato_campo_formulario[]             @relation("tipo_dato_campo_formulario_updated_byTousuario")
   tipo_documento_persona_tipo_documento_persona_created_byTousuario                                 tipo_documento_persona[]                 @relation("tipo_documento_persona_created_byTousuario")
   tipo_documento_persona_tipo_documento_persona_updated_byTousuario                                 tipo_documento_persona[]                 @relation("tipo_documento_persona_updated_byTousuario")
+  tipo_evidencia_contrato_tipo_evidencia_contrato_created_byTousuario                               tipo_evidencia_contrato[]                @relation("tipo_evidencia_contrato_created_byTousuario")
+  tipo_evidencia_contrato_tipo_evidencia_contrato_updated_byTousuario                               tipo_evidencia_contrato[]                @relation("tipo_evidencia_contrato_updated_byTousuario")
   tipo_evidencia_entrega_tipo_evidencia_entrega_created_byTousuario                                 tipo_evidencia_entrega[]                 @relation("tipo_evidencia_entrega_created_byTousuario")
   tipo_evidencia_entrega_tipo_evidencia_entrega_updated_byTousuario                                 tipo_evidencia_entrega[]                 @relation("tipo_evidencia_entrega_updated_byTousuario")
   tipo_genero_tipo_genero_created_byTousuario                                                       tipo_genero[]                            @relation("tipo_genero_created_byTousuario")
@@ -1016,4 +1020,36 @@ model tipo_dato_campo_formulario {
   formulario_campo                                       formulario_campo[]
   usuario_tipo_dato_campo_formulario_created_byTousuario usuario?           @relation("tipo_dato_campo_formulario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tdcf_created_by")
   usuario_tipo_dato_campo_formulario_updated_byTousuario usuario?           @relation("tipo_dato_campo_formulario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tdcf_updated_by")
+}
+
+model evidencia_contrato_prestamo {
+  id                                                      Int                     @id @default(autoincrement())
+  contrato_prestamo_id                                    Int
+  tipo_evidencia_id                                       Int
+  ruta_archivo                                            String                  @db.VarChar(500)
+  observaciones                                           String?
+  activo                                                  Boolean                 @default(true)
+  created_at                                              DateTime                @default(now()) @db.Timestamp(6)
+  updated_at                                              DateTime?               @db.Timestamp(6)
+  created_by                                              Int?
+  updated_by                                              Int?
+  contrato_prestamo                                       contrato_prestamo       @relation(fields: [contrato_prestamo_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ecp_contrato")
+  usuario_evidencia_contrato_prestamo_created_byTousuario usuario?                @relation("evidencia_contrato_prestamo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ecp_created_by")
+  tipo_evidencia_contrato                                 tipo_evidencia_contrato @relation(fields: [tipo_evidencia_id], references: [id], onUpdate: NoAction, map: "fk_ecp_tipo")
+  usuario_evidencia_contrato_prestamo_updated_byTousuario usuario?                @relation("evidencia_contrato_prestamo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ecp_updated_by")
+
+  @@index([contrato_prestamo_id], map: "idx_evidencia_contrato_prestamo_contrato")
+}
+
+model tipo_evidencia_contrato {
+  id                                                  Int                           @id @default(autoincrement())
+  nombre                                              String                        @unique @db.VarChar(50)
+  activo                                              Boolean                       @default(true)
+  created_at                                          DateTime                      @default(now()) @db.Timestamp(6)
+  updated_at                                          DateTime?                     @db.Timestamp(6)
+  created_by                                          Int?
+  updated_by                                          Int?
+  evidencia_contrato_prestamo                         evidencia_contrato_prestamo[]
+  usuario_tipo_evidencia_contrato_created_byTousuario usuario?                      @relation("tipo_evidencia_contrato_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tec_created_by")
+  usuario_tipo_evidencia_contrato_updated_byTousuario usuario?                      @relation("tipo_evidencia_contrato_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tec_updated_by")
 }
