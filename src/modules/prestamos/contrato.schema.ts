@@ -31,9 +31,11 @@ export const editarContratoSchema = z.object({
 });
 
 export const listarContratosQuerySchema = z.object({
-  estado: z.enum(["VIGENTE", "DEVUELTO", "VENCIDO", "EXTENDIDO"], {
-    error: "El estado debe ser VIGENTE, DEVUELTO, VENCIDO o EXTENDIDO",
-  }).optional(),
+  estado: z
+    .enum(["VIGENTE", "DEVUELTO", "VENCIDO", "EXTENDIDO"], {
+      error: "El estado debe ser VIGENTE, DEVUELTO, VENCIDO o EXTENDIDO",
+    })
+    .optional(),
   personaId: z.coerce.number().int().positive().optional(),
   incluirInactivos: z
     .string()
@@ -60,4 +62,12 @@ export const editarMultaSchema = z.object({
 
 export const pagarMultaSchema = z.object({
   fecha_pago: fechaSchema.optional(),
+});
+
+export const crearEvidenciaContratoSchema = z.object({
+  tipo_evidencia_id: z.coerce
+    .number({ error: "tipo_evidencia_id es requerido" })
+    .int()
+    .positive("tipo_evidencia_id es requerido"),
+  observaciones: z.string().trim().max(2000).optional(),
 });

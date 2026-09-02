@@ -7,9 +7,11 @@ import {
   aplicarMultaSchema,
   editarMultaSchema,
   pagarMultaSchema,
+  crearEvidenciaContratoSchema,
 } from "./contrato.schema.js";
 import {
   buscarContratoPorId,
+  buscarPersonaEInsumoDeContrato,
   listarContratos,
   listarContratosVencidos,
   listarCadenaDeRenovaciones,
@@ -20,7 +22,6 @@ import {
   crearContrato,
   renovarContrato,
   editarContrato,
-  guardarDocumentoFirmado,
   registrarDevolucion,
   marcarContratosVencidos,
 } from "./contrato.repository.js";
@@ -33,6 +34,13 @@ import {
   marcarMultaPagada,
   anularMulta,
 } from "./multa.repository.js";
+import {
+  listarEvidenciasDeContrato,
+  buscarEvidenciaContratoPorId,
+  existeTipoEvidenciaContratoActivo,
+  crearEvidenciaContrato,
+  eliminarEvidenciaContrato,
+} from "./evidencia-contrato.repository.js";
 import { guardarArchivo } from "../../lib/storage/storage.service.js";
 import { paginar } from "../../lib/paginacion.js";
 
@@ -123,13 +131,18 @@ export async function obtenerController(
       return res.status(ruta.status).json({ message: ruta.message });
     }
 
-    const [contrato, multas, cadena] = await Promise.all([
-      buscarContratoPorId(ruta.id),
-      listarMultasDeContrato(ruta.id, false),
-      listarCadenaDeRenovaciones(ruta.id),
-    ]);
+    const [contrato, multas, cadena, referencia, evidencias] =
+      await Promise.all([
+        buscarContratoPorId(ruta.id),
+        listarMultasDeContrato(ruta.id, false),
+        listarCadenaDeRenovaciones(ruta.id),
+        buscarPersonaEInsumoDeContrato(ruta.id),
+        listarEvidenciasDeContrato(ruta.id),
+      ]);
 
-    return res.status(200).json({ ...contrato, multas, cadena });
+    return res
+      .status(200)
+      .json({ ...contrato, multas, cadena, ...referencia, evidencias });
   } catch (error) {
     return next(error);
   }
@@ -201,9 +214,7 @@ export async function renovarController(
 
     const contrato = (await buscarContratoPorId(ruta.id))!;
     if (!contrato.activo) {
-      return res
-        .status(409)
-        .json({ message: "El contrato está desactivado" });
+      return res.status(409).json({ message: "El contrato está desactivado" });
     }
     if (contrato.fecha_devolucion_real !== null) {
       return res.status(409).json({
@@ -324,36 +335,6 @@ export async function marcarVencidosController(
       actualizados,
       message: `${actualizados} contrato(s) marcados como VENCIDO`,
     });
-  } catch (error) {
-    return next(error);
-  }
-}
-
-export async function subirDocumentoController(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
-  try {
-    const ruta = await resolverContrato(req);
-    if (!ruta.ok) {
-      return res.status(ruta.status).json({ message: ruta.message });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({ message: "Debe adjuntar un archivo" });
-    }
-
-    const guardado = await guardarArchivo(
-      req.file.buffer,
-      "contratos-prestamo",
-    );
-    const actualizado = await guardarDocumentoFirmado(
-      req.usuario!.id,
-      ruta.id,
-      guardado.rutaRelativa,
-    );
-    return res.status(201).json(actualizado);
   } catch (error) {
     return next(error);
   }
@@ -490,9 +471,7 @@ export async function pagarMultaController(
 
     const multa = (await buscarMultaPorId(ruta.multaId))!;
     if (!multa.activo) {
-      return res
-        .status(409)
-        .json({ message: "La multa fue anulada" });
+      return res.status(409).json({ message: "La multa fue anulada" });
     }
     if (multa.pagada) {
       return res.status(200).json(multa); // idempotente
@@ -533,6 +512,108 @@ export async function anularMultaController(
     return res
       .status(200)
       .json(await anularMulta(req.usuario!.id, ruta.multaId));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// ─────────────────────────────────────────────── evidencias
+
+/**
+ * Evidencias del contrato: el documento firmado (tipo CONTRATO_FIRMADO), el
+ * DPI de quien firma (frontal y reverso), y la foto de recepción del
+ * equipo -- todo vive aquí, ya no hay una columna dedicada solo para el
+ * documento firmado. Un préstamo no exige formularios de estudio
+ * socioeconómico -- eso es solo para donación definitiva -- así que estas
+ * evidencias son todo lo que un préstamo necesita.
+ */
+export async function listarEvidenciasContratoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverContrato(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+    return res.status(200).json(await listarEvidenciasDeContrato(ruta.id));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function subirEvidenciaContratoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverContrato(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Debe adjuntar un archivo" });
+    }
+
+    const parsed = crearEvidenciaContratoSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errores: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    if (
+      !(await existeTipoEvidenciaContratoActivo(parsed.data.tipo_evidencia_id))
+    ) {
+      return res.status(400).json({
+        message: "El tipo de evidencia indicado no existe o no está activo",
+      });
+    }
+
+    const guardado = await guardarArchivo(
+      req.file.buffer,
+      "evidencia-contrato-prestamo",
+    );
+
+    const nueva = await crearEvidenciaContrato(req.usuario!.id, {
+      contratoId: ruta.id,
+      tipoEvidenciaId: parsed.data.tipo_evidencia_id,
+      rutaArchivo: guardado.rutaRelativa,
+      observaciones: parsed.data.observaciones,
+    });
+    return res.status(201).json(nueva);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function eliminarEvidenciaContratoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverContrato(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+
+    const evidenciaId = Number(req.params.evidenciaId);
+    if (!Number.isInteger(evidenciaId)) {
+      return res.status(400).json({ message: "Id de evidencia inválido" });
+    }
+
+    const evidencia = await buscarEvidenciaContratoPorId(evidenciaId);
+    if (!evidencia || evidencia.contrato_prestamo_id !== ruta.id) {
+      return res.status(404).json({ message: "Evidencia no encontrada" });
+    }
+
+    await eliminarEvidenciaContrato(req.usuario!.id, evidenciaId);
+    return res.status(200).json(await listarEvidenciasDeContrato(ruta.id));
   } catch (error) {
     return next(error);
   }

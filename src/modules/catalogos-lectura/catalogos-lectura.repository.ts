@@ -80,6 +80,16 @@ export async function listarTiposEvidenciaEntrega(): Promise<
   });
 }
 
+export async function listarTiposEvidenciaContrato(): Promise<
+  TipoEvidenciaEntregaRow[]
+> {
+  return prisma.tipo_evidencia_contrato.findMany({
+    where: { activo: true },
+    orderBy: { nombre: "asc" },
+    select: { id: true, nombre: true, activo: true },
+  });
+}
+
 export async function listarEstadosSolicitud(): Promise<EstadoSolicitudRow[]> {
   return prisma.estado_solicitud_apoyo.findMany({
     orderBy: { id: "asc" },

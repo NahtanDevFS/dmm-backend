@@ -4,6 +4,7 @@ import {
   listarTiposParentesco,
   listarTiposDocumentoPersona,
   listarTiposEvidenciaEntrega,
+  listarTiposEvidenciaContrato,
   listarEstadosSolicitud,
   listarEstadosContrato,
   listarTiposMulta,
@@ -55,6 +56,19 @@ export async function listarTiposEvidenciaEntregaController(
 ) {
   try {
     const tipos = await listarTiposEvidenciaEntrega();
+    return res.status(200).json(tipos);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listarTiposEvidenciaContratoController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const tipos = await listarTiposEvidenciaContrato();
     return res.status(200).json(tipos);
   } catch (error) {
     return next(error);
