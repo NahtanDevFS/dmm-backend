@@ -11,13 +11,11 @@ export interface ContratoRow {
   fecha_devolucion_pactada: Date;
   fecha_devolucion_real: Date | null;
   estado_id: number;
-  ruta_documento_firmado: string | null;
   activo: boolean;
 }
 
 const COLUMNAS = `id, detalle_entrega_id, contrato_anterior_id, fecha_inicio,
-  fecha_devolucion_pactada, fecha_devolucion_real, estado_id,
-  ruta_documento_firmado, activo`;
+  fecha_devolucion_pactada, fecha_devolucion_real, estado_id, activo`;
 
 async function idEstado(client: PoolClient, nombre: string): Promise<number> {
   const result = await client.query<{ id: number }>(
@@ -136,7 +134,6 @@ export async function listarContratos(params: {
             cp.fecha_devolucion_pactada,
             cp.fecha_devolucion_real,
             ecp.nombre                               AS estado,
-            cp.ruta_documento_firmado,
             cp.activo,
             e.persona_id,
             p.nombres || ' ' || p.apellidos          AS persona_nombre_completo,
@@ -227,8 +224,7 @@ export async function listarCadenaDeRenovaciones(
        SELECT ${COLUMNAS} FROM public.contrato_prestamo WHERE id = $1
        UNION
        SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id, cp.fecha_inicio,
-              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id,
-              cp.ruta_documento_firmado, cp.activo
+              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id, cp.activo
        FROM public.contrato_prestamo cp
        JOIN hacia_atras h ON h.contrato_anterior_id = cp.id
      ),
@@ -236,8 +232,7 @@ export async function listarCadenaDeRenovaciones(
        SELECT ${COLUMNAS} FROM public.contrato_prestamo WHERE id = $1
        UNION
        SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id, cp.fecha_inicio,
-              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id,
-              cp.ruta_documento_firmado, cp.activo
+              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id, cp.activo
        FROM public.contrato_prestamo cp
        JOIN hacia_adelante h ON cp.contrato_anterior_id = h.id
      )
@@ -263,8 +258,7 @@ export async function buscarContratoRaiz(
        SELECT ${COLUMNAS} FROM public.contrato_prestamo WHERE id = $1
        UNION ALL
        SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id, cp.fecha_inicio,
-              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id,
-              cp.ruta_documento_firmado, cp.activo
+              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id, cp.activo
        FROM public.contrato_prestamo cp
        JOIN hacia_atras h ON h.contrato_anterior_id = cp.id
      )
@@ -403,23 +397,6 @@ export async function editarContrato(
        WHERE id = $3
        RETURNING ${COLUMNAS}`,
       [fechaDevolucionPactada, usuarioId, id],
-    );
-    return result.rows[0];
-  });
-}
-
-export async function guardarDocumentoFirmado(
-  usuarioId: number,
-  id: number,
-  ruta: string,
-): Promise<ContratoRow> {
-  return withUserTransaction(usuarioId, async (client) => {
-    const result = await client.query<ContratoRow>(
-      `UPDATE public.contrato_prestamo
-       SET ruta_documento_firmado = $1, updated_by = $2
-       WHERE id = $3
-       RETURNING ${COLUMNAS}`,
-      [ruta, usuarioId, id],
     );
     return result.rows[0];
   });
