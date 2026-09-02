@@ -17,7 +17,8 @@ export type CategoriaArchivo =
   | "evidencia-entrega"
   | "recetas-medicas"
   | "documentos-recepcion"
-  | "contratos-prestamo";
+  | "contratos-prestamo"
+  | "evidencia-contrato-prestamo";
 
 export interface ArchivoGuardado {
   rutaRelativa: string;

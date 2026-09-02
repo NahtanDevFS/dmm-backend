@@ -39,6 +39,42 @@ export async function buscarContratoPorId(
   return result.rows[0] ?? null;
 }
 
+export async function buscarPersonaEInsumoDeContrato(id: number): Promise<{
+  persona_id: number;
+  persona_nombre_completo: string;
+  insumo_nombre: string;
+  cantidad_entregada: number;
+} | null> {
+  const result = await pool.query<{
+    persona_id: number;
+    persona_nombre_completo: string;
+    insumo_nombre: string;
+    cantidad_entregada: number;
+  }>(
+    `WITH RECURSIVE hacia_atras AS (
+       SELECT id, detalle_entrega_id, contrato_anterior_id
+       FROM public.contrato_prestamo WHERE id = $1
+       UNION ALL
+       SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id
+       FROM public.contrato_prestamo cp
+       JOIN hacia_atras h ON h.contrato_anterior_id = cp.id
+     )
+     SELECT e.persona_id,
+            p.nombres || ' ' || p.apellidos AS persona_nombre_completo,
+            i.nombre AS insumo_nombre,
+            de.cantidad_entregada
+     FROM hacia_atras h
+     JOIN public.detalle_entrega de ON de.id = h.detalle_entrega_id
+     JOIN public.entrega e ON e.id = de.entrega_id
+     JOIN public.persona p ON p.id = e.persona_id
+     JOIN public.detalle_inventario_lote dl ON dl.id = de.detalle_inventario_lote_id
+     JOIN public.insumo i ON i.id = dl.insumo_id
+     LIMIT 1`,
+    [id],
+  );
+  return result.rows[0] ?? null;
+}
+
 /**
  * Listado con el beneficiario y el insumo resueltos. Ninguno de los dos está en
  * `contrato_prestamo`: se alcanzan por detalle_entrega -> entrega -> persona y
@@ -402,10 +438,10 @@ export async function registrarDevolucion(
   contratoRaizId: number,
 ): Promise<void> {
   await withUserTransaction(usuarioId, async (client) => {
-    await client.query(
-      `CALL public.sp_registrar_devolucion_prestamo($1, $2)`,
-      [contratoRaizId, usuarioId],
-    );
+    await client.query(`CALL public.sp_registrar_devolucion_prestamo($1, $2)`, [
+      contratoRaizId,
+      usuarioId,
+    ]);
 
     if (contratoId !== contratoRaizId) {
       const estadoDevuelto = await idEstado(client, "DEVUELTO");
