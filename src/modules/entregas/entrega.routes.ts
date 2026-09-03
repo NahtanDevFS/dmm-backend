@@ -9,6 +9,7 @@ import {
   lotesFifoController,
   registrarController,
   anularController,
+  anularDetalleController,
   listarEvidenciasController,
   subirEvidenciaController,
   eliminarEvidenciaController,
@@ -36,6 +37,7 @@ router.post(
   requireAuth,
   requireRole(DIRECCION),
   anularController,
+  anularDetalleController,
 );
 
 router.get(

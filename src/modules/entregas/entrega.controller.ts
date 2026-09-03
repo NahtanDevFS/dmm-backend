@@ -16,8 +16,10 @@ import {
   existeTipoParentescoActivo,
   existeTipoEvidenciaActivo,
   buscarLineaParaEntrega,
+  buscarDetalleEntrega,
   registrarEntrega,
   anularEntrega,
+  anularDetalleEntrega,
 } from "./entrega.repository.js";
 import {
   listarEvidenciasDeEntrega,
@@ -168,13 +170,6 @@ export async function registrarController(
         .json({ message: "La persona indicada no existe o no está activa" });
     }
 
-    const insumo = await buscarInsumoActivo(parsed.data.insumo_id);
-    if (!insumo) {
-      return res
-        .status(400)
-        .json({ message: "El insumo indicado no existe o no está activo" });
-    }
-
     if (parsed.data.persona_receptor_id != null) {
       if (!(await existePersonaActiva(parsed.data.persona_receptor_id))) {
         return res.status(400).json({
@@ -192,52 +187,75 @@ export async function registrarController(
       }
     }
 
-    // Reglas que la base de datos NO cubre para el despacho contra una línea de
-    // solicitud. sp_registrar_entrega valida existencia y coherencia del insumo,
-    // y el CHECK de detalle_solicitud_apoyo impide exceder lo requerido, pero
-    // nada impide entregar contra una línea cancelada o una solicitud que
-    // todavía espera aprobación.
-    if (parsed.data.detalle_solicitud_id != null) {
-      const linea = await buscarLineaParaEntrega(
-        parsed.data.detalle_solicitud_id,
-      );
+    // Cada insumo se valida por separado. Si uno solo falla no se registra
+    // nada: la entrega es un acto único y no tiene sentido guardar la mitad.
+    const nombresInsumo: string[] = [];
+
+    for (const [indice, renglon] of parsed.data.insumos.entries()) {
+      const posicion = `Insumo ${indice + 1}: `;
+
+      const insumo = await buscarInsumoActivo(renglon.insumo_id);
+      if (!insumo) {
+        return res
+          .status(400)
+          .json({ message: posicion + "no existe o no está activo" });
+      }
+      nombresInsumo.push(insumo.nombre);
+
+      // Reglas que la base de datos NO cubre para el despacho contra una línea
+      // de solicitud. sp_agregar_insumo_entrega valida existencia y coherencia
+      // del insumo, y el CHECK de detalle_solicitud_apoyo impide exceder lo
+      // requerido, pero nada impide entregar contra una línea cancelada o una
+      // solicitud que todavía espera aprobación.
+      if (renglon.detalle_solicitud_id == null) continue;
+
+      const linea = await buscarLineaParaEntrega(renglon.detalle_solicitud_id);
       if (!linea) {
         return res.status(400).json({
-          message: "La línea de solicitud indicada no existe o está inactiva",
+          message:
+            posicion +
+            "la línea de solicitud indicada no existe o está inactiva",
         });
       }
       if (linea.estado_nombre === "CANCELADA") {
         return res.status(409).json({
-          message: "No se puede entregar: la línea de solicitud fue cancelada.",
+          message:
+            posicion +
+            "no se puede entregar, la línea de solicitud fue cancelada.",
         });
       }
       if (linea.estado_nombre === "ENTREGADA") {
         return res.status(409).json({
           message:
-            "No se puede entregar: la línea de solicitud ya fue entregada por completo.",
+            posicion +
+            "no se puede entregar, la línea de solicitud ya fue entregada por completo.",
         });
       }
       if (linea.requiere_aprobacion && !linea.aprobada) {
         return res.status(409).json({
           message:
-            "No se puede entregar: la solicitud requiere aprobación y todavía no ha sido aprobada.",
+            posicion +
+            "no se puede entregar, la solicitud requiere aprobación y todavía no ha sido aprobada.",
         });
       }
       if (linea.persona_id !== parsed.data.persona_id) {
         return res.status(400).json({
           message:
-            "La persona indicada no es el beneficiario de esa solicitud.",
+            posicion +
+            "la persona indicada no es el beneficiario de esa solicitud.",
         });
       }
       const pendiente = linea.cantidad_requerida - linea.cantidad_entregada;
-      if (parsed.data.cantidad > pendiente) {
+      if (renglon.cantidad > pendiente) {
         return res.status(409).json({
-          message: `La cantidad excede lo pendiente de esa línea. Pendiente: ${pendiente}.`,
+          message:
+            posicion +
+            `la cantidad excede lo pendiente de esa línea. Pendiente: ${pendiente}.`,
         });
       }
     }
 
-    const contexto: ContextoError = { insumoNombre: insumo.nombre };
+    const contexto: ContextoError = { insumoNombre: nombresInsumo.join(", ") };
 
     try {
       const entregaId = await registrarEntrega(req.usuario!.id, parsed.data);
@@ -276,6 +294,58 @@ export async function anularController(
     // Que la entrega exista y esté activa lo valida sp_desactivar_entrega; su
     // excepción la traduce el errorHandler a 409.
     await anularEntrega(req.usuario!.id, ruta.id, parsed.data.motivo);
+
+    const [entrega, detalles] = await Promise.all([
+      buscarEntregaPorId(ruta.id),
+      listarDetallesDeEntrega(ruta.id),
+    ]);
+    return res.status(200).json({ ...entrega, detalles });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+/**
+ * Anula un solo insumo de la entrega. La entrega sigue vigente con el resto
+ * de sus renglones; el trigger del renglón devuelve su stock y recalcula la
+ * línea de solicitud si la tenía.
+ *
+ * El procedimiento rechaza los casos que no se pueden deshacer así —un
+ * préstamo vigente, o uno ya devuelto cuyo stock volvió al inventario— y el
+ * errorHandler traduce esa excepción a 409.
+ */
+export async function anularDetalleController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverEntrega(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+
+    const detalleId = Number(req.params.detalleId);
+    if (!Number.isInteger(detalleId)) {
+      return res.status(400).json({ message: "Id de renglón inválido" });
+    }
+
+    const parsed = anularEntregaSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errores: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const detalle = await buscarDetalleEntrega(detalleId);
+    if (!detalle || detalle.entrega_id !== ruta.id) {
+      return res
+        .status(404)
+        .json({ message: "El renglón no pertenece a esta entrega" });
+    }
+
+    await anularDetalleEntrega(req.usuario!.id, detalleId, parsed.data.motivo);
 
     const [entrega, detalles] = await Promise.all([
       buscarEntregaPorId(ruta.id),
