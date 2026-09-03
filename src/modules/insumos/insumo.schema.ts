@@ -23,6 +23,15 @@ export const crearInsumoSchema = z.object({
 
 export const editarInsumoSchema = crearInsumoSchema.partial();
 
+/**
+ * Filtros del listado de stock. Sin paginación: la respuesta es el catálogo
+ * completo, pensado para armar un desplegable de una sola vez.
+ */
+export const listarStockQuerySchema = z.object({
+  categoriaId: z.coerce.number().int().positive().optional(),
+  busqueda: z.string().trim().min(1).optional(),
+});
+
 export const listarInsumosQuerySchema = z.object({
   categoriaId: z.coerce.number().int().positive().optional(),
   busqueda: z.string().trim().min(1).optional(),

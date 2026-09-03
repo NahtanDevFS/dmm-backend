@@ -14,6 +14,8 @@ import {
   agregarCampoController,
   editarCampoController,
   asignarFormularioCategoriaController,
+  listarAsignacionesController,
+  formulariosDeInsumoController,
   quitarFormularioCategoriaController,
   listarFormulariosDeLineaController,
   obtenerRespuestasController,
@@ -39,6 +41,22 @@ router.get(
   requireAuth,
   requireRole(OPERACION),
   listarTiposDatoController,
+);
+
+// Los dos GET que faltaban. Sin ellos, la configuración de formularios solo
+// se podía leer entrando a la base, y la exigencia de un insumo solo se
+// descubría cuando la aprobación ya estaba bloqueada.
+router.get(
+  "/categorias-formulario",
+  requireAuth,
+  requireRole(OPERACION),
+  listarAsignacionesController,
+);
+router.get(
+  "/insumos/:insumoId/formularios",
+  requireAuth,
+  requireRole(OPERACION),
+  formulariosDeInsumoController,
 );
 
 router.get(
@@ -89,6 +107,8 @@ router.post(
   requireAuth,
   requireRole(DIRECCION),
   asignarFormularioCategoriaController,
+  listarAsignacionesController,
+  formulariosDeInsumoController,
 );
 router.delete(
   "/categorias-formulario/:categoriaId/:formularioId",

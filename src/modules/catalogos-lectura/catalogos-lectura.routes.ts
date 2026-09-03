@@ -4,6 +4,7 @@ import { requireRole } from "../../middlewares/role.middleware.js";
 import { OPERACION } from "../../config/roles.js";
 import {
   listarTiposGeneroController,
+  listarModalidadesSolicitudController,
   listarTiposParentescoController,
   listarTiposDocumentoPersonaController,
   listarTiposEvidenciaEntregaController,
@@ -19,10 +20,17 @@ const router = Router();
 // los necesita: todos van con OPERACION.
 
 router.get(
+  "/modalidades-solicitud",
+  requireAuth,
+  requireRole(OPERACION),
+  listarModalidadesSolicitudController,
+);
+router.get(
   "/tipos-genero",
   requireAuth,
   requireRole(OPERACION),
   listarTiposGeneroController,
+  listarModalidadesSolicitudController,
 );
 router.get(
   "/tipos-parentesco",

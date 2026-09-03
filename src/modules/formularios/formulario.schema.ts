@@ -66,15 +66,25 @@ export const editarCampoFormularioSchema = z.object({
 });
 
 export const asignarFormularioCategoriaSchema = z.object({
-  categoria_insumo_id: z
-    .number({ error: "categoria_insumo_id es requerido" })
-    .int()
-    .positive(),
-  formulario_id: z
-    .number({ error: "formulario_id es requerido" })
-    .int()
-    .positive(),
-  orden: z.number().int().nonnegative().optional(),
+  categoria_insumo_id: z.number().int().positive(),
+  formulario_id: z.number().int().positive(),
+  orden: z.number().int().min(0).optional(),
+  /**
+   * A qué modalidad aplica el formulario. Ausente o null significa que
+   * aplica a todas, que es el comportamiento de siempre y el valor con el
+   * que quedaron las asignaciones anteriores a la migración 20.
+   */
+  modalidad_solicitud_id: z.number().int().positive().nullable().optional(),
+});
+
+/** Filtros del listado de asignaciones para la pantalla de Catálogos. */
+export const listarAsignacionesQuerySchema = z.object({
+  categoriaId: z.coerce.number().int().positive().optional(),
+});
+
+/** Para anticipar los formularios de un insumo antes de crear la línea. */
+export const formulariosDeInsumoQuerySchema = z.object({
+  modalidadId: z.coerce.number().int().positive().optional(),
 });
 
 /* ═══════════════════════════ Respuestas de una línea de solicitud ═══════════════════════════ */

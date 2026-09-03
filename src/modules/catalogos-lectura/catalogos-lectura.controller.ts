@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import {
   listarTiposGenero,
+  listarModalidadesSolicitud,
   listarTiposParentesco,
   listarTiposDocumentoPersona,
   listarTiposEvidenciaEntrega,
@@ -9,6 +10,18 @@ import {
   listarEstadosContrato,
   listarTiposMulta,
 } from "./catalogos-lectura.repository.js";
+
+export async function listarModalidadesSolicitudController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    return res.status(200).json(await listarModalidadesSolicitud());
+  } catch (error) {
+    return next(error);
+  }
+}
 
 export async function listarTiposGeneroController(
   _req: Request,

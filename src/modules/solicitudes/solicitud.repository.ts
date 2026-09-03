@@ -26,6 +26,8 @@ export interface LineaSolicitudRow {
   estado_id: number;
   fecha_asignacion: Date | null;
   receta_medica_id: number | null;
+  /** Donación o préstamo. Inmutable una vez creada la línea. */
+  modalidad_solicitud_id: number;
   activo: boolean;
 }
 
@@ -34,7 +36,8 @@ const COLUMNAS_SOLICITUD = `id, persona_id, programa_id, fecha_solicitud,
   observaciones_trabajo_social, activo`;
 
 const COLUMNAS_LINEA = `id, solicitud_id, insumo_id, cantidad_requerida,
-  cantidad_entregada, estado_id, fecha_asignacion, receta_medica_id, activo`;
+  cantidad_entregada, estado_id, fecha_asignacion, receta_medica_id,
+  modalidad_solicitud_id, activo`;
 
 // ─────────────────────────────────────────────── lecturas
 
@@ -93,7 +96,9 @@ export async function listarSolicitudesActivas(params: {
   }
   if (params.programaId !== undefined) {
     valores.push(params.programaId);
-    condiciones.push(`programa_nombre = (SELECT nombre FROM public.programa WHERE id = $${valores.length})`);
+    condiciones.push(
+      `programa_nombre = (SELECT nombre FROM public.programa WHERE id = $${valores.length})`,
+    );
   }
   if (params.estadoLinea !== undefined) {
     valores.push(params.estadoLinea);
@@ -237,7 +242,11 @@ export async function crearSolicitudConLineas(
     fecha_solicitud?: string;
     requiere_aprobacion?: boolean;
     observaciones_trabajo_social?: string | null;
-    lineas: Array<{ insumo_id: number; cantidad_requerida: number }>;
+    lineas: Array<{
+      insumo_id: number;
+      cantidad_requerida: number;
+      modalidad_solicitud_id: number;
+    }>;
   },
 ): Promise<{ solicitud: SolicitudRow; lineas: LineaSolicitudRow[] }> {
   return withUserTransaction(usuarioId, async (client) => {
@@ -280,13 +289,15 @@ export async function crearSolicitudConLineas(
       // BEFORE INSERT lo sobrescribe según el stock real del insumo.
       await client.query(
         `INSERT INTO public.detalle_solicitud_apoyo
-           (solicitud_id, insumo_id, cantidad_requerida, estado_id, created_by)
-         VALUES ($1, $2, $3, $4, $5)`,
+           (solicitud_id, insumo_id, cantidad_requerida, estado_id,
+            modalidad_solicitud_id, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           solicitudId,
           linea.insumo_id,
           linea.cantidad_requerida,
           estadoInicial,
+          linea.modalidad_solicitud_id,
           usuarioId,
         ],
       );
@@ -348,20 +359,26 @@ export async function editarSolicitud(
 export async function agregarLinea(
   usuarioId: number,
   solicitudId: number,
-  datos: { insumo_id: number; cantidad_requerida: number },
+  datos: {
+    insumo_id: number;
+    cantidad_requerida: number;
+    modalidad_solicitud_id: number;
+  },
 ): Promise<LineaSolicitudRow> {
   return withUserTransaction(usuarioId, async (client) => {
     const estadoInicial = await idEstado(client, "PENDIENTE_ADQUISICION");
     const result = await client.query<LineaSolicitudRow>(
       `INSERT INTO public.detalle_solicitud_apoyo
-         (solicitud_id, insumo_id, cantidad_requerida, estado_id, created_by)
-       VALUES ($1, $2, $3, $4, $5)
+         (solicitud_id, insumo_id, cantidad_requerida, estado_id,
+          modalidad_solicitud_id, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING ${COLUMNAS_LINEA}`,
       [
         solicitudId,
         datos.insumo_id,
         datos.cantidad_requerida,
         estadoInicial,
+        datos.modalidad_solicitud_id,
         usuarioId,
       ],
     );
