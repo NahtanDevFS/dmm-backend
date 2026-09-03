@@ -11,6 +11,15 @@ const lineaSchema = z.object({
     .number()
     .int()
     .positive("La cantidad requerida debe ser mayor que cero"),
+  /**
+   * Bajo qué figura se entrega este insumo: donación definitiva o préstamo.
+   * Decide qué formularios se exigen, y no se puede cambiar después — la
+   * base lo impide con un trigger. Si la figura cambia, es otra solicitud.
+   */
+  modalidad_solicitud_id: z
+    .number()
+    .int()
+    .positive("Debe indicar la modalidad (donación o préstamo)"),
 });
 
 export const crearSolicitudSchema = z.object({

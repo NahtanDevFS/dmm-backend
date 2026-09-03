@@ -10,6 +10,7 @@ import {
   desactivarController,
   reactivarController,
   obtenerStockController,
+  listarStockController,
 } from "./insumo.controller.js";
 import presentacionRoutes from "./presentacion-insumo.routes.js";
 
@@ -19,6 +20,14 @@ import presentacionRoutes from "./presentacion-insumo.routes.js";
 // EMPLEADO_DMM.
 const router = Router();
 
+// Antes de "/:id" para que "stock" no se lea como un id.
+router.get(
+  "/stock",
+  requireAuth,
+  requireRole(OPERACION),
+  listarStockController,
+);
+
 router.get("/", requireAuth, requireRole(OPERACION), listarController);
 router.get("/:id", requireAuth, requireRole(OPERACION), obtenerController);
 router.get(
@@ -26,6 +35,7 @@ router.get(
   requireAuth,
   requireRole(OPERACION),
   obtenerStockController,
+  listarStockController,
 );
 router.post("/", requireAuth, requireRole(DIRECCION), crearController);
 router.patch("/:id", requireAuth, requireRole(DIRECCION), editarController);

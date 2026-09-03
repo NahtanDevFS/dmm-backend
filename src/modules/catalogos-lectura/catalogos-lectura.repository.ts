@@ -44,6 +44,31 @@ export interface TipoMultaRow {
   activo: boolean;
 }
 
+/**
+ * Modalidad bajo la que se entrega un insumo. Vive aquí y no en los catálogos
+ * administrables porque el código se ramifica sobre estos nombres: un
+ * préstamo se salta los formularios marcados como propios de donación. Si
+ * alguien pudiera agregar "Comodato" desde una pantalla, nacería una
+ * modalidad que ninguna validación conoce y que se comportaría como donación
+ * sin que nadie lo haya decidido.
+ */
+export interface ModalidadSolicitudRow {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  activo: boolean;
+}
+
+export async function listarModalidadesSolicitud(): Promise<
+  ModalidadSolicitudRow[]
+> {
+  return prisma.modalidad_solicitud.findMany({
+    where: { activo: true },
+    orderBy: { nombre: "asc" },
+    select: { id: true, nombre: true, descripcion: true, activo: true },
+  });
+}
+
 export async function listarTiposGenero(): Promise<TipoGeneroRow[]> {
   return prisma.tipo_genero.findMany({
     where: { activo: true },

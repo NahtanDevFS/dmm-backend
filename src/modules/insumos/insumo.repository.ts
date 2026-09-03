@@ -29,6 +29,11 @@ export interface StockInsumoRow {
   semaforo: string | null;
 }
 
+/** Una fila del listado de stock: lo de la vista más la categoría por id. */
+export interface StockInsumoListadoRow extends StockInsumoRow {
+  categoria_id: number;
+}
+
 export interface StockPresentacionRow {
   presentacion_id: number;
   presentacion_nombre: string;
@@ -72,7 +77,9 @@ export async function listarInsumos(params: {
   const where = {
     ...(incluirInactivos ? {} : { activo: true }),
     ...(categoriaId !== undefined ? { categoria_id: categoriaId } : {}),
-    ...(busqueda ? { nombre: { contains: busqueda, mode: "insensitive" as const } } : {}),
+    ...(busqueda
+      ? { nombre: { contains: busqueda, mode: "insensitive" as const } }
+      : {}),
   };
 
   const [total, filas] = await Promise.all([
@@ -89,9 +96,7 @@ export async function listarInsumos(params: {
   return { total, filas };
 }
 
-export async function buscarInsumoPorId(
-  id: number,
-): Promise<InsumoRow | null> {
+export async function buscarInsumoPorId(id: number): Promise<InsumoRow | null> {
   return prisma.insumo.findUnique({ where: { id }, select: SELECT_PUBLICO });
 }
 
@@ -114,7 +119,9 @@ export async function existeNombreDuplicadoEnCategoria(
   return true;
 }
 
-export async function existeCategoriaInsumoActiva(id: number): Promise<boolean> {
+export async function existeCategoriaInsumoActiva(
+  id: number,
+): Promise<boolean> {
   const categoria = await prisma.categoria_insumo.findUnique({
     where: { id },
     select: { activo: true },
@@ -246,6 +253,50 @@ export async function obtenerStockInsumo(
     [id],
   );
   return result.rows[0] ?? null;
+}
+
+/**
+ * Stock de todos los insumos de una sola vez, tal como lo expone
+ * v_stock_insumo. Existe para las pantallas que necesitan mostrar las
+ * existencias *antes* de que el usuario elija —el desplegable de la entrega
+ * directa, sobre todo—: preguntar insumo por insumo obligaría a una llamada
+ * por opción y quien atiende no podría contestar "sí hay" sin abrir nada.
+ *
+ * La vista filtra por `insumo.activo = true`, así que los desactivados no
+ * aparecen. Es lo correcto aquí: no se entrega lo que está dado de baja.
+ */
+export async function listarStockInsumos(params: {
+  categoriaId?: number;
+  busqueda?: string;
+}): Promise<StockInsumoListadoRow[]> {
+  const condiciones: string[] = [];
+  const valores: unknown[] = [];
+
+  if (params.categoriaId !== undefined) {
+    valores.push(params.categoriaId);
+    condiciones.push(`i.categoria_id = $${valores.length}`);
+  }
+  if (params.busqueda) {
+    valores.push(`%${params.busqueda}%`);
+    condiciones.push(`v.insumo_nombre ILIKE $${valores.length}`);
+  }
+
+  const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
+
+  // La vista no expone categoria_id, solo el nombre. Se une con insumo para
+  // poder filtrar y agrupar por id, que es lo que usa el frontend.
+  const result = await pool.query<StockInsumoListadoRow>(
+    `SELECT v.insumo_id, v.insumo_nombre, i.categoria_id, v.categoria_nombre,
+            v.unidad_base_nombre, v.requiere_fecha_caducidad,
+            v.requiere_codigo_fabricante, v.bloquea_solicitud_sin_stock,
+            v.stock_total, v.proxima_caducidad, v.semaforo
+     FROM public.v_stock_insumo v
+     JOIN public.insumo i ON i.id = v.insumo_id
+     ${where}
+     ORDER BY v.categoria_nombre, v.insumo_nombre`,
+    valores,
+  );
+  return result.rows;
 }
 
 export async function obtenerStockTotalInsumo(id: number): Promise<number> {

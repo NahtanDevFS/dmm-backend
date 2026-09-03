@@ -100,26 +100,30 @@ model departamento {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model detalle_entrega {
-  id                                          Int                     @id @default(autoincrement())
+  id                                          Int                      @id @default(autoincrement())
   entrega_id                                  Int
-  detalle_inventario_lote_id                  Int
-  presentacion_despacho_id                    Int
-  cantidad_despacho_original                  Decimal                 @db.Decimal(12, 4)
+  insumo_id                                   Int
+  detalle_solicitud_id                        Int?
   cantidad_entregada                          Int
-  activo                                      Boolean                 @default(true)
-  created_at                                  DateTime                @default(now()) @db.Timestamp(6)
-  updated_at                                  DateTime?               @db.Timestamp(6)
+  activo                                      Boolean                  @default(true)
+  motivo_anulacion                            String?
+  fecha_anulacion                             DateTime?                @db.Timestamp(6)
+  created_at                                  DateTime                 @default(now()) @db.Timestamp(6)
+  updated_at                                  DateTime?                @db.Timestamp(6)
   created_by                                  Int?
   updated_by                                  Int?
   contrato_prestamo                           contrato_prestamo?
-  usuario_detalle_entrega_created_byTousuario usuario?                @relation("detalle_entrega_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_det_created_by")
-  entrega                                     entrega                 @relation(fields: [entrega_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_det_entrega")
-  detalle_inventario_lote                     detalle_inventario_lote @relation(fields: [detalle_inventario_lote_id], references: [id], onUpdate: NoAction, map: "fk_det_lote")
-  presentacion_insumo                         presentacion_insumo     @relation(fields: [presentacion_despacho_id], references: [id], onUpdate: NoAction, map: "fk_det_presentacion")
-  usuario_detalle_entrega_updated_byTousuario usuario?                @relation("detalle_entrega_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_det_updated_by")
+  usuario_detalle_entrega_created_byTousuario usuario?                 @relation("detalle_entrega_created_byTousuario", fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_det_created_by")
+  detalle_solicitud_apoyo                     detalle_solicitud_apoyo? @relation(fields: [detalle_solicitud_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_de_detalle_solicitud")
+  entrega                                     entrega                  @relation(fields: [entrega_id], references: [id], onUpdate: NoAction, map: "fk_det_entrega")
+  insumo                                      insumo                   @relation(fields: [insumo_id], references: [id], onUpdate: NoAction, map: "fk_de_insumo")
+  usuario_detalle_entrega_updated_byTousuario usuario?                 @relation("detalle_entrega_updated_byTousuario", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fk_det_updated_by")
+  detalle_entrega_lote                        detalle_entrega_lote[]
 
+  @@unique([entrega_id, insumo_id], map: "uq_detalle_entrega_insumo_por_entrega")
   @@index([entrega_id], map: "idx_detalle_entrega_entrega")
-  @@index([detalle_inventario_lote_id], map: "idx_detalle_entrega_lote")
+  @@index([insumo_id], map: "idx_detalle_entrega_insumo")
+  @@index([detalle_solicitud_id], map: "idx_detalle_entrega_solicitud")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -141,7 +145,7 @@ model detalle_inventario_lote {
   updated_by                                          Int?
   unidades_por_presentacion_lote                      Decimal                 @db.Decimal(12, 4)
   marca_id                                            Int?
-  detalle_entrega                                     detalle_entrega[]
+  detalle_entrega_lote                                detalle_entrega_lote[]
   usuario_detalle_inventario_lote_created_byTousuario usuario?                @relation("detalle_inventario_lote_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_detalle_lote_created_by")
   insumo                                              insumo                  @relation(fields: [insumo_id], references: [id], onUpdate: NoAction, map: "fk_detalle_lote_insumo")
   presentacion_insumo                                 presentacion_insumo     @relation(fields: [presentacion_recepcion_id], references: [id], onUpdate: NoAction, map: "fk_detalle_lote_presentacion")
@@ -206,33 +210,30 @@ model encargado_menor {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model entrega {
-  id                                           Int                      @id @default(autoincrement())
-  detalle_solicitud_id                         Int?
+  id                                           Int                 @id @default(autoincrement())
   persona_id                                   Int
   persona_receptor_id                          Int?
   tipo_parentesco_receptor_id                  Int?
-  fecha_entrega                                DateTime                 @default(dbgenerated("CURRENT_DATE")) @db.Date
+  fecha_entrega                                DateTime            @default(dbgenerated("CURRENT_DATE")) @db.Date
   usuario_entrega_id                           Int
   observaciones                                String?
-  activo                                       Boolean                  @default(true)
-  created_at                                   DateTime                 @default(now()) @db.Timestamp(6)
-  updated_at                                   DateTime?                @db.Timestamp(6)
+  activo                                       Boolean             @default(true)
+  created_at                                   DateTime            @default(now()) @db.Timestamp(6)
+  updated_at                                   DateTime?           @db.Timestamp(6)
   created_by                                   Int?
   updated_by                                   Int?
   detalle_entrega                              detalle_entrega[]
-  usuario_entrega_created_byTousuario          usuario?                 @relation("entrega_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_entrega_created_by")
-  detalle_solicitud_apoyo                      detalle_solicitud_apoyo? @relation(fields: [detalle_solicitud_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_detalle_solicitud")
-  tipo_parentesco                              tipo_parentesco?         @relation(fields: [tipo_parentesco_receptor_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_parentesco")
-  persona_entrega_persona_idTopersona          persona                  @relation("entrega_persona_idTopersona", fields: [persona_id], references: [id], onUpdate: NoAction, map: "fk_entrega_persona")
-  persona_entrega_persona_receptor_idTopersona persona?                 @relation("entrega_persona_receptor_idTopersona", fields: [persona_receptor_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_receptor")
-  usuario_entrega_updated_byTousuario          usuario?                 @relation("entrega_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_entrega_updated_by")
-  usuario_entrega_usuario_entrega_idTousuario  usuario                  @relation("entrega_usuario_entrega_idTousuario", fields: [usuario_entrega_id], references: [id], onUpdate: NoAction, map: "fk_entrega_usuario")
+  usuario_entrega_created_byTousuario          usuario?            @relation("entrega_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_entrega_created_by")
+  tipo_parentesco                              tipo_parentesco?    @relation(fields: [tipo_parentesco_receptor_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_parentesco")
+  persona_entrega_persona_idTopersona          persona             @relation("entrega_persona_idTopersona", fields: [persona_id], references: [id], onUpdate: NoAction, map: "fk_entrega_persona")
+  persona_entrega_persona_receptor_idTopersona persona?            @relation("entrega_persona_receptor_idTopersona", fields: [persona_receptor_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_receptor")
+  usuario_entrega_updated_byTousuario          usuario?            @relation("entrega_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_entrega_updated_by")
+  usuario_entrega_usuario_entrega_idTousuario  usuario             @relation("entrega_usuario_entrega_idTousuario", fields: [usuario_entrega_id], references: [id], onUpdate: NoAction, map: "fk_entrega_usuario")
   evidencia_entrega                            evidencia_entrega[]
 
   @@index([fecha_entrega], map: "idx_entrega_fecha")
   @@index([persona_id], map: "idx_entrega_persona")
   @@index([persona_receptor_id], map: "idx_entrega_receptor", where: raw("(persona_receptor_id IS NOT NULL)"))
-  @@index([detalle_solicitud_id], map: "idx_entrega_detalle_solicitud", where: raw("(detalle_solicitud_id IS NOT NULL)"))
 }
 
 model estado_contrato_prestamo {
@@ -311,6 +312,7 @@ model insumo {
   requiere_fecha_caducidad           Boolean                   @default(false)
   requiere_codigo_fabricante         Boolean                   @default(false)
   bloquea_solicitud_sin_stock        Boolean                   @default(false)
+  detalle_entrega                    detalle_entrega[]
   detalle_inventario_lote            detalle_inventario_lote[]
   detalle_solicitud_apoyo            detalle_solicitud_apoyo[]
   usuario_insumo_created_byTousuario usuario?                  @relation("insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ins2_created_by")
@@ -401,7 +403,7 @@ model presentacion_insumo {
   updated_at                                      DateTime?                 @db.Timestamp(6)
   created_by                                      Int?
   updated_by                                      Int?
-  detalle_entrega                                 detalle_entrega[]
+  detalle_entrega_lote                            detalle_entrega_lote[]
   detalle_inventario_lote                         detalle_inventario_lote[]
   usuario_presentacion_insumo_created_byTousuario usuario?                  @relation("presentacion_insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_pi_created_by")
   insumo                                          insumo                    @relation(fields: [insumo_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pi_insumo")
@@ -577,6 +579,8 @@ model usuario {
   departamento_departamento_updated_byTousuario                                                     departamento[]                           @relation("departamento_updated_byTousuario")
   detalle_entrega_detalle_entrega_created_byTousuario                                               detalle_entrega[]                        @relation("detalle_entrega_created_byTousuario")
   detalle_entrega_detalle_entrega_updated_byTousuario                                               detalle_entrega[]                        @relation("detalle_entrega_updated_byTousuario")
+  detalle_entrega_lote_detalle_entrega_lote_created_byTousuario                                     detalle_entrega_lote[]                   @relation("detalle_entrega_lote_created_byTousuario")
+  detalle_entrega_lote_detalle_entrega_lote_updated_byTousuario                                     detalle_entrega_lote[]                   @relation("detalle_entrega_lote_updated_byTousuario")
   detalle_inventario_lote_detalle_inventario_lote_created_byTousuario                               detalle_inventario_lote[]                @relation("detalle_inventario_lote_created_byTousuario")
   detalle_inventario_lote_detalle_inventario_lote_updated_byTousuario                               detalle_inventario_lote[]                @relation("detalle_inventario_lote_updated_byTousuario")
   detalle_solicitud_apoyo_detalle_solicitud_apoyo_created_byTousuario                               detalle_solicitud_apoyo[]                @relation("detalle_solicitud_apoyo_created_byTousuario")
@@ -614,6 +618,8 @@ model usuario {
   insumo_insumo_updated_byTousuario                                                                 insumo[]                                 @relation("insumo_updated_byTousuario")
   marca_insumo_marca_insumo_created_byTousuario                                                     marca_insumo[]                           @relation("marca_insumo_created_byTousuario")
   marca_insumo_marca_insumo_updated_byTousuario                                                     marca_insumo[]                           @relation("marca_insumo_updated_byTousuario")
+  modalidad_solicitud_modalidad_solicitud_created_byTousuario                                       modalidad_solicitud[]                    @relation("modalidad_solicitud_created_byTousuario")
+  modalidad_solicitud_modalidad_solicitud_updated_byTousuario                                       modalidad_solicitud[]                    @relation("modalidad_solicitud_updated_byTousuario")
   multa_prestamo_multa_prestamo_created_byTousuario                                                 multa_prestamo[]                         @relation("multa_prestamo_created_byTousuario")
   multa_prestamo_multa_prestamo_updated_byTousuario                                                 multa_prestamo[]                         @relation("multa_prestamo_updated_byTousuario")
   municipio_municipio_created_byTousuario                                                           municipio[]                              @relation("municipio_created_byTousuario")
@@ -717,18 +723,21 @@ model detalle_solicitud_apoyo {
   created_by                                          Int?
   updated_by                                          Int?
   receta_medica_id                                    Int?
+  modalidad_solicitud_id                              Int
+  detalle_entrega                                     detalle_entrega[]
   usuario_detalle_solicitud_apoyo_created_byTousuario usuario?                       @relation("detalle_solicitud_apoyo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dsa_created_by")
   estado_solicitud_apoyo                              estado_solicitud_apoyo         @relation(fields: [estado_id], references: [id], onUpdate: NoAction, map: "fk_dsa_estado")
   insumo                                              insumo                         @relation(fields: [insumo_id], references: [id], onUpdate: NoAction, map: "fk_dsa_insumo")
+  modalidad_solicitud                                 modalidad_solicitud            @relation(fields: [modalidad_solicitud_id], references: [id], onUpdate: NoAction, map: "fk_dsa_modalidad")
   receta_medica                                       receta_medica?                 @relation(fields: [receta_medica_id], references: [id], onUpdate: NoAction, map: "fk_dsa_receta")
   solicitud_apoyo                                     solicitud_apoyo                @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dsa_solicitud")
   usuario_detalle_solicitud_apoyo_updated_byTousuario usuario?                       @relation("detalle_solicitud_apoyo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dsa_updated_by")
   detalle_solicitud_formulario                        detalle_solicitud_formulario[]
-  entrega                                             entrega[]
 
   @@unique([solicitud_id, insumo_id], map: "detalle_solicitud_insumo_unico_key")
   @@index([insumo_id, estado_id], map: "idx_detalle_solicitud_insumo_estado", where: raw("(activo = true)"))
   @@index([solicitud_id], map: "idx_detalle_solicitud_solicitud")
+  @@index([modalidad_solicitud_id], map: "idx_dsa_modalidad")
 }
 
 model documento_recepcion {
@@ -882,19 +891,21 @@ model catalogo_valor {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model categoria_insumo_formulario {
-  id                                                      Int              @id @default(autoincrement())
+  id                                                      Int                  @id @default(autoincrement())
   categoria_insumo_id                                     Int
   formulario_id                                           Int
-  orden                                                   Int              @default(0)
-  activo                                                  Boolean          @default(true)
-  created_at                                              DateTime         @default(now()) @db.Timestamp(6)
-  updated_at                                              DateTime?        @db.Timestamp(6)
+  orden                                                   Int                  @default(0)
+  activo                                                  Boolean              @default(true)
+  created_at                                              DateTime             @default(now()) @db.Timestamp(6)
+  updated_at                                              DateTime?            @db.Timestamp(6)
   created_by                                              Int?
   updated_by                                              Int?
-  categoria_insumo                                        categoria_insumo @relation(fields: [categoria_insumo_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cif_categoria")
-  usuario_categoria_insumo_formulario_created_byTousuario usuario?         @relation("categoria_insumo_formulario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cif_created_by")
-  formulario                                              formulario       @relation(fields: [formulario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cif_formulario")
-  usuario_categoria_insumo_formulario_updated_byTousuario usuario?         @relation("categoria_insumo_formulario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cif_updated_by")
+  modalidad_solicitud_id                                  Int?
+  categoria_insumo                                        categoria_insumo     @relation(fields: [categoria_insumo_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cif_categoria")
+  usuario_categoria_insumo_formulario_created_byTousuario usuario?             @relation("categoria_insumo_formulario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cif_created_by")
+  formulario                                              formulario           @relation(fields: [formulario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cif_formulario")
+  modalidad_solicitud                                     modalidad_solicitud? @relation(fields: [modalidad_solicitud_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_cif_modalidad")
+  usuario_categoria_insumo_formulario_updated_byTousuario usuario?             @relation("categoria_insumo_formulario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cif_updated_by")
 
   @@unique([categoria_insumo_id, formulario_id], map: "cif_categoria_formulario_unico_key")
   @@index([categoria_insumo_id], map: "idx_cif_categoria")
@@ -1052,4 +1063,43 @@ model tipo_evidencia_contrato {
   evidencia_contrato_prestamo                         evidencia_contrato_prestamo[]
   usuario_tipo_evidencia_contrato_created_byTousuario usuario?                      @relation("tipo_evidencia_contrato_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tec_created_by")
   usuario_tipo_evidencia_contrato_updated_byTousuario usuario?                      @relation("tipo_evidencia_contrato_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tec_updated_by")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model detalle_entrega_lote {
+  id                                               Int                     @id @default(autoincrement())
+  detalle_inventario_lote_id                       Int
+  presentacion_despacho_id                         Int
+  cantidad_despacho_original                       Decimal                 @db.Decimal(12, 4)
+  cantidad_entregada                               Int
+  activo                                           Boolean                 @default(true)
+  created_at                                       DateTime                @default(now()) @db.Timestamp(6)
+  updated_at                                       DateTime?               @db.Timestamp(6)
+  created_by                                       Int?
+  updated_by                                       Int?
+  detalle_entrega_id                               Int
+  detalle_entrega                                  detalle_entrega         @relation(fields: [detalle_entrega_id], references: [id], onUpdate: NoAction, map: "fk_del_detalle_entrega")
+  usuario_detalle_entrega_lote_created_byTousuario usuario?                @relation("detalle_entrega_lote_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_det_created_by")
+  detalle_inventario_lote                          detalle_inventario_lote @relation(fields: [detalle_inventario_lote_id], references: [id], onUpdate: NoAction, map: "fk_det_lote")
+  presentacion_insumo                              presentacion_insumo     @relation(fields: [presentacion_despacho_id], references: [id], onUpdate: NoAction, map: "fk_det_presentacion")
+  usuario_detalle_entrega_lote_updated_byTousuario usuario?                @relation("detalle_entrega_lote_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_det_updated_by")
+
+  @@index([detalle_inventario_lote_id], map: "idx_detalle_entrega_lote_lote")
+  @@index([detalle_entrega_id], map: "idx_detalle_entrega_lote_renglon")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model modalidad_solicitud {
+  id                                              Int                           @id @default(autoincrement())
+  nombre                                          String                        @unique @db.VarChar(50)
+  descripcion                                     String?
+  activo                                          Boolean                       @default(true)
+  created_at                                      DateTime                      @default(now()) @db.Timestamp(6)
+  updated_at                                      DateTime?                     @db.Timestamp(6)
+  created_by                                      Int?
+  updated_by                                      Int?
+  categoria_insumo_formulario                     categoria_insumo_formulario[]
+  detalle_solicitud_apoyo                         detalle_solicitud_apoyo[]
+  usuario_modalidad_solicitud_created_byTousuario usuario?                      @relation("modalidad_solicitud_created_byTousuario", fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_ms_created_by")
+  usuario_modalidad_solicitud_updated_byTousuario usuario?                      @relation("modalidad_solicitud_updated_byTousuario", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fk_ms_updated_by")
 }

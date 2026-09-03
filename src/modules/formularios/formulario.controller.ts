@@ -5,6 +5,8 @@ import {
   agregarCampoFormularioSchema,
   editarCampoFormularioSchema,
   asignarFormularioCategoriaSchema,
+  listarAsignacionesQuerySchema,
+  formulariosDeInsumoQuerySchema,
   guardarRespuestasSchema,
 } from "./formulario.schema.js";
 import {
@@ -21,6 +23,8 @@ import {
   editarCampoFormulario,
   agregarOpcionCampo,
   asignarFormularioACategoria,
+  listarAsignaciones,
+  listarFormulariosDeInsumo,
   quitarFormularioDeCategoria,
   listarFormulariosDeLinea,
   buscarDetalleFormulario,
@@ -261,6 +265,55 @@ export async function editarCampoController(
   }
 }
 
+/**
+ * Las asignaciones categoría → formulario, con su modalidad. Alimenta la
+ * pantalla de Catálogos, que hasta ahora no existía: configurar un
+ * formulario exigía insertar filas por SQL a mano.
+ */
+export async function listarAsignacionesController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const parsed = listarAsignacionesQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.issues[0].message });
+    }
+    return res
+      .status(200)
+      .json(await listarAsignaciones(parsed.data.categoriaId));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+/**
+ * Qué formularios va a exigir un insumo. Se consulta al armar la solicitud,
+ * para poder avisarlo con la persona todavía presente.
+ */
+export async function formulariosDeInsumoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const insumoId = idDesdeParam(req.params.insumoId);
+    if (!insumoId) {
+      return res.status(400).json({ message: "Id de insumo inválido" });
+    }
+    const parsed = formulariosDeInsumoQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.issues[0].message });
+    }
+    return res
+      .status(200)
+      .json(await listarFormulariosDeInsumo(insumoId, parsed.data.modalidadId));
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export async function asignarFormularioCategoriaController(
   req: Request,
   res: Response,
@@ -275,6 +328,7 @@ export async function asignarFormularioCategoriaController(
       categoriaInsumoId: parsed.data.categoria_insumo_id,
       formularioId: parsed.data.formulario_id,
       orden: parsed.data.orden,
+      modalidadSolicitudId: parsed.data.modalidad_solicitud_id,
     });
     return res.status(201).json(asignacion);
   } catch (error) {

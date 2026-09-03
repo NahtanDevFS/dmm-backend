@@ -4,6 +4,7 @@ import {
   crearInsumoSchema,
   editarInsumoSchema,
   listarInsumosQuerySchema,
+  listarStockQuerySchema,
 } from "./insumo.schema.js";
 import {
   listarInsumos,
@@ -17,6 +18,7 @@ import {
   editarInsumo,
   cambiarEstadoInsumo,
   obtenerStockInsumo,
+  listarStockInsumos,
   obtenerStockTotalInsumo,
   obtenerStockPorPresentacion,
   withReadClient,
@@ -242,6 +244,37 @@ export async function reactivarController(
 
     const actualizado = await cambiarEstadoInsumo(req.usuario!.id, id, true);
     return res.status(200).json(actualizado);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+/**
+ * Stock de todos los insumos en una sola respuesta. Sin paginación a
+ * propósito: quien la consume necesita el catálogo completo para armar un
+ * desplegable, y partirlo en páginas obligaría a que la pantalla supiera
+ * pedir más justo cuando el usuario está escribiendo.
+ */
+export async function listarStockController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const parsed = listarStockQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Parámetros de búsqueda inválidos",
+        errores: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    return res.status(200).json(
+      await listarStockInsumos({
+        categoriaId: parsed.data.categoriaId,
+        busqueda: parsed.data.busqueda,
+      }),
+    );
   } catch (error) {
     return next(error);
   }

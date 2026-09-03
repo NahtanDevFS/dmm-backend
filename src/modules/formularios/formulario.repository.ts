@@ -75,6 +75,8 @@ export interface CategoriaInsumoFormularioRow {
   categoria_insumo_id: number;
   formulario_id: number;
   orden: number;
+  /** null = aplica a cualquier modalidad. */
+  modalidad_solicitud_id: number | null;
   activo: boolean;
 }
 
@@ -203,9 +205,22 @@ export async function listarFormulariosDeCategoria(
   return rows;
 }
 
-/** Igual que arriba, pero resuelta a partir del insumo (categoria_id vive en insumo). */
+/**
+ * Formularios que exigirá un insumo, resuelto a partir de su categoría y de
+ * la modalidad bajo la que se piensa entregar.
+ *
+ * Existe para poder avisarlo al CREAR la solicitud, cuando la persona
+ * todavía está en la ventanilla. Antes solo se podía preguntar por una línea
+ * ya existente, así que los tres formularios de una silla de ruedas se
+ * descubrían al intentar aprobar — con la persona ya en su casa y el estudio
+ * socioeconómico imposible de llenar.
+ *
+ * Sin `modalidadSolicitudId` devuelve todos los formularios de la categoría,
+ * que es lo que corresponde cuando aún no se ha decidido la figura.
+ */
 export async function listarFormulariosDeInsumo(
   insumoId: number,
+  modalidadSolicitudId?: number,
 ): Promise<FormularioRow[]> {
   const { rows } = await pool.query<FormularioRow>(
     `SELECT f.id, f.nombre, f.descripcion, f.activo
@@ -213,8 +228,49 @@ export async function listarFormulariosDeInsumo(
      JOIN public.categoria_insumo_formulario cif ON cif.categoria_insumo_id = i.categoria_id
      JOIN public.formulario f ON f.id = cif.formulario_id
      WHERE i.id = $1 AND cif.activo = true AND f.activo = true
+       AND ($2::integer IS NULL
+            OR cif.modalidad_solicitud_id IS NULL
+            OR cif.modalidad_solicitud_id = $2)
      ORDER BY cif.orden ASC`,
-    [insumoId],
+    [insumoId, modalidadSolicitudId ?? null],
+  );
+  return rows;
+}
+
+/**
+ * Las asignaciones de una categoría tal como se administran: con la
+ * modalidad a la que aplica cada una y el nombre del formulario. Es lo que
+ * necesita la pantalla de Catálogos, distinto de `listarFormulariosDeCategoria`,
+ * que solo devuelve los formularios resueltos.
+ */
+export interface AsignacionCategoriaRow {
+  id: number;
+  categoria_insumo_id: number;
+  categoria_nombre: string;
+  formulario_id: number;
+  formulario_nombre: string;
+  orden: number;
+  modalidad_solicitud_id: number | null;
+  modalidad_nombre: string | null;
+  activo: boolean;
+}
+
+export async function listarAsignaciones(
+  categoriaInsumoId?: number,
+): Promise<AsignacionCategoriaRow[]> {
+  const { rows } = await pool.query<AsignacionCategoriaRow>(
+    `SELECT cif.id, cif.categoria_insumo_id, ci.nombre AS categoria_nombre,
+            cif.formulario_id, f.nombre AS formulario_nombre, cif.orden,
+            cif.modalidad_solicitud_id, ms.nombre AS modalidad_nombre,
+            cif.activo
+     FROM public.categoria_insumo_formulario cif
+     JOIN public.categoria_insumo ci ON ci.id = cif.categoria_insumo_id
+     JOIN public.formulario f ON f.id = cif.formulario_id
+     LEFT JOIN public.modalidad_solicitud ms ON ms.id = cif.modalidad_solicitud_id
+     WHERE cif.activo = true
+       AND ($1::integer IS NULL OR cif.categoria_insumo_id = $1)
+     ORDER BY ci.nombre, cif.orden`,
+    [categoriaInsumoId ?? null],
   );
   return rows;
 }
@@ -366,21 +422,32 @@ export async function agregarOpcionCampo(
 
 export async function asignarFormularioACategoria(
   usuarioId: number,
-  datos: { categoriaInsumoId: number; formularioId: number; orden?: number },
+  datos: {
+    categoriaInsumoId: number;
+    formularioId: number;
+    orden?: number;
+    /** null = el formulario aplica a cualquier modalidad. */
+    modalidadSolicitudId?: number | null;
+  },
 ): Promise<CategoriaInsumoFormularioRow> {
   return withUserTransaction(usuarioId, async (client) => {
     const { rows } = await client.query<CategoriaInsumoFormularioRow>(
       `INSERT INTO public.categoria_insumo_formulario
-         (categoria_insumo_id, formulario_id, orden, created_by)
-       VALUES ($1, $2, $3, $4)
+         (categoria_insumo_id, formulario_id, orden, modalidad_solicitud_id, created_by)
+       VALUES ($1, $2, $3, $5, $4)
        ON CONFLICT (categoria_insumo_id, formulario_id)
-       DO UPDATE SET activo = true, orden = EXCLUDED.orden, updated_by = $4
-       RETURNING id, categoria_insumo_id, formulario_id, orden, activo`,
+       DO UPDATE SET activo = true,
+                     orden = EXCLUDED.orden,
+                     modalidad_solicitud_id = EXCLUDED.modalidad_solicitud_id,
+                     updated_by = $4
+       RETURNING id, categoria_insumo_id, formulario_id, orden,
+                 modalidad_solicitud_id, activo`,
       [
         datos.categoriaInsumoId,
         datos.formularioId,
         datos.orden ?? 0,
         usuarioId,
+        datos.modalidadSolicitudId ?? null,
       ],
     );
     return rows[0];
@@ -418,34 +485,37 @@ export async function listarFormulariosDeLinea(
   detalleSolicitudId: number,
 ): Promise<FormularioDeLineaRow[]> {
   const { rows } = await pool.query<FormularioDeLineaRow>(
-    `SELECT f.id, f.nombre, f.descripcion, f.activo,
-            dsf.id AS detalle_solicitud_formulario_id, dsf.completado
-     FROM public.detalle_solicitud_apoyo dsa
-     JOIN public.insumo i ON i.id = dsa.insumo_id
-     JOIN public.categoria_insumo_formulario cif
-       ON cif.categoria_insumo_id = i.categoria_id AND cif.activo = true
-     JOIN public.formulario f ON f.id = cif.formulario_id AND f.activo = true
-     LEFT JOIN public.detalle_solicitud_formulario dsf
-       ON dsf.formulario_id = f.id
-      AND dsf.detalle_solicitud_id = dsa.id
-      AND dsf.activo = true
-     WHERE dsa.id = $1
-     ORDER BY cif.orden ASC`,
+    `SELECT formulario_id AS id, formulario_nombre AS nombre,
+            formulario_descripcion AS descripcion, true AS activo,
+            detalle_solicitud_formulario_id, completado
+     FROM public.v_formularios_exigidos_linea
+     WHERE detalle_solicitud_id = $1
+     ORDER BY orden ASC`,
     [detalleSolicitudId],
   );
   return rows;
 }
 
 /**
- * true si la línea tiene al menos un formulario exigido por su categoría
- * que todavía no está completo (o ni siquiera se ha empezado). Es lo que
- * bloquea la aprobación de la solicitud (RF-PRO, ver solicitud.controller).
+ * true si la línea tiene al menos un formulario exigido que todavía no está
+ * completo (o ni siquiera se ha empezado). Es lo que bloquea la aprobación
+ * de la solicitud (RF-PRO, ver solicitud.controller).
+ *
+ * Consulta la misma vista que el listado, no el listado mismo: así la
+ * pantalla que muestra los formularios y la validación que decide si falta
+ * alguno no pueden desalinearse. Un préstamo no arrastra los formularios
+ * marcados como propios de donación.
  */
 export async function tieneFormulariosPendientes(
   detalleSolicitudId: number,
 ): Promise<boolean> {
-  const formularios = await listarFormulariosDeLinea(detalleSolicitudId);
-  return formularios.some((f) => f.completado !== true);
+  const { rows } = await pool.query<{ pendientes: number }>(
+    `SELECT count(*)::int AS pendientes
+     FROM public.v_formularios_exigidos_linea
+     WHERE detalle_solicitud_id = $1 AND completado = false`,
+    [detalleSolicitudId],
+  );
+  return rows[0].pendientes > 0;
 }
 
 export async function buscarDetalleFormulario(
