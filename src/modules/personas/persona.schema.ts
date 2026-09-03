@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { telefonoSchema, telefonoOpcionalSchema } from "../../lib/telefono.js";
 import { paginacionShape } from "../../lib/paginacion.js";
 
 const nombresSchema = z
@@ -44,7 +45,7 @@ const datosBasePersonaSchema = z.object({
   fecha_nacimiento: fechaNacimientoSchema,
   genero_id: z.number().int().positive().nullable().optional(),
   comunidad_id: z.number().int().positive().nullable().optional(),
-  telefono: z.string().trim().max(20).nullable().optional(),
+  telefono: telefonoOpcionalSchema,
 });
 
 const encargadoSchema = z.discriminatedUnion("tipo", [
@@ -69,7 +70,12 @@ const contactoReferenciaSchema = z.object({
     .trim()
     .min(1, "El nombre del contacto es requerido")
     .max(150),
-  telefono: z.string().trim().max(20).nullable().optional(),
+  /**
+   * Obligatorio, a diferencia del teléfono de la persona. Un contacto de
+   * referencia sin número no sirve para nada: existe justamente para poder
+   * llamar a alguien cuando no se ubica a la persona.
+   */
+  telefono: telefonoSchema,
   observaciones: z.string().trim().max(2000).nullable().optional(),
 });
 

@@ -40,7 +40,12 @@ export interface CatalogoSimpleConfig {
   dependencias: DependenciaCatalogo[];
   camposExtra?: Array<{
     nombre: string;
-    tipo: "string";
+    /**
+     * "telefono" y "correo" no son solo texto libre: se validan con su
+     * formato. Un teléfono de tres dígitos guardado en una institución no
+     * se detecta hasta que alguien intenta llamar.
+     */
+    tipo: "string" | "telefono" | "correo";
     requerido: boolean;
   }>;
 }
@@ -150,8 +155,8 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
       },
     ],
     camposExtra: [
-      { nombre: "telefono", tipo: "string", requerido: false },
-      { nombre: "correo", tipo: "string", requerido: false },
+      { nombre: "telefono", tipo: "telefono", requerido: false },
+      { nombre: "correo", tipo: "correo", requerido: false },
     ],
   },
 };
