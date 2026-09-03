@@ -7,10 +7,13 @@ export interface PresentacionInsumoRow {
   insumo_id: number;
   unidad_medida_id: number;
   es_default: boolean;
+  /** Unidades base que contiene, de forma nominal. Llega como string por NUMERIC. */
+  unidades_por_presentacion: string;
   activo: boolean;
 }
 
-const COLUMNAS = "id, insumo_id, unidad_medida_id, es_default, activo";
+const COLUMNAS = `id, insumo_id, unidad_medida_id, es_default,
+  unidades_por_presentacion, activo`;
 
 /**
  * Se consulta con `pg` en vez de Prisma a propósito: el índice único parcial
@@ -110,7 +113,11 @@ async function desmarcarDefaultVigente(
 export async function crearPresentacion(
   usuarioId: number,
   insumoId: number,
-  datos: { unidad_medida_id: number; es_default: boolean },
+  datos: {
+    unidad_medida_id: number;
+    es_default: boolean;
+    unidades_por_presentacion?: number;
+  },
 ): Promise<PresentacionInsumoRow> {
   return withUserTransaction(usuarioId, async (client) => {
     if (datos.es_default) {
@@ -119,10 +126,19 @@ export async function crearPresentacion(
 
     const result = await client.query<PresentacionInsumoRow>(
       `INSERT INTO public.presentacion_insumo
-         (insumo_id, unidad_medida_id, es_default, created_by)
-       VALUES ($1, $2, $3, $4)
+         (insumo_id, unidad_medida_id, es_default,
+          unidades_por_presentacion, created_by)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING ${COLUMNAS}`,
-      [insumoId, datos.unidad_medida_id, datos.es_default, usuarioId],
+      [
+        insumoId,
+        datos.unidad_medida_id,
+        datos.es_default,
+        // La predeterminada expresa la unidad base: su factor es 1 por
+        // definición, no algo que el usuario elija.
+        datos.es_default ? 1 : (datos.unidades_por_presentacion ?? 1),
+        usuarioId,
+      ],
     );
     return result.rows[0];
   });
@@ -132,7 +148,11 @@ export async function editarPresentacion(
   usuarioId: number,
   id: number,
   insumoId: number,
-  datos: { unidad_medida_id?: number; es_default?: boolean },
+  datos: {
+    unidad_medida_id?: number;
+    es_default?: boolean;
+    unidades_por_presentacion?: number;
+  },
 ): Promise<PresentacionInsumoRow> {
   return withUserTransaction(usuarioId, async (client) => {
     if (datos.es_default === true) {
@@ -143,12 +163,22 @@ export async function editarPresentacion(
     const valores: unknown[] = [];
     let i = 1;
 
-    for (const campo of ["unidad_medida_id", "es_default"] as const) {
+    for (const campo of [
+      "unidad_medida_id",
+      "es_default",
+      "unidades_por_presentacion",
+    ] as const) {
       if (campo in datos) {
         sets.push(`${campo} = $${i}`);
         valores.push(datos[campo]);
         i += 1;
       }
+    }
+
+    // Volverla predeterminada la convierte en la unidad base, así que su
+    // factor pasa a 1 aunque nadie lo haya pedido explícitamente.
+    if (datos.es_default === true && datos.unidades_por_presentacion == null) {
+      sets.push(`unidades_por_presentacion = 1`);
     }
 
     sets.push(`updated_by = $${i}`);
