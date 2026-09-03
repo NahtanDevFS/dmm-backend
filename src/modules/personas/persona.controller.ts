@@ -36,15 +36,7 @@ import {
   existeTipoParentescoActivo,
 } from "../catalogos-lectura/catalogos-lectura.repository.js";
 
-const FIRMA_ERROR_MENOR_SIN_ENCARGADO = "debe vincularse a un encargado";
-
-function esErrorMenorSinEncargado(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    error.message.includes(FIRMA_ERROR_MENOR_SIN_ENCARGADO)
-  );
-}
-
+/** Valida los catálogos referenciados antes de tocar la base. */
 async function validarGeneroYComunidad(datos: {
   genero_id?: number | null;
   comunidad_id?: number | null;
@@ -159,16 +151,12 @@ export async function crearController(
       }
     }
 
-    if (
-      esMenorDeEdad(datos.fecha_nacimiento) &&
-      !datos.cui_dpi &&
-      (!encargados || encargados.length === 0)
-    ) {
-      return res.status(400).json({
-        message:
-          "La persona es menor de edad y no tiene CUI/DPI: debe indicar al menos un encargado.",
-      });
-    }
+    // El encargado ya NO bloquea (migración 22). Se puede vincular a
+    // cualquier persona y se recomienda para menores y para quienes tienen
+    // alguna discapacidad registrada, pero negarse a registrar a alguien por
+    // no tener ese dato a mano no protege a nadie: en la práctica se termina
+    // inventando el dato, o la persona no queda registrada y su ayuda
+    // tampoco. La interfaz lo advierte; la base ya no lo exige.
 
     const nueva = await crearPersonaConRelaciones(
       req.usuario!.id,
@@ -179,12 +167,6 @@ export async function crearController(
     );
     return res.status(201).json(nueva);
   } catch (error) {
-    if (esErrorMenorSinEncargado(error)) {
-      return res.status(400).json({
-        message:
-          "La persona es menor de edad y no tiene CUI/DPI: debe indicar al menos un encargado válido.",
-      });
-    }
     return next(error);
   }
 }
@@ -230,12 +212,6 @@ export async function editarController(
     const actualizada = await editarPersona(req.usuario!.id, id, parsed.data);
     return res.status(200).json(actualizada);
   } catch (error) {
-    if (esErrorMenorSinEncargado(error)) {
-      return res.status(400).json({
-        message:
-          "Este cambio dejaría a la persona como menor de edad sin CUI/DPI y sin encargado vinculado. Agregue un encargado antes de guardar este cambio.",
-      });
-    }
     return next(error);
   }
 }
@@ -410,12 +386,6 @@ export async function desvincularEncargadoController(
     const encargados = await listarEncargadosDePersona(id);
     return res.status(200).json(encargados);
   } catch (error) {
-    if (esErrorMenorSinEncargado(error)) {
-      return res.status(400).json({
-        message:
-          "No se puede quitar este encargado: la persona es menor de edad, no tiene CUI/DPI, y quedaría sin ningún encargado vinculado.",
-      });
-    }
     return next(error);
   }
 }

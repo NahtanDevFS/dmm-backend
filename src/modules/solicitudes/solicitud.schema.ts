@@ -5,22 +5,52 @@ const fechaSchema = z
   .string()
   .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha inválida");
 
-const lineaSchema = z.object({
-  insumo_id: z.number().int().positive("insumo_id es requerido"),
-  cantidad_requerida: z
-    .number()
-    .int()
-    .positive("La cantidad requerida debe ser mayor que cero"),
-  /**
-   * Bajo qué figura se entrega este insumo: donación definitiva o préstamo.
-   * Decide qué formularios se exigen, y no se puede cambiar después — la
-   * base lo impide con un trigger. Si la figura cambia, es otra solicitud.
-   */
-  modalidad_solicitud_id: z
-    .number()
-    .int()
-    .positive("Debe indicar la modalidad (donación o préstamo)"),
-});
+const lineaSchema = z
+  .object({
+    insumo_id: z.number().int().positive("insumo_id es requerido"),
+    /**
+     * En unidad base. Opcional si se pide por presentación: en ese caso el
+     * backend la calcula, para que el número guardado no dependa de que el
+     * cliente haya multiplicado bien.
+     */
+    cantidad_requerida: z
+      .number()
+      .int()
+      .positive("La cantidad requerida debe ser mayor que cero")
+      .optional(),
+    /** Cómo se expresó el pedido: "2 cajas". Ambas o ninguna. */
+    presentacion_solicitud_id: z.number().int().positive().optional(),
+    cantidad_presentacion: z
+      .number()
+      .positive("La cantidad debe ser mayor que cero")
+      .optional(),
+    /**
+     * Bajo qué figura se entrega este insumo: donación definitiva o préstamo.
+     * Decide qué formularios se exigen, y no se puede cambiar después — la
+     * base lo impide con un trigger. Si la figura cambia, es otra solicitud.
+     */
+    modalidad_solicitud_id: z
+      .number()
+      .int()
+      .positive("Debe indicar la modalidad (donación o préstamo)"),
+  })
+  .refine(
+    (d) =>
+      (d.presentacion_solicitud_id == null) ===
+      (d.cantidad_presentacion == null),
+    {
+      message:
+        "Indique la presentación y su cantidad juntas, o ninguna de las dos",
+      path: ["cantidad_presentacion"],
+    },
+  )
+  .refine(
+    (d) => d.cantidad_requerida != null || d.presentacion_solicitud_id != null,
+    {
+      message: "Indique la cantidad, en unidad base o por presentación",
+      path: ["cantidad_requerida"],
+    },
+  );
 
 export const crearSolicitudSchema = z.object({
   persona_id: z.number().int().positive("persona_id es requerido"),

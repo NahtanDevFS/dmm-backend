@@ -38,6 +38,11 @@ export interface SemaforoRow {
   cantidad_disponible: number;
   cantidad_inicial: number;
   semaforo: string;
+  /** Código impreso por el fabricante, distinto del código del envío. */
+  codigo_lote_fabricante: string | null;
+  /** En qué presentación llegó este lote (caja, quintal, unidad). */
+  presentacion_nombre: string;
+  institucion_nombre: string;
 }
 
 const SELECT_RECEPCION = {
@@ -345,29 +350,48 @@ export async function listarSemaforoInventario(params: {
 
   if (params.insumoId !== undefined) {
     valores.push(params.insumoId);
-    condiciones.push(`insumo_id = $${valores.length}`);
+    condiciones.push(`v.insumo_id = $${valores.length}`);
   }
   if (params.semaforo !== undefined) {
     valores.push(params.semaforo);
-    condiciones.push(`semaforo = $${valores.length}`);
+    condiciones.push(`v.semaforo = $${valores.length}`);
   }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
+  /**
+   * Se parte de la vista y se le agregan por join los datos que no expone:
+   * de qué presentación se recibió el lote, con qué código de fabricante y de
+   * qué institución vino.
+   *
+   * Van aquí y no dentro de la vista para no tener que migrarla: la vista
+   * calcula el semáforo, que es su razón de ser, y estos son datos de
+   * contexto que solo necesita esta pantalla. El alias `v` mantiene los
+   * nombres de columna intactos, así que el ORDER BY de abajo sigue igual.
+   */
   const result = await pool.query<SemaforoRow>(
-    `SELECT detalle_inventario_lote_id, insumo_id, insumo_nombre, codigo_lote,
-            fecha_caducidad, fecha_recepcion, cantidad_disponible,
-            cantidad_inicial, semaforo
-     FROM public.v_semaforo_inventario
+    `SELECT v.detalle_inventario_lote_id, v.insumo_id, v.insumo_nombre,
+            v.codigo_lote, v.fecha_caducidad, v.fecha_recepcion,
+            v.cantidad_disponible, v.cantidad_inicial, v.semaforo,
+            dl.codigo_lote_fabricante,
+            um.nombre AS presentacion_nombre,
+            ins.nombre AS institucion_nombre
+     FROM public.v_semaforo_inventario v
+     JOIN public.detalle_inventario_lote dl
+       ON dl.id = v.detalle_inventario_lote_id
+     JOIN public.presentacion_insumo pi ON pi.id = dl.presentacion_recepcion_id
+     JOIN public.unidad_medida um ON um.id = pi.unidad_medida_id
+     JOIN public.recepcion_donacion_lote rl ON rl.id = dl.recepcion_lote_id
+     JOIN public.institucion_donante ins ON ins.id = rl.institucion_id
      ${where}
-     ORDER BY CASE semaforo
+     ORDER BY CASE v.semaforo
                 WHEN 'VENCIDO'  THEN 1
                 WHEN 'ROJO'     THEN 2
                 WHEN 'AMARILLO' THEN 3
                 WHEN 'VERDE'    THEN 4
                 ELSE 5
               END,
-              fecha_caducidad NULLS LAST,
-              insumo_nombre`,
+              v.fecha_caducidad NULLS LAST,
+              v.insumo_nombre`,
     valores,
   );
   return result.rows;

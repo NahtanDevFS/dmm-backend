@@ -28,6 +28,9 @@ export interface LineaSolicitudRow {
   receta_medica_id: number | null;
   /** Donación o préstamo. Inmutable una vez creada la línea. */
   modalidad_solicitud_id: number;
+  /** Cómo se expresó el pedido, si se expresó por presentación. */
+  presentacion_solicitud_id: number | null;
+  cantidad_presentacion: string | null;
   activo: boolean;
 }
 
@@ -37,7 +40,56 @@ const COLUMNAS_SOLICITUD = `id, persona_id, programa_id, fecha_solicitud,
 
 const COLUMNAS_LINEA = `id, solicitud_id, insumo_id, cantidad_requerida,
   cantidad_entregada, estado_id, fecha_asignacion, receta_medica_id,
-  modalidad_solicitud_id, activo`;
+  modalidad_solicitud_id, presentacion_solicitud_id, cantidad_presentacion,
+  activo`;
+
+/**
+ * Convierte lo pedido a unidad base cuando vino expresado en una presentación
+ * ("2 cajas" → 200 tabletas).
+ *
+ * El cálculo se hace aquí y no en el cliente a propósito: el número que se
+ * guarda gobierna stock, despacho y lista de espera, así que no puede
+ * depender de que el navegador haya multiplicado bien. Si la línea ya trae
+ * cantidad en unidad base, se respeta tal cual.
+ *
+ * El factor es NOMINAL: los lotes reales pueden traer otra cantidad por caja.
+ * Eso es correcto — la solicitud queda por las 200 tabletas que la persona
+ * necesita, y el despacho toma las cajas que hagan falta para cubrirlas.
+ */
+async function resolverCantidadBase(
+  client: PoolClient,
+  linea: {
+    cantidad_requerida?: number;
+    presentacion_solicitud_id?: number;
+    cantidad_presentacion?: number;
+  },
+): Promise<number> {
+  if (linea.presentacion_solicitud_id == null) {
+    return linea.cantidad_requerida!;
+  }
+
+  const { rows } = await client.query<{ factor: string }>(
+    `SELECT unidades_por_presentacion AS factor
+     FROM public.presentacion_insumo
+     WHERE id = $1 AND activo = true`,
+    [linea.presentacion_solicitud_id],
+  );
+
+  if (rows.length === 0) {
+    throw new Error("La presentación indicada no existe o está inactiva.");
+  }
+
+  const total = Number(rows[0].factor) * linea.cantidad_presentacion!;
+  const redondeado = Math.round(total);
+
+  if (redondeado < 1) {
+    throw new Error(
+      "La cantidad pedida equivale a menos de una unidad. Ajuste la cantidad o la presentación.",
+    );
+  }
+
+  return redondeado;
+}
 
 // ─────────────────────────────────────────────── lecturas
 
@@ -244,7 +296,9 @@ export async function crearSolicitudConLineas(
     observaciones_trabajo_social?: string | null;
     lineas: Array<{
       insumo_id: number;
-      cantidad_requerida: number;
+      cantidad_requerida?: number;
+      presentacion_solicitud_id?: number;
+      cantidad_presentacion?: number;
       modalidad_solicitud_id: number;
     }>;
   },
@@ -290,14 +344,17 @@ export async function crearSolicitudConLineas(
       await client.query(
         `INSERT INTO public.detalle_solicitud_apoyo
            (solicitud_id, insumo_id, cantidad_requerida, estado_id,
-            modalidad_solicitud_id, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+            modalidad_solicitud_id, presentacion_solicitud_id,
+            cantidad_presentacion, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           solicitudId,
           linea.insumo_id,
-          linea.cantidad_requerida,
+          await resolverCantidadBase(client, linea),
           estadoInicial,
           linea.modalidad_solicitud_id,
+          linea.presentacion_solicitud_id ?? null,
+          linea.cantidad_presentacion ?? null,
           usuarioId,
         ],
       );
@@ -361,7 +418,9 @@ export async function agregarLinea(
   solicitudId: number,
   datos: {
     insumo_id: number;
-    cantidad_requerida: number;
+    cantidad_requerida?: number;
+    presentacion_solicitud_id?: number;
+    cantidad_presentacion?: number;
     modalidad_solicitud_id: number;
   },
 ): Promise<LineaSolicitudRow> {
@@ -370,15 +429,18 @@ export async function agregarLinea(
     const result = await client.query<LineaSolicitudRow>(
       `INSERT INTO public.detalle_solicitud_apoyo
          (solicitud_id, insumo_id, cantidad_requerida, estado_id,
-          modalidad_solicitud_id, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
+          modalidad_solicitud_id, presentacion_solicitud_id,
+          cantidad_presentacion, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING ${COLUMNAS_LINEA}`,
       [
         solicitudId,
         datos.insumo_id,
-        datos.cantidad_requerida,
+        await resolverCantidadBase(client, datos),
         estadoInicial,
         datos.modalidad_solicitud_id,
+        datos.presentacion_solicitud_id ?? null,
+        datos.cantidad_presentacion ?? null,
         usuarioId,
       ],
     );
