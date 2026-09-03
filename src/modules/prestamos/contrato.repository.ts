@@ -65,8 +65,7 @@ export async function buscarPersonaEInsumoDeContrato(id: number): Promise<{
      JOIN public.detalle_entrega de ON de.id = h.detalle_entrega_id
      JOIN public.entrega e ON e.id = de.entrega_id
      JOIN public.persona p ON p.id = e.persona_id
-     JOIN public.detalle_inventario_lote dl ON dl.id = de.detalle_inventario_lote_id
-     JOIN public.insumo i ON i.id = dl.insumo_id
+     JOIN public.insumo i ON i.id = de.insumo_id
      LIMIT 1`,
     [id],
   );
@@ -76,7 +75,7 @@ export async function buscarPersonaEInsumoDeContrato(id: number): Promise<{
 /**
  * Listado con el beneficiario y el insumo resueltos. Ninguno de los dos está en
  * `contrato_prestamo`: se alcanzan por detalle_entrega -> entrega -> persona y
- * detalle_entrega -> detalle_inventario_lote -> insumo. En una renovación esas
+ * detalle_entrega -> insumo. En una renovación esas
  * columnas son NULL, así que se sube por la cadena con un CTE recursivo hasta el
  * contrato raíz, que es el que sí tiene la entrega física.
  */
@@ -153,8 +152,7 @@ export async function listarContratos(params: {
      LEFT JOIN public.detalle_entrega de ON de.id = ca.detalle_entrega_id
      LEFT JOIN public.entrega e ON e.id = de.entrega_id
      LEFT JOIN public.persona p ON p.id = e.persona_id
-     LEFT JOIN public.detalle_inventario_lote dl ON dl.id = de.detalle_inventario_lote_id
-     LEFT JOIN public.insumo i ON i.id = dl.insumo_id
+     LEFT JOIN public.insumo i ON i.id = de.insumo_id
      LEFT JOIN (
        SELECT contrato_prestamo_id,
               count(*) FILTER (WHERE pagada = false) AS multas_pendientes,
@@ -197,8 +195,7 @@ export async function listarContratosVencidos(): Promise<
      LEFT JOIN public.detalle_entrega de ON de.id = ca.detalle_entrega_id
      LEFT JOIN public.entrega e ON e.id = de.entrega_id
      LEFT JOIN public.persona p ON p.id = e.persona_id
-     LEFT JOIN public.detalle_inventario_lote dl ON dl.id = de.detalle_inventario_lote_id
-     LEFT JOIN public.insumo i ON i.id = dl.insumo_id
+     LEFT JOIN public.insumo i ON i.id = de.insumo_id
      LEFT JOIN (
        SELECT contrato_prestamo_id, count(*)::int AS multas_pendientes
        FROM public.multa_prestamo WHERE activo = true AND pagada = false

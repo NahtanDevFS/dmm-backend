@@ -4,7 +4,6 @@ import { withUserTransaction } from "../../db/withUserTransaction.js";
 
 export interface EntregaRow {
   id: number;
-  detalle_solicitud_id: number | null;
   persona_id: number;
   persona_receptor_id: number | null;
   tipo_parentesco_receptor_id: number | null;
@@ -14,16 +13,31 @@ export interface EntregaRow {
   activo: boolean;
 }
 
-export interface DetalleEntregaRow {
+/** De qué lote salió una parte del renglón. */
+export interface LoteDeRenglon {
   id: number;
   detalle_inventario_lote_id: number;
   presentacion_despacho_id: number;
   cantidad_despacho_original: string;
   cantidad_entregada: number;
   activo: boolean;
-  insumo_nombre: string;
   codigo_lote: string | null;
-  fecha_caducidad: Date | null;
+  fecha_caducidad: string | null;
+}
+
+/** Un insumo entregado. El reparto por lotes viaja anidado en `lotes`. */
+export interface DetalleEntregaRow {
+  id: number;
+  insumo_id: number;
+  insumo_nombre: string;
+  detalle_solicitud_id: number | null;
+  solicitud_id: number | null;
+  cantidad_entregada: number;
+  activo: boolean;
+  motivo_anulacion: string | null;
+  fecha_anulacion: Date | null;
+  tiene_prestamo: boolean;
+  lotes: LoteDeRenglon[];
 }
 
 export interface LineaSolicitudParaEntrega {
@@ -38,7 +52,7 @@ export interface LineaSolicitudParaEntrega {
   persona_id: number;
 }
 
-const COLUMNAS_ENTREGA = `id, detalle_solicitud_id, persona_id, persona_receptor_id,
+const COLUMNAS_ENTREGA = `id, persona_id, persona_receptor_id,
   tipo_parentesco_receptor_id, fecha_entrega, usuario_entrega_id, observaciones, activo`;
 
 // ─────────────────────────────────────────────── lecturas
@@ -87,8 +101,7 @@ export async function listarEntregas(params: {
     valores.push(params.insumoId);
     condiciones.push(`EXISTS (
       SELECT 1 FROM public.detalle_entrega de2
-      JOIN public.detalle_inventario_lote dl2 ON dl2.id = de2.detalle_inventario_lote_id
-      WHERE de2.entrega_id = e.id AND dl2.insumo_id = $${valores.length}
+      WHERE de2.entrega_id = e.id AND de2.insumo_id = $${valores.length}
     )`);
   }
 
@@ -109,20 +122,23 @@ export async function listarEntregas(params: {
             e.persona_receptor_id,
             pr.nombres || ' ' || pr.apellidos            AS receptor_nombre_completo,
             tp.nombre                                    AS parentesco_receptor,
-            e.detalle_solicitud_id,
             u.username                                   AS entregado_por,
             e.observaciones,
             e.activo,
             COALESCE(SUM(de.cantidad_entregada) FILTER (WHERE de.activo), 0)::integer AS total_entregado,
-            COALESCE(string_agg(DISTINCT i.nombre, ', ') FILTER (WHERE de.activo), '') AS insumos
+            COALESCE(string_agg(DISTINCT i.nombre, ', ') FILTER (WHERE de.activo), '') AS insumos,
+            -- Origen de la entrega. La regla de origen único garantiza que
+            -- todos los renglones comparten solicitud, así que un MIN alcanza.
+            MIN(dsa.solicitud_id)                        AS solicitud_id,
+            COUNT(*) FILTER (WHERE NOT de.activo)::integer AS renglones_anulados
      FROM public.entrega e
      JOIN public.persona p        ON p.id = e.persona_id
      LEFT JOIN public.persona pr  ON pr.id = e.persona_receptor_id
      LEFT JOIN public.tipo_parentesco tp ON tp.id = e.tipo_parentesco_receptor_id
      JOIN public.usuario u        ON u.id = e.usuario_entrega_id
      LEFT JOIN public.detalle_entrega de ON de.entrega_id = e.id
-     LEFT JOIN public.detalle_inventario_lote dl ON dl.id = de.detalle_inventario_lote_id
-     LEFT JOIN public.insumo i    ON i.id = dl.insumo_id
+     LEFT JOIN public.insumo i    ON i.id = de.insumo_id
+     LEFT JOIN public.detalle_solicitud_apoyo dsa ON dsa.id = de.detalle_solicitud_id
      ${where}
      GROUP BY e.id, p.nombres, p.apellidos, pr.nombres, pr.apellidos, tp.nombre, u.username
      ORDER BY e.fecha_entrega DESC, e.id DESC
@@ -133,23 +149,65 @@ export async function listarEntregas(params: {
   return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
-/** Renglones de la entrega: de qué lote salió cada cantidad. */
+/**
+ * Renglones de la entrega: un insumo por fila, con el reparto por lotes
+ * anidado. Se arma en una sola consulta con json_agg en vez de una por
+ * renglón: una entrega puede traer varios insumos y cada uno varios lotes.
+ */
 export async function listarDetallesDeEntrega(
   entregaId: number,
 ): Promise<DetalleEntregaRow[]> {
   const result = await pool.query<DetalleEntregaRow>(
-    `SELECT de.id, de.detalle_inventario_lote_id, de.presentacion_despacho_id,
-            de.cantidad_despacho_original, de.cantidad_entregada, de.activo,
-            i.nombre AS insumo_nombre, rl.codigo_lote, dl.fecha_caducidad
+    `SELECT de.id,
+            de.insumo_id,
+            i.nombre AS insumo_nombre,
+            de.detalle_solicitud_id,
+            dsa.solicitud_id,
+            de.cantidad_entregada,
+            de.activo,
+            de.motivo_anulacion,
+            de.fecha_anulacion,
+            EXISTS (SELECT 1 FROM public.contrato_prestamo cp
+                     WHERE cp.detalle_entrega_id = de.id) AS tiene_prestamo,
+            COALESCE((
+              SELECT json_agg(json_build_object(
+                       'id', del.id,
+                       'detalle_inventario_lote_id', del.detalle_inventario_lote_id,
+                       'presentacion_despacho_id', del.presentacion_despacho_id,
+                       'cantidad_despacho_original', del.cantidad_despacho_original,
+                       'cantidad_entregada', del.cantidad_entregada,
+                       'activo', del.activo,
+                       'codigo_lote', rl.codigo_lote,
+                       'fecha_caducidad', dl.fecha_caducidad
+                     ) ORDER BY del.id)
+              FROM public.detalle_entrega_lote del
+              JOIN public.detalle_inventario_lote dl ON dl.id = del.detalle_inventario_lote_id
+              JOIN public.recepcion_donacion_lote rl ON rl.id = dl.recepcion_lote_id
+              WHERE del.detalle_entrega_id = de.id
+            ), '[]'::json) AS lotes
      FROM public.detalle_entrega de
-     JOIN public.detalle_inventario_lote dl ON dl.id = de.detalle_inventario_lote_id
-     JOIN public.insumo i ON i.id = dl.insumo_id
-     JOIN public.recepcion_donacion_lote rl ON rl.id = dl.recepcion_lote_id
+     JOIN public.insumo i ON i.id = de.insumo_id
+     LEFT JOIN public.detalle_solicitud_apoyo dsa ON dsa.id = de.detalle_solicitud_id
      WHERE de.entrega_id = $1
      ORDER BY de.id`,
     [entregaId],
   );
   return result.rows;
+}
+
+/** Un renglón suelto, para validar antes de anularlo. */
+export async function buscarDetalleEntrega(
+  id: number,
+): Promise<{ id: number; entrega_id: number; activo: boolean } | null> {
+  const result = await pool.query<{
+    id: number;
+    entrega_id: number;
+    activo: boolean;
+  }>(
+    `SELECT id, entrega_id, activo FROM public.detalle_entrega WHERE id = $1`,
+    [id],
+  );
+  return result.rows[0] ?? null;
 }
 
 /**
@@ -227,56 +285,66 @@ export async function buscarLineaParaEntrega(
 // ─────────────────────────────────────────────── escrituras
 
 /**
- * Registra la entrega invocando sp_registrar_entrega. El SP crea la cabecera,
- * recorre v_inventario_lote_fifo en orden y va insertando un detalle_entrega por
- * lote; los triggers hacen el resto: fn_calcular_cantidad_entregada convierte la
- * presentación, fn_descontar_inventario descuenta con FOR UPDATE y
- * fn_actualizar_linea_desde_entrega recalcula la línea y la cabecera de la
- * solicitud. El backend no reimplementa nada de eso.
+ * Registra la entrega completa: una cabecera y un renglón por insumo.
  *
- * El procedimiento no devuelve el id de la entrega creada, así que se lee con
- * currval() de la secuencia: es por sesión, así que no lo afectan inserciones
- * concurrentes de otras transacciones.
+ * `fn_crear_entrega` crea la cabecera y devuelve su id —ya no hace falta
+ * leerlo con currval—, y `sp_agregar_insumo_entrega` se llama una vez por
+ * insumo. Cada llamada reparte la cantidad entre lotes por FEFO/FIFO e
+ * inserta las filas de detalle_entrega_lote; los triggers hacen el resto:
+ * fn_calcular_cantidad_entregada convierte la presentación,
+ * fn_descontar_inventario descuenta con FOR UPDATE y
+ * fn_actualizar_linea_desde_entrega recalcula la línea de solicitud.
+ *
+ * Todo va en una transacción: si el tercer insumo no tiene stock, no queda
+ * una entrega a medias con los dos primeros.
  */
 export async function registrarEntrega(
   usuarioId: number,
   datos: {
     persona_id: number;
-    insumo_id: number;
-    cantidad: number;
-    detalle_solicitud_id?: number | null;
+    insumos: {
+      insumo_id: number;
+      cantidad: number;
+      detalle_solicitud_id?: number | null;
+    }[];
     persona_receptor_id?: number | null;
     tipo_parentesco_receptor_id?: number | null;
     observaciones?: string | null;
   },
 ): Promise<number> {
   return withUserTransaction(usuarioId, async (client) => {
-    await client.query(
-      `CALL public.sp_registrar_entrega($1, $2, $3, $4, $5, $6, $7, $8)`,
+    const cabecera = await client.query<{ id: number }>(
+      `SELECT public.fn_crear_entrega($1, $2, $3, $4, $5) AS id`,
       [
-        datos.detalle_solicitud_id ?? null,
         datos.persona_id,
-        datos.insumo_id,
-        datos.cantidad,
         usuarioId,
         datos.observaciones ?? null,
         datos.persona_receptor_id ?? null,
         datos.tipo_parentesco_receptor_id ?? null,
       ],
     );
+    const entregaId = cabecera.rows[0].id;
 
-    const result = await client.query<{ id: string }>(
-      `SELECT currval('entrega_id_seq') AS id`,
-    );
-    return Number(result.rows[0].id);
+    for (const renglon of datos.insumos) {
+      await client.query(
+        `CALL public.sp_agregar_insumo_entrega($1, $2, $3, $4)`,
+        [
+          entregaId,
+          renglon.insumo_id,
+          renglon.cantidad,
+          renglon.detalle_solicitud_id ?? null,
+        ],
+      );
+    }
+
+    return entregaId;
   });
 }
 
 /**
- * Anulación. El UPDATE de `entrega.activo` dispara trg_restaurar_inventario,
- * que devuelve las cantidades a cada lote. El SP desactiva los detalles
- * *después* de ese UPDATE justamente para que el trigger todavía los vea
- * activos y pueda restaurarlos.
+ * Anulación de la entrega completa. El procedimiento apaga cada renglón y
+ * es el trigger de cada uno el que devuelve su stock a los lotes de origen,
+ * de modo que no hay dos caminos de restauración que puedan descuadrar.
  */
 export async function anularEntrega(
   usuarioId: number,
@@ -289,5 +357,23 @@ export async function anularEntrega(
       usuarioId,
       motivo,
     ]);
+  });
+}
+
+/**
+ * Anulación de un solo insumo, dejando el resto de la entrega en pie. Es el
+ * caso de "se entregó el jarabe, el acetaminofén estaba vencido": rehacer
+ * toda la entrega para corregir un renglón invita a no corregir nada.
+ */
+export async function anularDetalleEntrega(
+  usuarioId: number,
+  detalleId: number,
+  motivo: string,
+): Promise<void> {
+  await withUserTransaction(usuarioId, async (client) => {
+    await client.query(
+      `CALL public.sp_desactivar_detalle_entrega($1, $2, $3)`,
+      [detalleId, usuarioId, motivo],
+    );
   });
 }
