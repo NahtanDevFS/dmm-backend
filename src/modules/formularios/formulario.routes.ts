@@ -13,6 +13,7 @@ import {
   editarFormularioController,
   agregarCampoController,
   editarCampoController,
+  moverCampoController,
   asignarFormularioCategoriaController,
   listarAsignacionesController,
   formulariosDeInsumoController,
@@ -96,6 +97,15 @@ router.post(
   requireRole(DIRECCION),
   agregarCampoController,
 );
+// Reordenar: mueve un campo un lugar arriba o abajo. Va aparte del PATCH
+// porque no edita un valor del campo, lo intercambia con otro registro.
+router.post(
+  "/campos/:campoId/mover",
+  requireAuth,
+  requireRole(DIRECCION),
+  moverCampoController,
+);
+
 router.patch(
   "/campos/:campoId",
   requireAuth,
