@@ -5,6 +5,7 @@ import { OPERACION } from "../../config/roles.js";
 import {
   listarTiposGeneroController,
   listarModalidadesSolicitudController,
+  listarEstadosCivilesController,
   listarTiposParentescoController,
   listarTiposDocumentoPersonaController,
   listarTiposEvidenciaEntregaController,
@@ -20,10 +21,17 @@ const router = Router();
 // los necesita: todos van con OPERACION.
 
 router.get(
+  "/estados-civiles",
+  requireAuth,
+  requireRole(OPERACION),
+  listarEstadosCivilesController,
+);
+router.get(
   "/modalidades-solicitud",
   requireAuth,
   requireRole(OPERACION),
   listarModalidadesSolicitudController,
+  listarEstadosCivilesController,
 );
 router.get(
   "/tipos-genero",
@@ -31,6 +39,7 @@ router.get(
   requireRole(OPERACION),
   listarTiposGeneroController,
   listarModalidadesSolicitudController,
+  listarEstadosCivilesController,
 );
 router.get(
   "/tipos-parentesco",

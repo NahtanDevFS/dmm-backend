@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import {
   listarTiposGenero,
   listarModalidadesSolicitud,
+  listarEstadosCiviles,
   listarTiposParentesco,
   listarTiposDocumentoPersona,
   listarTiposEvidenciaEntrega,
@@ -18,6 +19,18 @@ export async function listarModalidadesSolicitudController(
 ) {
   try {
     return res.status(200).json(await listarModalidadesSolicitud());
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listarEstadosCivilesController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    return res.status(200).json(await listarEstadosCiviles());
   } catch (error) {
     return next(error);
   }

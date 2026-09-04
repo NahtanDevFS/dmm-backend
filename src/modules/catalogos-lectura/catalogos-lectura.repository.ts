@@ -69,6 +69,27 @@ export async function listarModalidadesSolicitud(): Promise<
   });
 }
 
+/**
+ * Estado civil. A diferencia de modalidad_solicitud, ningún código se
+ * ramifica sobre estos valores: es una etiqueta descriptiva y podría
+ * administrarse. Vive aquí por ahora porque los cinco valores vienen del
+ * formulario de Orden de Malta y no se espera que cambien.
+ */
+export interface EstadoCivilRow {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  activo: boolean;
+}
+
+export async function listarEstadosCiviles(): Promise<EstadoCivilRow[]> {
+  return prisma.estado_civil.findMany({
+    where: { activo: true },
+    orderBy: { id: "asc" },
+    select: { id: true, nombre: true, descripcion: true, activo: true },
+  });
+}
+
 export async function listarTiposGenero(): Promise<TipoGeneroRow[]> {
   return prisma.tipo_genero.findMany({
     where: { activo: true },

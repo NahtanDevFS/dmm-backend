@@ -46,6 +46,18 @@ const datosBasePersonaSchema = z.object({
   genero_id: z.number().int().positive().nullable().optional(),
   comunidad_id: z.number().int().positive().nullable().optional(),
   telefono: telefonoOpcionalSchema,
+
+  /**
+   * Los datos que pide la sección I del estudio socioeconómico y que hasta
+   * ahora no se guardaban en ningún lado (o se guardaban en columnas que
+   * nadie leía). Todos opcionales: una ficha se abre con lo que la persona
+   * traiga encima y se completa después.
+   */
+  direccion: z.string().trim().max(255).nullable().optional(),
+  estado_civil_id: z.number().int().positive().nullable().optional(),
+  grado_academico_id: z.number().int().positive().nullable().optional(),
+  ocupacion_id: z.number().int().positive().nullable().optional(),
+  municipio_nacimiento_id: z.number().int().positive().nullable().optional(),
 });
 
 const encargadoSchema = z.discriminatedUnion("tipo", [
