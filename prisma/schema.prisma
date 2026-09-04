@@ -361,6 +361,8 @@ model persona {
   direccion                                             String?                       @db.VarChar(255)
   grado_academico                                       String?                       @db.VarChar(100)
   ocupacion                                             String?                       @db.VarChar(100)
+  estado_civil_id                                       Int?
+  lugar_nacimiento                                      String?                       @db.VarChar(255)
   contacto_referencia_persona                           contacto_referencia_persona[]
   documento_persona                                     documento_persona[]
   encargado_menor_encargado_menor_encargado_idTopersona encargado_menor[]             @relation("encargado_menor_encargado_idTopersona")
@@ -370,12 +372,14 @@ model persona {
   usuario_persona_created_byTousuario                   usuario?                      @relation("persona_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_per_created_by")
   usuario_persona_updated_byTousuario                   usuario?                      @relation("persona_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_per_updated_by")
   comunidad                                             comunidad?                    @relation(fields: [comunidad_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_persona_comunidad")
+  estado_civil                                          estado_civil?                 @relation(fields: [estado_civil_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_persona_estado_civil")
   tipo_genero                                           tipo_genero?                  @relation(fields: [genero_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_persona_genero")
   persona_discapacidad                                  persona_discapacidad[]
   solicitud_apoyo                                       solicitud_apoyo[]
 
   @@index([comunidad_id], map: "idx_persona_comunidad")
   @@index([cui_dpi], map: "idx_persona_cui_dpi", where: raw("(cui_dpi IS NOT NULL)"))
+  @@index([estado_civil_id], map: "idx_persona_estado_civil", where: raw("(estado_civil_id IS NOT NULL)"))
 }
 
 model persona_discapacidad {
@@ -484,6 +488,7 @@ model solicitud_apoyo {
   created_by                                    Int?
   updated_by                                    Int?
   detalle_solicitud_apoyo                       detalle_solicitud_apoyo[]
+  documento_solicitud                           documento_solicitud[]
   receta_medica                                 receta_medica[]
   usuario_solicitud_apoyo_aprobado_porTousuario usuario?                  @relation("solicitud_apoyo_aprobado_porTousuario", fields: [aprobado_por], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sol_aprobador")
   usuario_solicitud_apoyo_created_byTousuario   usuario?                  @relation("solicitud_apoyo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sol_created_by")
@@ -597,9 +602,13 @@ model usuario {
   documento_persona_documento_persona_updated_byTousuario                                           documento_persona[]                      @relation("documento_persona_updated_byTousuario")
   documento_recepcion_documento_recepcion_created_byTousuario                                       documento_recepcion[]                    @relation("documento_recepcion_created_byTousuario")
   documento_recepcion_documento_recepcion_updated_byTousuario                                       documento_recepcion[]                    @relation("documento_recepcion_updated_byTousuario")
+  documento_solicitud_documento_solicitud_created_byTousuario                                       documento_solicitud[]                    @relation("documento_solicitud_created_byTousuario")
+  documento_solicitud_documento_solicitud_updated_byTousuario                                       documento_solicitud[]                    @relation("documento_solicitud_updated_byTousuario")
   entrega_entrega_created_byTousuario                                                               entrega[]                                @relation("entrega_created_byTousuario")
   entrega_entrega_updated_byTousuario                                                               entrega[]                                @relation("entrega_updated_byTousuario")
   entrega_entrega_usuario_entrega_idTousuario                                                       entrega[]                                @relation("entrega_usuario_entrega_idTousuario")
+  estado_civil_estado_civil_created_byTousuario                                                     estado_civil[]                           @relation("estado_civil_created_byTousuario")
+  estado_civil_estado_civil_updated_byTousuario                                                     estado_civil[]                           @relation("estado_civil_updated_byTousuario")
   estado_contrato_prestamo_estado_contrato_prestamo_created_byTousuario                             estado_contrato_prestamo[]               @relation("estado_contrato_prestamo_created_byTousuario")
   estado_contrato_prestamo_estado_contrato_prestamo_updated_byTousuario                             estado_contrato_prestamo[]               @relation("estado_contrato_prestamo_updated_byTousuario")
   estado_solicitud_apoyo_estado_solicitud_apoyo_created_byTousuario                                 estado_solicitud_apoyo[]                 @relation("estado_solicitud_apoyo_created_byTousuario")
@@ -974,6 +983,7 @@ model formulario {
   updated_by                             Int?
   categoria_insumo_formulario            categoria_insumo_formulario[]
   detalle_solicitud_formulario           detalle_solicitud_formulario[]
+  documento_solicitud                    documento_solicitud[]
   usuario_formulario_created_byTousuario usuario?                       @relation("formulario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_form_created_by")
   usuario_formulario_updated_byTousuario usuario?                       @relation("formulario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_form_updated_by")
   formulario_campo                       formulario_campo[]
@@ -1108,4 +1118,40 @@ model modalidad_solicitud {
   detalle_solicitud_apoyo                         detalle_solicitud_apoyo[]
   usuario_modalidad_solicitud_created_byTousuario usuario?                      @relation("modalidad_solicitud_created_byTousuario", fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_ms_created_by")
   usuario_modalidad_solicitud_updated_byTousuario usuario?                      @relation("modalidad_solicitud_updated_byTousuario", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fk_ms_updated_by")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model documento_solicitud {
+  id                                              Int             @id @default(autoincrement())
+  solicitud_id                                    Int
+  formulario_id                                   Int?
+  ruta_archivo                                    String          @db.VarChar(500)
+  descripcion                                     String?         @db.VarChar(255)
+  observaciones                                   String?
+  activo                                          Boolean         @default(true)
+  created_at                                      DateTime        @default(now()) @db.Timestamp(6)
+  updated_at                                      DateTime?       @db.Timestamp(6)
+  created_by                                      Int?
+  updated_by                                      Int?
+  usuario_documento_solicitud_created_byTousuario usuario?        @relation("documento_solicitud_created_byTousuario", fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_ds_created_by")
+  formulario                                      formulario?     @relation(fields: [formulario_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_ds_formulario")
+  solicitud_apoyo                                 solicitud_apoyo @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ds_solicitud")
+  usuario_documento_solicitud_updated_byTousuario usuario?        @relation("documento_solicitud_updated_byTousuario", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fk_ds_updated_by")
+
+  @@index([solicitud_id], map: "idx_documento_solicitud_solicitud")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model estado_civil {
+  id                                       Int       @id @default(autoincrement())
+  nombre                                   String    @unique @db.VarChar(50)
+  descripcion                              String?
+  activo                                   Boolean   @default(true)
+  created_at                               DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                               DateTime? @db.Timestamp(6)
+  created_by                               Int?
+  updated_by                               Int?
+  usuario_estado_civil_created_byTousuario usuario?  @relation("estado_civil_created_byTousuario", fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_ec_created_by")
+  usuario_estado_civil_updated_byTousuario usuario?  @relation("estado_civil_updated_byTousuario", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fk_ec_updated_by")
+  persona                                  persona[]
 }
