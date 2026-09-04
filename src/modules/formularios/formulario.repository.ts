@@ -155,19 +155,28 @@ export async function buscarFormularioPorId(
  */
 export async function buscarFormularioConCampos(
   id: number,
+  incluirInactivos = false,
 ): Promise<FormularioConCampos | null> {
   const formulario = await buscarFormularioPorId(id);
   if (!formulario) return null;
 
+  /*
+    `incluirInactivos` es solo para la pantalla de administración. Al LLENAR
+    un formulario los campos desactivados no deben aparecer —esa es la razón
+    de desactivarlos— pero al DEFINIRLO hay que verlos: siguen ocupando su
+    número de orden, que la base exige único por formulario, y sin verlos no
+    hay forma de reactivar uno.
+  */
   const { rows: campos } = await pool.query<FormularioCampoRow>(
     `SELECT fc.id, fc.formulario_id, fc.etiqueta, fc.tipo_dato_id,
             tdc.nombre AS tipo_dato_nombre, fc.catalogo_id, fc.obligatorio,
             fc.orden, fc.grupo_repetible, fc.ayuda, fc.activo
      FROM public.formulario_campo fc
      JOIN public.tipo_dato_campo_formulario tdc ON tdc.id = fc.tipo_dato_id
-     WHERE fc.formulario_id = $1 AND fc.activo = true
+     WHERE fc.formulario_id = $1
+       AND ($2::boolean OR fc.activo = true)
      ORDER BY fc.orden ASC`,
-    [id],
+    [id, incluirInactivos],
   );
 
   return { ...formulario, campos };
@@ -367,6 +376,72 @@ export async function agregarCampoFormulario(
       [rows[0].id],
     );
     return campo[0];
+  });
+}
+
+/**
+ * Intercambia un campo con su vecino, para reordenar el formulario.
+ *
+ * El orden importa al llenar —los campos se leen de arriba abajo— pero al
+ * definirlos nadie sabe de antemano que uno va en la posición 14. Por eso se
+ * mueve de a un lugar en vez de pedir el número: escribirlo a mano choca
+ * contra la unicidad de (formulario, orden) en cuanto se equivoca.
+ *
+ * El intercambio pasa por un valor temporal negativo porque esa restricción
+ * es inmediata, no diferida: poner el orden de A en B antes de liberar el de
+ * A rompería a mitad de camino. Los negativos no existen en uso normal, así
+ * que no chocan con nada.
+ *
+ * Se cuentan también los campos desactivados: siguen ocupando su número, y
+ * saltárselos dejaría huecos que confunden al leer la tabla.
+ */
+export async function moverCampoFormulario(
+  usuarioId: number,
+  campoId: number,
+  direccion: "arriba" | "abajo",
+): Promise<void> {
+  await withUserTransaction(usuarioId, async (client) => {
+    const { rows: actuales } = await client.query<{
+      formulario_id: number;
+      orden: number;
+    }>(
+      `SELECT formulario_id, orden FROM public.formulario_campo WHERE id = $1`,
+      [campoId],
+    );
+
+    if (actuales.length === 0) {
+      throw new Error("El campo no existe.");
+    }
+    const actual = actuales[0];
+
+    // El vecino inmediato en la dirección pedida. Si no hay, el campo ya está
+    // en un extremo y no hay nada que hacer.
+    const { rows: vecinos } = await client.query<{ id: number; orden: number }>(
+      direccion === "arriba"
+        ? `SELECT id, orden FROM public.formulario_campo
+           WHERE formulario_id = $1 AND orden < $2
+           ORDER BY orden DESC LIMIT 1`
+        : `SELECT id, orden FROM public.formulario_campo
+           WHERE formulario_id = $1 AND orden > $2
+           ORDER BY orden ASC LIMIT 1`,
+      [actual.formulario_id, actual.orden],
+    );
+
+    if (vecinos.length === 0) return;
+    const vecino = vecinos[0];
+
+    await client.query(
+      `UPDATE public.formulario_campo SET orden = -1, updated_by = $2 WHERE id = $1`,
+      [campoId, usuarioId],
+    );
+    await client.query(
+      `UPDATE public.formulario_campo SET orden = $2, updated_by = $3 WHERE id = $1`,
+      [vecino.id, actual.orden, usuarioId],
+    );
+    await client.query(
+      `UPDATE public.formulario_campo SET orden = $2, updated_by = $3 WHERE id = $1`,
+      [campoId, vecino.orden, usuarioId],
+    );
   });
 }
 

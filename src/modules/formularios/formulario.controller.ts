@@ -21,6 +21,7 @@ import {
   editarFormulario,
   agregarCampoFormulario,
   editarCampoFormulario,
+  moverCampoFormulario,
   agregarOpcionCampo,
   asignarFormularioACategoria,
   listarAsignaciones,
@@ -108,7 +109,11 @@ export async function obtenerFormularioController(
     if (!id)
       return res.status(400).json({ message: "Id de formulario inválido" });
 
-    const formulario = await buscarFormularioConCampos(id);
+    // Solo la pantalla de administración pide los campos desactivados; al
+    // llenar el formulario no deben verse.
+    const incluirInactivos = req.query.incluirInactivos === "true";
+
+    const formulario = await buscarFormularioConCampos(id, incluirInactivos);
     if (!formulario) {
       return res.status(404).json({ message: "El formulario no existe" });
     }
@@ -237,6 +242,31 @@ export async function agregarCampoController(
     const traducido = traducirErrorPostgres(error);
     if (traducido)
       return res.status(traducido.status).json({ message: traducido.message });
+    return next(error);
+  }
+}
+
+export async function moverCampoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const campoId = idDesdeParam(req.params.campoId);
+    if (!campoId) {
+      return res.status(400).json({ message: "Id de campo inválido" });
+    }
+
+    const direccion = req.body?.direccion;
+    if (direccion !== "arriba" && direccion !== "abajo") {
+      return res
+        .status(400)
+        .json({ message: "La dirección debe ser «arriba» o «abajo»" });
+    }
+
+    await moverCampoFormulario(req.usuario!.id, campoId, direccion);
+    return res.status(204).send();
+  } catch (error) {
     return next(error);
   }
 }
