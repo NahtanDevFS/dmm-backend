@@ -127,6 +127,16 @@ export const listarSolicitudesQuerySchema = z.object({
   ...paginacionShape,
 });
 
+/**
+ * Documento del legajo. `formulario_id` es opcional a propósito: no todo lo
+ * que se adjunta es uno de los formularios.
+ */
+export const crearDocumentoSolicitudSchema = z.object({
+  formulario_id: z.coerce.number().int().positive().optional(),
+  descripcion: z.string().trim().max(255).optional(),
+  observaciones: z.string().trim().max(2000).optional(),
+});
+
 export const crearRecetaSchema = z.object({
   fecha_emision: fechaSchema.optional(),
   observaciones: z.string().trim().max(2000).optional(),

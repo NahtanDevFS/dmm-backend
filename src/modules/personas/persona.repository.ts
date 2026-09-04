@@ -11,6 +11,28 @@ export interface PersonaRow {
   genero_id: number | null;
   comunidad_id: number | null;
   telefono: string | null;
+  /**
+   * Los cinco campos que pide el estudio socioeconómico en su sección I.
+   *
+   * `direccion`, `grado_academico` y `ocupacion` existían en la tabla desde
+   * antes pero ningún código las leía ni las escribía: eran columnas
+   * muertas. `estado_civil_id` y `lugar_nacimiento` llegaron con la
+   * migración 23.
+   *
+   * Están aquí para que la ficha de la persona sea la única fuente de esos
+   * datos, en vez de volver a preguntarlos dentro de cada formulario, donde
+   * quedarían como copias que pueden discrepar y no sirven para buscar.
+   */
+  direccion: string | null;
+  estado_civil_id: number | null;
+  grado_academico_id: number | null;
+  ocupacion_id: number | null;
+  /**
+   * Municipio donde nació, que cuelga de su departamento. Distinto de
+   * comunidad_id, que es dónde vive hoy: se puede nacer en un sitio y residir
+   * en otro, y el estudio socioeconómico distingue las dos cosas.
+   */
+  municipio_nacimiento_id: number | null;
   activo: boolean;
 }
 
@@ -23,6 +45,11 @@ const SELECT_PUBLICO = {
   genero_id: true,
   comunidad_id: true,
   telefono: true,
+  direccion: true,
+  estado_civil_id: true,
+  grado_academico_id: true,
+  ocupacion_id: true,
+  municipio_nacimiento_id: true,
   activo: true,
 } as const;
 
@@ -36,6 +63,11 @@ interface DatosPersonaBase {
   genero_id?: number | null;
   comunidad_id?: number | null;
   telefono?: string | null;
+  direccion?: string | null;
+  estado_civil_id?: number | null;
+  grado_academico_id?: number | null;
+  ocupacion_id?: number | null;
+  municipio_nacimiento_id?: number | null;
 }
 
 type EncargadoInput =
@@ -155,8 +187,10 @@ async function insertarPersona(
 ): Promise<PersonaRow> {
   const result = await client.query<PersonaRow>(
     `INSERT INTO public.persona
-       (cui_dpi, nombres, apellidos, fecha_nacimiento, genero_id, comunidad_id, telefono, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (cui_dpi, nombres, apellidos, fecha_nacimiento, genero_id, comunidad_id,
+        telefono, direccion, estado_civil_id, grado_academico_id,
+        ocupacion_id, municipio_nacimiento_id, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      RETURNING ${COLUMNAS_PUBLICAS.join(", ")}`,
     [
       datos.cui_dpi ?? null,
@@ -166,6 +200,11 @@ async function insertarPersona(
       datos.genero_id ?? null,
       datos.comunidad_id ?? null,
       datos.telefono ?? null,
+      datos.direccion ?? null,
+      datos.estado_civil_id ?? null,
+      datos.grado_academico_id ?? null,
+      datos.ocupacion_id ?? null,
+      datos.municipio_nacimiento_id ?? null,
       usuarioId,
     ],
   );
@@ -284,6 +323,11 @@ export async function editarPersona(
       "genero_id",
       "comunidad_id",
       "telefono",
+      "direccion",
+      "estado_civil_id",
+      "grado_academico_id",
+      "ocupacion_id",
+      "municipio_nacimiento_id",
     ];
 
     for (const campo of campos) {

@@ -15,7 +15,9 @@ export interface CatalogoSimpleConfig {
     | "institucion_donante"
     | "categoria_insumo"
     | "marca_insumo"
-    | "unidad_medida";
+    | "unidad_medida"
+    | "grado_academico"
+    | "ocupacion";
   tableName: string;
   /**
    * No todas las tablas de catálogo tienen columna `descripcion`: hoy solo
@@ -51,6 +53,42 @@ export interface CatalogoSimpleConfig {
 }
 
 export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
+  /**
+   * Escolaridad y ocupación son administrables a propósito: ningún código se
+   * ramifica sobre sus valores, son etiquetas descriptivas del estudio
+   * socioeconómico. Que la Dirección agregue una ocupación que no estaba
+   * prevista sin esperar una migración es justamente lo que debe poder hacer.
+   */
+  "grados-academicos": {
+    slug: "grados-academicos",
+    prismaModel: "grado_academico",
+    tableName: "grado_academico",
+    tieneDescripcion: false,
+    rolesLectura: OPERACION,
+    dependencias: [
+      {
+        tablaDependiente: "persona",
+        columnaFk: "grado_academico_id",
+        mensajeBloqueo:
+          "No se puede desactivar: hay personas activas registradas con este grado académico.",
+      },
+    ],
+  },
+  ocupaciones: {
+    slug: "ocupaciones",
+    prismaModel: "ocupacion",
+    tableName: "ocupacion",
+    tieneDescripcion: false,
+    rolesLectura: OPERACION,
+    dependencias: [
+      {
+        tablaDependiente: "persona",
+        columnaFk: "ocupacion_id",
+        mensajeBloqueo:
+          "No se puede desactivar: hay personas activas registradas con esta ocupación.",
+      },
+    ],
+  },
   discapacidades: {
     slug: "discapacidades",
     prismaModel: "discapacidad",
