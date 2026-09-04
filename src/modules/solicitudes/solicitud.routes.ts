@@ -18,6 +18,7 @@ import {
   cancelarSolicitudController,
   listarRecetasController,
   listarDocumentosController,
+  expedientePdfController,
   subirDocumentoController,
   eliminarDocumentoController,
   subirRecetaController,
@@ -88,11 +89,21 @@ router.post(
 // Legajo escaneado de la solicitud: formularios firmados, recetas,
 // constancias. Reemplaza en la práctica a /recetas, que nació cuando la
 // medicina pasaba por solicitud.
+// El expediente completo en PDF. GET y no POST: no cambia nada, solo arma un
+// documento con lo que ya está registrado.
+router.get(
+  "/:id/expediente.pdf",
+  requireAuth,
+  requireRole(OPERACION),
+  expedientePdfController,
+);
+
 router.get(
   "/:id/documentos",
   requireAuth,
   requireRole(OPERACION),
   listarDocumentosController,
+  expedientePdfController,
 );
 router.post(
   "/:id/documentos",
@@ -114,6 +125,7 @@ router.get(
   requireRole(OPERACION),
   listarRecetasController,
   listarDocumentosController,
+  expedientePdfController,
   subirDocumentoController,
   eliminarDocumentoController,
 );

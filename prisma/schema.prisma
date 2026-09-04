@@ -34,6 +34,7 @@ model categoria_insumo {
   updated_at                                   DateTime?                     @db.Timestamp(6)
   created_by                                   Int?
   updated_by                                   Int?
+  permite_prestamo                             Boolean                       @default(false)
   usuario_categoria_insumo_created_byTousuario usuario?                      @relation("categoria_insumo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cat_created_by")
   usuario_categoria_insumo_updated_byTousuario usuario?                      @relation("categoria_insumo_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cat_updated_by")
   categoria_insumo_formulario                  categoria_insumo_formulario[]

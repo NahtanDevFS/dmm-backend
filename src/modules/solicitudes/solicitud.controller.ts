@@ -36,6 +36,14 @@ import {
   eliminarRecetaMedica,
 } from "./receta-medica.repository.js";
 import { guardarArchivo } from "../../lib/storage/storage.service.js";
+import { responderExpedientePdf } from "../../lib/reportes/expediente.js";
+import {
+  cabeceraExpediente,
+  lineasExpediente,
+  formulariosExpediente,
+  documentosExpediente,
+  entregasExpediente,
+} from "./expediente.repository.js";
 import {
   listarDocumentosDeSolicitud,
   buscarDocumentoSolicitudPorId,
@@ -543,6 +551,62 @@ export async function cancelarSolicitudController(
       listarLineasDeSolicitud(ruta.id, false),
     ]);
     return res.status(200).json({ ...solicitud, lineas });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+/**
+ * El expediente completo en un PDF: la ficha de la persona, cada insumo con
+ * sus formularios llenos, las entregas y los documentos adjuntos.
+ *
+ * Un solo archivo y no uno por formulario: separar obligaría a juntarlos a
+ * mano para archivar, que es justo lo que el sistema debería evitar.
+ */
+export async function expedientePdfController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverSolicitud(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+
+    const cabecera = await cabeceraExpediente(ruta.id);
+    if (!cabecera) {
+      return res.status(404).json({ message: "La solicitud no existe" });
+    }
+
+    const [lineas, documentos, entregas] = await Promise.all([
+      lineasExpediente(ruta.id),
+      documentosExpediente(ruta.id),
+      entregasExpediente(ruta.id),
+    ]);
+
+    // Una consulta por línea. Son pocas —lo habitual es una— y hacerlo en una
+    // sola con todos los formularios de todas las líneas complicaría el
+    // agrupado sin ganar nada perceptible.
+    const formulariosPorLinea = new Map(
+      await Promise.all(
+        lineas.map(
+          async (linea) =>
+            [
+              linea.detalle_solicitud_id,
+              await formulariosExpediente(linea.detalle_solicitud_id),
+            ] as const,
+        ),
+      ),
+    );
+
+    return responderExpedientePdf(res, {
+      cabecera,
+      lineas,
+      formulariosPorLinea,
+      documentos,
+      entregas,
+    });
   } catch (error) {
     return next(error);
   }

@@ -392,8 +392,9 @@ export async function agregarCampoFormulario(
  * A rompería a mitad de camino. Los negativos no existen en uso normal, así
  * que no chocan con nada.
  *
- * Se cuentan también los campos desactivados: siguen ocupando su número, y
- * saltárselos dejaría huecos que confunden al leer la tabla.
+ * El intercambio ocurre solo entre campos activos. Los desactivados no
+ * aparecen al llenar el formulario, así que su posición no significa nada:
+ * conservan su número —que la base exige único— pero no participan.
  */
 export async function moverCampoFormulario(
   usuarioId: number,
@@ -404,8 +405,10 @@ export async function moverCampoFormulario(
     const { rows: actuales } = await client.query<{
       formulario_id: number;
       orden: number;
+      activo: boolean;
     }>(
-      `SELECT formulario_id, orden FROM public.formulario_campo WHERE id = $1`,
+      `SELECT formulario_id, orden, activo
+       FROM public.formulario_campo WHERE id = $1`,
       [campoId],
     );
 
@@ -414,15 +417,28 @@ export async function moverCampoFormulario(
     }
     const actual = actuales[0];
 
+    // Un campo desactivado no se muestra al llenar el formulario, así que su
+    // posición no significa nada. Conserva su número —que la base exige
+    // único— pero no participa del reordenamiento.
+    if (!actual.activo) {
+      throw new Error(
+        "Un campo desactivado no se puede reordenar: no aparece al llenar el formulario. Reactívelo primero.",
+      );
+    }
+
     // El vecino inmediato en la dirección pedida. Si no hay, el campo ya está
     // en un extremo y no hay nada que hacer.
+    // Solo entre activos: si el intercambio contara los desactivados, mover
+    // un campo se cambiaría con uno invisible y parecería que no pasó nada.
+    // Que un inactivo quede con un número intermedio es inofensivo, porque
+    // nadie lo lee.
     const { rows: vecinos } = await client.query<{ id: number; orden: number }>(
       direccion === "arriba"
         ? `SELECT id, orden FROM public.formulario_campo
-           WHERE formulario_id = $1 AND orden < $2
+           WHERE formulario_id = $1 AND orden < $2 AND activo = true
            ORDER BY orden DESC LIMIT 1`
         : `SELECT id, orden FROM public.formulario_campo
-           WHERE formulario_id = $1 AND orden > $2
+           WHERE formulario_id = $1 AND orden > $2 AND activo = true
            ORDER BY orden ASC LIMIT 1`,
       [actual.formulario_id, actual.orden],
     );

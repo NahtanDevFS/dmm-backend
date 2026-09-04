@@ -21,6 +21,7 @@ import {
   anularEntrega,
   anularDetalleEntrega,
 } from "./entrega.repository.js";
+import { tieneFormulariosPendientes } from "../formularios/formulario.repository.js";
 import {
   listarEvidenciasDeEntrega,
   buscarEvidenciaPorId,
@@ -231,6 +232,20 @@ export async function registrarController(
             "no se puede entregar, la línea de solicitud ya fue entregada por completo.",
         });
       }
+      /*
+        Los formularios se verificaban solo al aprobar, así que una línea que
+        no requiere aprobación podía despacharse sin haber llenado ninguno: el
+        equipo salía y el estudio socioeconómico nunca se hacía. Se comprueba
+        también aquí, que es el último momento en que todavía se puede evitar.
+      */
+      if (await tieneFormulariosPendientes(renglon.detalle_solicitud_id)) {
+        return res.status(409).json({
+          message:
+            posicion +
+            "faltan formularios por completar en esa línea. Llénelos antes de despachar.",
+        });
+      }
+
       if (linea.requiere_aprobacion && !linea.aprobada) {
         return res.status(409).json({
           message:

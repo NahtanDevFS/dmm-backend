@@ -32,6 +32,11 @@ export interface StockInsumoRow {
 /** Una fila del listado de stock: lo de la vista más la categoría por id. */
 export interface StockInsumoListadoRow extends StockInsumoRow {
   categoria_id: number;
+  /**
+   * Si la categoría admite préstamo. Sin esto la pantalla ofrecería prestar
+   * paracetamol: prestar solo tiene sentido con lo que se devuelve.
+   */
+  permite_prestamo: boolean;
 }
 
 export interface StockPresentacionRow {
@@ -287,11 +292,13 @@ export async function listarStockInsumos(params: {
   // poder filtrar y agrupar por id, que es lo que usa el frontend.
   const result = await pool.query<StockInsumoListadoRow>(
     `SELECT v.insumo_id, v.insumo_nombre, i.categoria_id, v.categoria_nombre,
+            ci.permite_prestamo,
             v.unidad_base_nombre, v.requiere_fecha_caducidad,
             v.requiere_codigo_fabricante, v.bloquea_solicitud_sin_stock,
             v.stock_total, v.proxima_caducidad, v.semaforo
      FROM public.v_stock_insumo v
      JOIN public.insumo i ON i.id = v.insumo_id
+     JOIN public.categoria_insumo ci ON ci.id = i.categoria_id
      ${where}
      ORDER BY v.categoria_nombre, v.insumo_nombre`,
     valores,
