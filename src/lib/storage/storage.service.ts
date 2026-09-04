@@ -18,7 +18,9 @@ export type CategoriaArchivo =
   | "recetas-medicas"
   | "documentos-recepcion"
   | "contratos-prestamo"
-  | "evidencia-contrato-prestamo";
+  | "evidencia-contrato-prestamo"
+  // Legajo escaneado de una solicitud: formularios firmados, constancias.
+  | "documentos-solicitud";
 
 export interface ArchivoGuardado {
   rutaRelativa: string;

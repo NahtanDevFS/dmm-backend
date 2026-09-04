@@ -337,6 +337,7 @@ model municipio {
   usuario_municipio_created_byTousuario usuario?     @relation("municipio_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_muni_created_by")
   usuario_municipio_updated_byTousuario usuario?     @relation("municipio_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_muni_updated_by")
   departamento                          departamento @relation(fields: [departamento_id], references: [id], onUpdate: NoAction, map: "fk_municipio_departamento")
+  persona                               persona[]
 
   @@unique([nombre, departamento_id], map: "municipio_nombre_departamento_key")
   @@index([departamento_id], map: "idx_municipio_departamento")
@@ -359,10 +360,10 @@ model persona {
   created_by                                            Int?
   updated_by                                            Int?
   direccion                                             String?                       @db.VarChar(255)
-  grado_academico                                       String?                       @db.VarChar(100)
-  ocupacion                                             String?                       @db.VarChar(100)
   estado_civil_id                                       Int?
-  lugar_nacimiento                                      String?                       @db.VarChar(255)
+  grado_academico_id                                    Int?
+  ocupacion_id                                          Int?
+  municipio_nacimiento_id                               Int?
   contacto_referencia_persona                           contacto_referencia_persona[]
   documento_persona                                     documento_persona[]
   encargado_menor_encargado_menor_encargado_idTopersona encargado_menor[]             @relation("encargado_menor_encargado_idTopersona")
@@ -374,12 +375,18 @@ model persona {
   comunidad                                             comunidad?                    @relation(fields: [comunidad_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_persona_comunidad")
   estado_civil                                          estado_civil?                 @relation(fields: [estado_civil_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_persona_estado_civil")
   tipo_genero                                           tipo_genero?                  @relation(fields: [genero_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_persona_genero")
+  grado_academico                                       grado_academico?              @relation(fields: [grado_academico_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_persona_grado_academico")
+  municipio                                             municipio?                    @relation(fields: [municipio_nacimiento_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_persona_municipio_nacimiento")
+  ocupacion                                             ocupacion?                    @relation(fields: [ocupacion_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_persona_ocupacion")
   persona_discapacidad                                  persona_discapacidad[]
   solicitud_apoyo                                       solicitud_apoyo[]
 
   @@index([comunidad_id], map: "idx_persona_comunidad")
   @@index([cui_dpi], map: "idx_persona_cui_dpi", where: raw("(cui_dpi IS NOT NULL)"))
   @@index([estado_civil_id], map: "idx_persona_estado_civil", where: raw("(estado_civil_id IS NOT NULL)"))
+  @@index([grado_academico_id], map: "idx_persona_grado_academico", where: raw("(grado_academico_id IS NOT NULL)"))
+  @@index([municipio_nacimiento_id], map: "idx_persona_municipio_nacimiento", where: raw("(municipio_nacimiento_id IS NOT NULL)"))
+  @@index([ocupacion_id], map: "idx_persona_ocupacion", where: raw("(ocupacion_id IS NOT NULL)"))
 }
 
 model persona_discapacidad {
@@ -623,6 +630,8 @@ model usuario {
   formulario_campo_formulario_campo_updated_byTousuario                                             formulario_campo[]                       @relation("formulario_campo_updated_byTousuario")
   formulario_campo_opcion_formulario_campo_opcion_created_byTousuario                               formulario_campo_opcion[]                @relation("formulario_campo_opcion_created_byTousuario")
   formulario_campo_opcion_formulario_campo_opcion_updated_byTousuario                               formulario_campo_opcion[]                @relation("formulario_campo_opcion_updated_byTousuario")
+  grado_academico_grado_academico_created_byTousuario                                               grado_academico[]                        @relation("grado_academico_created_byTousuario")
+  grado_academico_grado_academico_updated_byTousuario                                               grado_academico[]                        @relation("grado_academico_updated_byTousuario")
   institucion_donante_institucion_donante_created_byTousuario                                       institucion_donante[]                    @relation("institucion_donante_created_byTousuario")
   institucion_donante_institucion_donante_updated_byTousuario                                       institucion_donante[]                    @relation("institucion_donante_updated_byTousuario")
   insumo_insumo_created_byTousuario                                                                 insumo[]                                 @relation("insumo_created_byTousuario")
@@ -635,6 +644,8 @@ model usuario {
   multa_prestamo_multa_prestamo_updated_byTousuario                                                 multa_prestamo[]                         @relation("multa_prestamo_updated_byTousuario")
   municipio_municipio_created_byTousuario                                                           municipio[]                              @relation("municipio_created_byTousuario")
   municipio_municipio_updated_byTousuario                                                           municipio[]                              @relation("municipio_updated_byTousuario")
+  ocupacion_ocupacion_created_byTousuario                                                           ocupacion[]                              @relation("ocupacion_created_byTousuario")
+  ocupacion_ocupacion_updated_byTousuario                                                           ocupacion[]                              @relation("ocupacion_updated_byTousuario")
   persona_persona_created_byTousuario                                                               persona[]                                @relation("persona_created_byTousuario")
   persona_persona_updated_byTousuario                                                               persona[]                                @relation("persona_updated_byTousuario")
   presentacion_insumo_presentacion_insumo_created_byTousuario                                       presentacion_insumo[]                    @relation("presentacion_insumo_created_byTousuario")
@@ -1154,4 +1165,32 @@ model estado_civil {
   usuario_estado_civil_created_byTousuario usuario?  @relation("estado_civil_created_byTousuario", fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_ec_created_by")
   usuario_estado_civil_updated_byTousuario usuario?  @relation("estado_civil_updated_byTousuario", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fk_ec_updated_by")
   persona                                  persona[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model grado_academico {
+  id                                          Int       @id @default(autoincrement())
+  nombre                                      String    @unique @db.VarChar(100)
+  activo                                      Boolean   @default(true)
+  created_at                                  DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                                  DateTime? @db.Timestamp(6)
+  created_by                                  Int?
+  updated_by                                  Int?
+  usuario_grado_academico_created_byTousuario usuario?  @relation("grado_academico_created_byTousuario", fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_ga_created_by")
+  usuario_grado_academico_updated_byTousuario usuario?  @relation("grado_academico_updated_byTousuario", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fk_ga_updated_by")
+  persona                                     persona[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ocupacion {
+  id                                    Int       @id @default(autoincrement())
+  nombre                                String    @unique @db.VarChar(100)
+  activo                                Boolean   @default(true)
+  created_at                            DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                            DateTime? @db.Timestamp(6)
+  created_by                            Int?
+  updated_by                            Int?
+  usuario_ocupacion_created_byTousuario usuario?  @relation("ocupacion_created_byTousuario", fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_ocu_created_by")
+  usuario_ocupacion_updated_byTousuario usuario?  @relation("ocupacion_updated_byTousuario", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fk_ocu_updated_by")
+  persona                               persona[]
 }

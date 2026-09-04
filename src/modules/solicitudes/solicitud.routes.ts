@@ -17,6 +17,9 @@ import {
   cancelarLineaController,
   cancelarSolicitudController,
   listarRecetasController,
+  listarDocumentosController,
+  subirDocumentoController,
+  eliminarDocumentoController,
   subirRecetaController,
   eliminarRecetaController,
 } from "./solicitud.controller.js";
@@ -82,11 +85,37 @@ router.post(
   cancelarLineaController,
 );
 
+// Legajo escaneado de la solicitud: formularios firmados, recetas,
+// constancias. Reemplaza en la práctica a /recetas, que nació cuando la
+// medicina pasaba por solicitud.
+router.get(
+  "/:id/documentos",
+  requireAuth,
+  requireRole(OPERACION),
+  listarDocumentosController,
+);
+router.post(
+  "/:id/documentos",
+  requireAuth,
+  requireRole(OPERACION),
+  uploadMemoria.single("archivo"),
+  subirDocumentoController,
+);
+router.delete(
+  "/:id/documentos/:documentoId",
+  requireAuth,
+  requireRole(OPERACION),
+  eliminarDocumentoController,
+);
+
 router.get(
   "/:id/recetas",
   requireAuth,
   requireRole(OPERACION),
   listarRecetasController,
+  listarDocumentosController,
+  subirDocumentoController,
+  eliminarDocumentoController,
 );
 router.post(
   "/:id/recetas",

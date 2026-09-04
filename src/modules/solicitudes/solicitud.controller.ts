@@ -8,6 +8,7 @@ import {
   rechazarSchema,
   listarSolicitudesQuerySchema,
   crearRecetaSchema,
+  crearDocumentoSolicitudSchema,
 } from "./solicitud.schema.js";
 import {
   buscarSolicitudPorId,
@@ -35,6 +36,12 @@ import {
   eliminarRecetaMedica,
 } from "./receta-medica.repository.js";
 import { guardarArchivo } from "../../lib/storage/storage.service.js";
+import {
+  listarDocumentosDeSolicitud,
+  buscarDocumentoSolicitudPorId,
+  crearDocumentoSolicitud,
+  eliminarDocumentoSolicitud,
+} from "./documento-solicitud.repository.js";
 import { paginar } from "../../lib/paginacion.js";
 import {
   traducirErrorPostgres,
@@ -162,13 +169,18 @@ export async function obtenerController(
       return res.status(ruta.status).json({ message: ruta.message });
     }
 
-    const [solicitud, lineas, recetas] = await Promise.all([
+    // `recetas` se conserva por compatibilidad, pero el legajo real vive en
+    // `documentos`: la tabla receta_medica nació cuando la medicina pasaba
+    // por solicitud y con el flujo actual la receta va como evidencia de la
+    // entrega directa.
+    const [solicitud, lineas, recetas, documentos] = await Promise.all([
       buscarSolicitudPorId(ruta.id),
       listarLineasDeSolicitud(ruta.id, false),
       listarRecetasDeSolicitud(ruta.id),
+      listarDocumentosDeSolicitud(ruta.id),
     ]);
 
-    return res.status(200).json({ ...solicitud, lineas, recetas });
+    return res.status(200).json({ ...solicitud, lineas, recetas, documentos });
   } catch (error) {
     return next(error);
   }
@@ -531,6 +543,93 @@ export async function cancelarSolicitudController(
       listarLineasDeSolicitud(ruta.id, false),
     ]);
     return res.status(200).json({ ...solicitud, lineas });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// ─────────────────────────────────────────────── documentos del legajo
+
+export async function listarDocumentosController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverSolicitud(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+    return res.status(200).json(await listarDocumentosDeSolicitud(ruta.id));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function subirDocumentoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverSolicitud(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Debe adjuntar un archivo" });
+    }
+
+    const parsed = crearDocumentoSolicitudSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errores: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const guardado = await guardarArchivo(
+      req.file.buffer,
+      "documentos-solicitud",
+    );
+
+    const nuevo = await crearDocumentoSolicitud(req.usuario!.id, {
+      solicitudId: ruta.id,
+      formularioId: parsed.data.formulario_id,
+      rutaArchivo: guardado.rutaRelativa,
+      descripcion: parsed.data.descripcion,
+      observaciones: parsed.data.observaciones,
+    });
+    return res.status(201).json(nuevo);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function eliminarDocumentoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverSolicitud(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+
+    const documentoId = Number(req.params.documentoId);
+    if (!Number.isInteger(documentoId)) {
+      return res.status(400).json({ message: "Id de documento inválido" });
+    }
+
+    const documento = await buscarDocumentoSolicitudPorId(documentoId);
+    if (!documento || documento.solicitud_id !== ruta.id) {
+      return res.status(404).json({ message: "Documento no encontrado" });
+    }
+
+    await eliminarDocumentoSolicitud(req.usuario!.id, documentoId);
+    return res.status(200).json(await listarDocumentosDeSolicitud(ruta.id));
   } catch (error) {
     return next(error);
   }
