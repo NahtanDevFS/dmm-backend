@@ -22,6 +22,12 @@ export interface LoteDeRenglon {
   cantidad_entregada: number;
   activo: boolean;
   codigo_lote: string | null;
+  /**
+   * Serie del fabricante, para el equipo donde cada unidad es una pieza
+   * identificable. Es lo que permite saber CUÁL silla salió, distinto de
+   * codigo_lote, que identifica el envío en que llegó.
+   */
+  numero_serie: string | null;
   fecha_caducidad: string | null;
 }
 
@@ -37,6 +43,14 @@ export interface DetalleEntregaRow {
   motivo_anulacion: string | null;
   fecha_anulacion: Date | null;
   tiene_prestamo: boolean;
+  /** Si el insumo lleva serie por unidad: cambia cómo se rotula el lote. */
+  serie_por_unidad: boolean;
+  /**
+   * Si ese préstamo ya se devolvió. Importa porque la devolución devolvió el
+   * stock al lote: anular la entrega después lo sumaría una segunda vez y el
+   * inventario quedaría por encima de lo que se recibió.
+   */
+  prestamo_devuelto: boolean;
   lotes: LoteDeRenglon[];
 }
 
@@ -161,6 +175,7 @@ export async function listarDetallesDeEntrega(
     `SELECT de.id,
             de.insumo_id,
             i.nombre AS insumo_nombre,
+            i.serie_por_unidad,
             de.detalle_solicitud_id,
             dsa.solicitud_id,
             de.cantidad_entregada,
@@ -169,6 +184,10 @@ export async function listarDetallesDeEntrega(
             de.fecha_anulacion,
             EXISTS (SELECT 1 FROM public.contrato_prestamo cp
                      WHERE cp.detalle_entrega_id = de.id) AS tiene_prestamo,
+            EXISTS (SELECT 1 FROM public.contrato_prestamo cp
+                     WHERE cp.detalle_entrega_id = de.id
+                       AND cp.fecha_devolucion_real IS NOT NULL)
+              AS prestamo_devuelto,
             COALESCE((
               SELECT json_agg(json_build_object(
                        'id', del.id,
@@ -178,6 +197,7 @@ export async function listarDetallesDeEntrega(
                        'cantidad_entregada', del.cantidad_entregada,
                        'activo', del.activo,
                        'codigo_lote', rl.codigo_lote,
+                       'numero_serie', dl.codigo_lote_fabricante,
                        'fecha_caducidad', dl.fecha_caducidad
                      ) ORDER BY del.id)
               FROM public.detalle_entrega_lote del

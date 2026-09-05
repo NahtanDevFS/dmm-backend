@@ -12,6 +12,7 @@ import {
   reactivarController,
   listarLotesController,
   crearLoteController,
+  crearUnidadesController,
   listarDocumentosController,
   subirDocumentoController,
   eliminarDocumentoController,
@@ -49,6 +50,17 @@ router.post(
   requireAuth,
   requireRole(OPERACION),
   crearLoteController,
+);
+
+// Ingreso de equipo con número de serie: una unidad por serie, en vez de un
+// lote con cantidad. Recurso aparte porque lo que se pregunta es distinto —no
+// cuánto llegó sino cuáles llegaron— y mezclarlos en el mismo endpoint
+// obligaría a adivinar cuál de las dos formas quiso usar quien llama.
+router.post(
+  "/:id/unidades",
+  requireAuth,
+  requireRole(OPERACION),
+  crearUnidadesController,
 );
 
 router.get(

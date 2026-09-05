@@ -425,10 +425,11 @@ export function responderExpedientePdf(
   } else {
     tablaGrupo(
       doc,
-      ["Fecha", "Insumo", "Cantidad", "Entregó", "Recibió", "Estado"],
+      ["Fecha", "Insumo", "Serie", "Cantidad", "Entregó", "Recibió", "Estado"],
       entregas.map((e) => [
         fecha(e.fecha_entrega),
         e.insumo,
+        texto(e.numero_serie),
         String(e.cantidad_entregada),
         e.entregado_por,
         texto(e.receptor),

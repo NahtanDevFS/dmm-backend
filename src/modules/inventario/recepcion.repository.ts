@@ -106,12 +106,14 @@ export async function existeInstitucionActiva(id: number): Promise<boolean> {
 
 export async function buscarInsumoActivo(
   id: number,
-): Promise<{ nombre: string } | null> {
+): Promise<{ nombre: string; serie_por_unidad: boolean } | null> {
   const insumo = await prisma.insumo.findUnique({
     where: { id },
-    select: { nombre: true, activo: true },
+    select: { nombre: true, activo: true, serie_por_unidad: true },
   });
-  return insumo?.activo === true ? { nombre: insumo.nombre } : null;
+  return insumo?.activo === true
+    ? { nombre: insumo.nombre, serie_por_unidad: insumo.serie_por_unidad }
+    : null;
 }
 
 export async function existeMarcaActiva(id: number): Promise<boolean> {
@@ -319,6 +321,68 @@ export async function crearLoteYProcesarPendientes(
     ]);
 
     return result.rows[0];
+  });
+}
+
+/**
+ * Registra varias unidades identificables de un mismo insumo, una fila por
+ * número de serie.
+ *
+ * Es el ingreso de equipo: cinco sillas de ruedas son cinco unidades con cinco
+ * series, no un lote de cinco. Sin esto, el código de fabricante —que la base
+ * exige— se llenaba con la serie de una sola de ellas, y al prestar no había
+ * forma de saber cuál se llevó la persona.
+ *
+ * Todas van en una transacción: si la tercera serie está repetida, no queda
+ * ninguna registrada. Mejor eso que dos unidades cargadas y tres perdidas
+ * sin que nadie sepa cuáles fueron.
+ */
+export async function crearUnidadesSerializadas(
+  usuarioId: number,
+  recepcionId: number,
+  datos: {
+    insumo_id: number;
+    presentacion_recepcion_id: number;
+    marca_id?: number | null;
+    fecha_caducidad?: string | null;
+    observaciones?: string | null;
+    series: string[];
+  },
+): Promise<LoteInventarioRow[]> {
+  return withUserTransaction(usuarioId, async (client) => {
+    const creados: LoteInventarioRow[] = [];
+
+    for (const serie of datos.series) {
+      const result = await client.query<LoteInventarioRow>(
+        `INSERT INTO public.detalle_inventario_lote
+           (insumo_id, recepcion_lote_id, presentacion_recepcion_id, marca_id,
+            cantidad_recepcion_original, unidades_por_presentacion_lote,
+            codigo_lote_fabricante, fecha_caducidad, observaciones,
+            cantidad_inicial, cantidad_disponible, created_by)
+         VALUES ($1, $2, $3, $4, 1, 1, $5, $6, $7, 0, 0, $8)
+         RETURNING ${COLUMNAS_LOTE}`,
+        [
+          datos.insumo_id,
+          recepcionId,
+          datos.presentacion_recepcion_id,
+          datos.marca_id ?? null,
+          serie.trim(),
+          datos.fecha_caducidad ?? null,
+          datos.observaciones ?? null,
+          usuarioId,
+        ],
+      );
+      creados.push(result.rows[0]);
+    }
+
+    // Una vez, al final: las líneas en espera se resuelven con el stock total
+    // ingresado, no unidad por unidad.
+    await client.query(`CALL public.sp_procesar_donacion_pendientes($1, $2)`, [
+      datos.insumo_id,
+      recepcionId,
+    ]);
+
+    return creados;
   });
 }
 

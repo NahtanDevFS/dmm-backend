@@ -29,6 +29,35 @@ export const listarRecepcionesQuerySchema = z.object({
  * `cantidad_disponible`: las calcula el trigger trg_calcular_recepcion_lote
  * como FLOOR(cantidad_recepcion_original * unidades_por_presentacion_lote).
  */
+/**
+ * Ingreso de unidades identificables: una fila por número de serie.
+ *
+ * No pide cantidad —la da la lista de series— ni unidades por presentación:
+ * cada unidad es una. Pedir la cantidad además de las series permitiría que
+ * se contradijeran.
+ */
+export const crearUnidadesSchema = z.object({
+  insumo_id: z.number().int().positive("insumo_id es requerido"),
+  presentacion_recepcion_id: z
+    .number()
+    .int()
+    .positive("presentacion_recepcion_id es requerido"),
+  marca_id: z.number().int().positive().nullable().optional(),
+  fecha_caducidad: fechaSchema.nullable().optional(),
+  observaciones: z.string().trim().max(2000).nullable().optional(),
+  series: z
+    .array(
+      z.string().trim().min(1, "El número de serie no puede ir vacío").max(50),
+    )
+    .min(1, "Indique al menos un número de serie")
+    .max(200, "Demasiadas unidades en un solo ingreso")
+    .refine(
+      (lista) =>
+        new Set(lista.map((s) => s.trim().toUpperCase())).size === lista.length,
+      "Hay números de serie repetidos en la lista",
+    ),
+});
+
 export const crearLoteSchema = z.object({
   insumo_id: z.number().int().positive("insumo_id es requerido"),
   presentacion_recepcion_id: z

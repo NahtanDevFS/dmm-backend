@@ -12,6 +12,12 @@ export interface InsumoRow {
   requiere_fecha_caducidad: boolean;
   requiere_codigo_fabricante: boolean;
   bloquea_solicitud_sin_stock: boolean;
+  /**
+   * Si cada unidad es una pieza identificable con su propio número de serie.
+   * Cambia cómo se ingresa —una fila por serie, no un lote con cantidad— y
+   * permite elegir qué unidad concreta se entrega.
+   */
+  serie_por_unidad: boolean;
   activo: boolean;
 }
 
@@ -37,6 +43,8 @@ export interface StockInsumoListadoRow extends StockInsumoRow {
    * paracetamol: prestar solo tiene sentido con lo que se devuelve.
    */
   permite_prestamo: boolean;
+  /** Si cada unidad tiene su propia serie y se elige al entregar. */
+  serie_por_unidad: boolean;
 }
 
 export interface StockPresentacionRow {
@@ -56,6 +64,7 @@ const SELECT_PUBLICO = {
   requiere_fecha_caducidad: true,
   requiere_codigo_fabricante: true,
   bloquea_solicitud_sin_stock: true,
+  serie_por_unidad: true,
   activo: true,
 } as const;
 
@@ -69,6 +78,7 @@ const CAMPOS_EDITABLES = [
   "requiere_fecha_caducidad",
   "requiere_codigo_fabricante",
   "bloquea_solicitud_sin_stock",
+  "serie_por_unidad",
 ] as const;
 
 export async function listarInsumos(params: {
@@ -292,7 +302,7 @@ export async function listarStockInsumos(params: {
   // poder filtrar y agrupar por id, que es lo que usa el frontend.
   const result = await pool.query<StockInsumoListadoRow>(
     `SELECT v.insumo_id, v.insumo_nombre, i.categoria_id, v.categoria_nombre,
-            ci.permite_prestamo,
+            ci.permite_prestamo, i.serie_por_unidad,
             v.unidad_base_nombre, v.requiere_fecha_caducidad,
             v.requiere_codigo_fabricante, v.bloquea_solicitud_sin_stock,
             v.stock_total, v.proxima_caducidad, v.semaforo
@@ -302,6 +312,44 @@ export async function listarStockInsumos(params: {
      ${where}
      ORDER BY v.categoria_nombre, v.insumo_nombre`,
     valores,
+  );
+  return result.rows;
+}
+
+/**
+ * Unidades identificables disponibles de un insumo, una por número de serie.
+ *
+ * Es lo que se le muestra a quien entrega para que elija la pieza que tiene
+ * en la mano. Sin esto, FEFO elegiría una por su cuenta y el registro diría
+ * una serie mientras la persona se lleva otra —que en préstamos importa,
+ * porque hay que saber cuál silla devolver.
+ *
+ * Devuelve vacío para insumos que no llevan serie: ahí la unidad concreta no
+ * significa nada y el reparto automático es lo correcto.
+ */
+export interface UnidadDisponibleRow {
+  detalle_inventario_lote_id: number;
+  insumo_id: number;
+  insumo_nombre: string;
+  numero_serie: string | null;
+  codigo_envio: string | null;
+  fecha_recepcion: Date;
+  institucion_nombre: string;
+  marca_nombre: string | null;
+  cantidad_disponible: number;
+}
+
+export async function listarUnidadesDisponibles(
+  insumoId: number,
+): Promise<UnidadDisponibleRow[]> {
+  const result = await pool.query<UnidadDisponibleRow>(
+    `SELECT detalle_inventario_lote_id, insumo_id, insumo_nombre, numero_serie,
+            codigo_envio, fecha_recepcion, institucion_nombre, marca_nombre,
+            cantidad_disponible
+     FROM public.v_unidades_disponibles
+     WHERE insumo_id = $1
+     ORDER BY numero_serie`,
+    [insumoId],
   );
   return result.rows;
 }

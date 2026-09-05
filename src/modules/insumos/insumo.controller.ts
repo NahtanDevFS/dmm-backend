@@ -19,6 +19,7 @@ import {
   cambiarEstadoInsumo,
   obtenerStockInsumo,
   listarStockInsumos,
+  listarUnidadesDisponibles,
   obtenerStockTotalInsumo,
   obtenerStockPorPresentacion,
   withReadClient,
@@ -275,6 +276,26 @@ export async function listarStockController(
         busqueda: parsed.data.busqueda,
       }),
     );
+  } catch (error) {
+    return next(error);
+  }
+}
+
+/**
+ * Unidades identificables disponibles de un insumo, para poder elegir cuál se
+ * entrega. Vacío si el insumo no lleva serie.
+ */
+export async function listarUnidadesController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ message: "Id de insumo inválido" });
+    }
+    return res.status(200).json(await listarUnidadesDisponibles(id));
   } catch (error) {
     return next(error);
   }

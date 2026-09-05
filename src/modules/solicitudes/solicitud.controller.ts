@@ -143,6 +143,7 @@ export async function listarController(
       programaId: parsed.data.programaId,
       estadoLinea: parsed.data.estadoLinea,
       soloPendientesAprobacion: parsed.data.soloPendientesAprobacion,
+      incluirCerradas: parsed.data.incluirCerradas,
       limite: parsed.data.limite,
       desplazamiento: parsed.data.desplazamiento,
     });

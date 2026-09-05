@@ -104,6 +104,14 @@ export const rechazarSchema = z.object({
 });
 
 export const listarSolicitudesQuerySchema = z.object({
+  /**
+   * Incluye las líneas ya entregadas o canceladas. Falso por omisión: la
+   * pantalla se abre para ver lo que falta hacer, no el archivo.
+   */
+  incluirCerradas: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
   personaId: z.coerce.number().int().positive().optional(),
   programaId: z.coerce.number().int().positive().optional(),
   estadoLinea: z

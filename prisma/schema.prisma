@@ -73,6 +73,7 @@ model contrato_prestamo {
   updated_at                                    DateTime?                     @db.Timestamp(6)
   created_by                                    Int?
   updated_by                                    Int?
+  motivo_cierre                                 String?
   contrato_prestamo                             contrato_prestamo?            @relation("contrato_prestamoTocontrato_prestamo", fields: [contrato_anterior_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_cp_contrato_anterior")
   other_contrato_prestamo                       contrato_prestamo?            @relation("contrato_prestamoTocontrato_prestamo")
   usuario_contrato_prestamo_created_byTousuario usuario?                      @relation("contrato_prestamo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cp_created_by")
@@ -313,6 +314,7 @@ model insumo {
   requiere_fecha_caducidad           Boolean                   @default(false)
   requiere_codigo_fabricante         Boolean                   @default(false)
   bloquea_solicitud_sin_stock        Boolean                   @default(false)
+  serie_por_unidad                   Boolean                   @default(false)
   detalle_entrega                    detalle_entrega[]
   detalle_inventario_lote            detalle_inventario_lote[]
   detalle_solicitud_apoyo            detalle_solicitud_apoyo[]

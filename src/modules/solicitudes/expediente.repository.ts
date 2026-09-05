@@ -77,6 +77,8 @@ export interface DocumentoExpediente {
 export interface EntregaExpediente {
   fecha_entrega: Date;
   insumo: string;
+  /** Serie de la unidad entregada, en equipo identificable. */
+  numero_serie: string | null;
   cantidad_entregada: number;
   entregado_por: string;
   receptor: string | null;
@@ -226,6 +228,12 @@ export async function entregasExpediente(
 ): Promise<EntregaExpediente[]> {
   const { rows } = await pool.query<EntregaExpediente>(
     `SELECT e.fecha_entrega, i.nombre AS insumo, de.cantidad_entregada,
+            (SELECT dl.codigo_lote_fabricante
+             FROM public.detalle_entrega_lote del
+             JOIN public.detalle_inventario_lote dl
+               ON dl.id = del.detalle_inventario_lote_id
+             WHERE del.detalle_entrega_id = de.id
+             ORDER BY del.id LIMIT 1) AS numero_serie,
             u.username AS entregado_por,
             CASE WHEN pr.id IS NULL THEN NULL
                  ELSE pr.nombres || ' ' || pr.apellidos END AS receptor,

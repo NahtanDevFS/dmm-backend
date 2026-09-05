@@ -4,6 +4,7 @@ import {
   editarRecepcionSchema,
   listarRecepcionesQuerySchema,
   crearLoteSchema,
+  crearUnidadesSchema,
   darBajaLoteSchema,
   semaforoQuerySchema,
   crearDocumentoRecepcionSchema,
@@ -21,6 +22,7 @@ import {
   listarLotesDeRecepcion,
   buscarLotePorId,
   crearLoteYProcesarPendientes,
+  crearUnidadesSerializadas,
   darBajaLote,
   listarSemaforoInventario,
   tieneLotesActivos,
@@ -275,6 +277,66 @@ export async function listarLotesController(
   }
 }
 
+/**
+ * Ingresa varias unidades identificables de un insumo, una por serie.
+ *
+ * Existe aparte de crearLoteController porque el ingreso es distinto: no se
+ * pregunta cuánto llegó sino cuáles llegaron. Cinco sillas son cinco
+ * unidades, no un lote de cinco.
+ */
+export async function crearUnidadesController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverRecepcion(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+
+    const recepcion = (await buscarRecepcionPorId(ruta.id))!;
+    if (!recepcion.activo) {
+      return res.status(409).json({
+        message: "No se pueden agregar unidades a una recepción desactivada",
+      });
+    }
+
+    const parsed = crearUnidadesSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errores: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const insumo = await buscarInsumoActivo(parsed.data.insumo_id);
+    if (!insumo) {
+      return res
+        .status(400)
+        .json({ message: "El insumo indicado no existe o no está activo" });
+    }
+
+    // El trigger de la base también lo rechazaría, pero con un mensaje sobre
+    // cantidades que no explicaría por qué se usó el endpoint equivocado.
+    if (!insumo.serie_por_unidad) {
+      return res.status(409).json({
+        message:
+          "Este insumo no lleva número de serie por unidad: regístrelo como un lote normal, indicando la cantidad.",
+      });
+    }
+
+    const creados = await crearUnidadesSerializadas(
+      req.usuario!.id,
+      ruta.id,
+      parsed.data,
+    );
+    return res.status(201).json(creados);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export async function crearLoteController(
   req: Request,
   res: Response,
@@ -373,7 +435,9 @@ export async function darBajaLoteController(
 
     const lote = await buscarLotePorId(loteId);
     if (!lote) {
-      return res.status(404).json({ message: "Lote de inventario no encontrado" });
+      return res
+        .status(404)
+        .json({ message: "Lote de inventario no encontrado" });
     }
     if (!lote.activo) {
       return res

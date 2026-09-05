@@ -12,6 +12,9 @@ import {
   editarController,
   devolucionController,
   marcarVencidosController,
+  crearPrestamoDirectoController,
+  anularContratoController,
+  noDevueltoController,
   listarMultasController,
   aplicarMultaController,
   editarMultaController,
@@ -26,6 +29,18 @@ import {
 // Las multas son decisión económica: quedan con dirección.
 const router = Router();
 
+// La puerta principal del módulo: registra la entrega del equipo y su
+// contrato de una vez. Antes de "/:id" no hace falta —"/" no colisiona— pero
+// se deja arriba por ser la acción principal.
+router.post(
+  "/directo",
+  requireAuth,
+  requireRole(OPERACION),
+  crearPrestamoDirectoController,
+  anularContratoController,
+  noDevueltoController,
+);
+
 // Antes de "/:id" para que "vencidos" no se lea como un id.
 router.get(
   "/vencidos",
@@ -38,12 +53,32 @@ router.post(
   requireAuth,
   requireRole(DIRECCION),
   marcarVencidosController,
+  crearPrestamoDirectoController,
+  anularContratoController,
+  noDevueltoController,
 );
 
 router.get("/", requireAuth, requireRole(OPERACION), listarController);
 router.get("/:id", requireAuth, requireRole(OPERACION), obtenerController);
 router.post("/", requireAuth, requireRole(OPERACION), crearController);
 router.patch("/:id", requireAuth, requireRole(OPERACION), editarController);
+// Dos finales distintos que no hay que confundir: anular deshace el registro
+// y devuelve el stock; no-devuelto cierra el contrato SIN restituirlo, porque
+// el equipo no está. Ambos son de DIRECCION: uno revierte inventario y el
+// otro asume una pérdida.
+router.post(
+  "/:id/anular",
+  requireAuth,
+  requireRole(DIRECCION),
+  anularContratoController,
+);
+router.post(
+  "/:id/no-devuelto",
+  requireAuth,
+  requireRole(DIRECCION),
+  noDevueltoController,
+);
+
 router.post(
   "/:id/renovar",
   requireAuth,
