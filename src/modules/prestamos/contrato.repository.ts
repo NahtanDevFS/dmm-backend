@@ -11,11 +11,17 @@ export interface ContratoRow {
   fecha_devolucion_pactada: Date;
   fecha_devolucion_real: Date | null;
   estado_id: number;
+  /**
+   * Por qué se anuló el contrato o por qué se dio el equipo por no devuelto.
+   * Vacío mientras el préstamo sigue su curso normal.
+   */
+  motivo_cierre: string | null;
   activo: boolean;
 }
 
 const COLUMNAS = `id, detalle_entrega_id, contrato_anterior_id, fecha_inicio,
-  fecha_devolucion_pactada, fecha_devolucion_real, estado_id, activo`;
+  fecha_devolucion_pactada, fecha_devolucion_real, estado_id, motivo_cierre,
+  activo`;
 
 async function idEstado(client: PoolClient, nombre: string): Promise<number> {
   const result = await client.query<{ id: number }>(
@@ -221,7 +227,8 @@ export async function listarCadenaDeRenovaciones(
        SELECT ${COLUMNAS} FROM public.contrato_prestamo WHERE id = $1
        UNION
        SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id, cp.fecha_inicio,
-              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id, cp.activo
+              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id,
+              cp.motivo_cierre, cp.activo
        FROM public.contrato_prestamo cp
        JOIN hacia_atras h ON h.contrato_anterior_id = cp.id
      ),
@@ -229,7 +236,8 @@ export async function listarCadenaDeRenovaciones(
        SELECT ${COLUMNAS} FROM public.contrato_prestamo WHERE id = $1
        UNION
        SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id, cp.fecha_inicio,
-              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id, cp.activo
+              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id,
+              cp.motivo_cierre, cp.activo
        FROM public.contrato_prestamo cp
        JOIN hacia_adelante h ON cp.contrato_anterior_id = h.id
      )
@@ -255,7 +263,8 @@ export async function buscarContratoRaiz(
        SELECT ${COLUMNAS} FROM public.contrato_prestamo WHERE id = $1
        UNION ALL
        SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id, cp.fecha_inicio,
-              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id, cp.activo
+              cp.fecha_devolucion_pactada, cp.fecha_devolucion_real, cp.estado_id,
+              cp.motivo_cierre, cp.activo
        FROM public.contrato_prestamo cp
        JOIN hacia_atras h ON h.contrato_anterior_id = cp.id
      )
@@ -497,6 +506,130 @@ export async function registrarDevolucion(
  * devolución. No hay job ni trigger que lo haga: se expone como acción
  * explícita para que la DMM la corra (o un cron del servidor la invoque).
  */
+/**
+ * Anula un préstamo registrado por error: deshace el contrato Y la entrega,
+ * devolviendo el equipo al inventario.
+ *
+ * Es para el caso "me equivoqué al capturar", no para "la persona no
+ * devolvió". La diferencia importa: aquí el equipo nunca salió de verdad —o
+ * volvió enseguida— así que el stock tiene que restituirse. Darlo por perdido
+ * es otra cosa y usa cerrarContratoNoDevuelto.
+ *
+ * Solo se permite si el préstamo no tuvo movimientos: sin devolución
+ * registrada y sin multas pagadas. Si los tuvo, no fue un error de captura y
+ * borrarlo perdería el rastro de algo que sí ocurrió.
+ *
+ * El orden importa: primero se desactiva el contrato y después el renglón,
+ * porque sp_desactivar_detalle_entrega rechaza anular un renglón que tenga un
+ * contrato vigente.
+ */
+export async function anularContratoPorError(
+  usuarioId: number,
+  contratoId: number,
+  motivo: string,
+): Promise<void> {
+  await withUserTransaction(usuarioId, async (client) => {
+    const { rows } = await client.query<{
+      detalle_entrega_id: number | null;
+      fecha_devolucion_real: Date | null;
+      activo: boolean;
+    }>(
+      `SELECT detalle_entrega_id, fecha_devolucion_real, activo
+       FROM public.contrato_prestamo WHERE id = $1`,
+      [contratoId],
+    );
+
+    if (rows.length === 0) throw new Error("El contrato no existe.");
+    const contrato = rows[0];
+
+    if (!contrato.activo) {
+      throw new Error("El contrato ya está anulado.");
+    }
+    if (contrato.fecha_devolucion_real !== null) {
+      throw new Error(
+        "Este préstamo ya tiene una devolución registrada, así que no fue un error de captura. Si el equipo no volvió, ciérrelo como no devuelto.",
+      );
+    }
+
+    const { rows: pagadas } = await client.query<{ n: string }>(
+      `SELECT count(*) AS n FROM public.multa_prestamo
+       WHERE contrato_prestamo_id = $1 AND pagada = true AND activo = true`,
+      [contratoId],
+    );
+    if (Number(pagadas[0].n) > 0) {
+      throw new Error(
+        "Este préstamo tiene multas ya pagadas: no se puede anular como si nunca hubiera existido.",
+      );
+    }
+
+    await client.query(
+      `UPDATE public.contrato_prestamo
+       SET activo = false,
+           motivo_cierre = 'ANULADO POR ERROR DE REGISTRO: ' || $2,
+           updated_by = $3
+       WHERE id = $1`,
+      [contratoId, motivo, usuarioId],
+    );
+
+    // Las multas del contrato anulado dejan de tener sentido: se cobraban por
+    // un préstamo que no existió.
+    await client.query(
+      `UPDATE public.multa_prestamo
+       SET activo = false, updated_by = $2
+       WHERE contrato_prestamo_id = $1 AND activo = true`,
+      [contratoId, usuarioId],
+    );
+
+    if (contrato.detalle_entrega_id !== null) {
+      await client.query(
+        `CALL public.sp_desactivar_detalle_entrega($1, $2, $3)`,
+        [
+          contrato.detalle_entrega_id,
+          usuarioId,
+          "Préstamo anulado por error de registro: " + motivo,
+        ],
+      );
+    }
+  });
+}
+
+/**
+ * Cierra un préstamo cuyo equipo no volvió.
+ *
+ * El contrato se da por terminado pero el stock NO se restituye, porque el
+ * equipo efectivamente no está. Anularlo como si nunca hubiera existido diría
+ * que hay una silla disponible que nadie tiene.
+ *
+ * El contrato queda activo: es un hecho ocurrido que hay que poder consultar,
+ * con sus multas si las tuvo.
+ */
+export async function cerrarContratoNoDevuelto(
+  usuarioId: number,
+  contratoId: number,
+  motivo: string,
+): Promise<ContratoRow> {
+  return withUserTransaction(usuarioId, async (client) => {
+    const estadoNoDevuelto = await idEstado(client, "NO_DEVUELTO");
+
+    const { rows } = await client.query<ContratoRow>(
+      `UPDATE public.contrato_prestamo
+       SET estado_id = $2,
+           motivo_cierre = $3,
+           updated_by = $4
+       WHERE id = $1 AND activo = true AND fecha_devolucion_real IS NULL
+       RETURNING ${COLUMNAS}`,
+      [contratoId, estadoNoDevuelto, motivo, usuarioId],
+    );
+
+    if (rows.length === 0) {
+      throw new Error(
+        "El contrato no existe, está anulado, o ya tiene una devolución registrada.",
+      );
+    }
+    return rows[0];
+  });
+}
+
 /** Nombre del tipo de multa que se aplica sola al vencer el plazo. */
 const MULTA_POR_ATRASO = "ATRASO";
 
@@ -512,8 +645,11 @@ export async function marcarContratosVencidos(
          AND cp.fecha_devolucion_real IS NULL
          AND cp.fecha_devolucion_pactada < CURRENT_DATE
          AND cp.estado_id <> $1
-         AND cp.estado_id <> (
-           SELECT id FROM public.estado_contrato_prestamo WHERE nombre = 'EXTENDIDO'
+         AND cp.estado_id NOT IN (
+           SELECT id FROM public.estado_contrato_prestamo
+           -- NO_DEVUELTO es un final, no un atraso: volver a marcarlo como
+           -- vencido le aplicaría otra multa en cada pasada.
+           WHERE nombre IN ('EXTENDIDO', 'NO_DEVUELTO')
          )`,
       [estadoVencido, usuarioId],
     );

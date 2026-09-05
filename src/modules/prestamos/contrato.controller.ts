@@ -4,6 +4,7 @@ import { buscarInsumoActivo } from "../inventario/recepcion.repository.js";
 import {
   crearContratoSchema,
   crearPrestamoDirectoSchema,
+  cerrarContratoSchema,
   renovarContratoSchema,
   editarContratoSchema,
   listarContratosQuerySchema,
@@ -24,6 +25,8 @@ import {
   buscarDetalleEntregaActivo,
   crearContrato,
   crearPrestamoDirecto,
+  anularContratoPorError,
+  cerrarContratoNoDevuelto,
   renovarContrato,
   editarContrato,
   registrarDevolucion,
@@ -398,6 +401,73 @@ export async function crearPrestamoDirectoController(
       // que ya viene redactado en español con las cantidades exactas.
       return next(error);
     }
+  } catch (error) {
+    return next(error);
+  }
+}
+
+/**
+ * Anula un préstamo registrado por error: deshace contrato y entrega, y el
+ * equipo vuelve al inventario.
+ */
+export async function anularContratoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverContrato(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+
+    const parsed = cerrarContratoSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errores: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    await anularContratoPorError(req.usuario!.id, ruta.id, parsed.data.motivo);
+    return res.status(200).json(await buscarContratoPorId(ruta.id));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+/**
+ * Cierra un préstamo cuyo equipo no volvió. El stock NO se restituye: el
+ * equipo efectivamente no está.
+ */
+export async function noDevueltoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const ruta = await resolverContrato(req);
+    if (!ruta.ok) {
+      return res.status(ruta.status).json({ message: ruta.message });
+    }
+
+    const parsed = cerrarContratoSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errores: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    return res
+      .status(200)
+      .json(
+        await cerrarContratoNoDevuelto(
+          req.usuario!.id,
+          ruta.id,
+          parsed.data.motivo,
+        ),
+      );
   } catch (error) {
     return next(error);
   }

@@ -13,6 +13,8 @@ import {
   devolucionController,
   marcarVencidosController,
   crearPrestamoDirectoController,
+  anularContratoController,
+  noDevueltoController,
   listarMultasController,
   aplicarMultaController,
   editarMultaController,
@@ -35,6 +37,8 @@ router.post(
   requireAuth,
   requireRole(OPERACION),
   crearPrestamoDirectoController,
+  anularContratoController,
+  noDevueltoController,
 );
 
 // Antes de "/:id" para que "vencidos" no se lea como un id.
@@ -50,12 +54,31 @@ router.post(
   requireRole(DIRECCION),
   marcarVencidosController,
   crearPrestamoDirectoController,
+  anularContratoController,
+  noDevueltoController,
 );
 
 router.get("/", requireAuth, requireRole(OPERACION), listarController);
 router.get("/:id", requireAuth, requireRole(OPERACION), obtenerController);
 router.post("/", requireAuth, requireRole(OPERACION), crearController);
 router.patch("/:id", requireAuth, requireRole(OPERACION), editarController);
+// Dos finales distintos que no hay que confundir: anular deshace el registro
+// y devuelve el stock; no-devuelto cierra el contrato SIN restituirlo, porque
+// el equipo no está. Ambos son de DIRECCION: uno revierte inventario y el
+// otro asume una pérdida.
+router.post(
+  "/:id/anular",
+  requireAuth,
+  requireRole(DIRECCION),
+  anularContratoController,
+);
+router.post(
+  "/:id/no-devuelto",
+  requireAuth,
+  requireRole(DIRECCION),
+  noDevueltoController,
+);
+
 router.post(
   "/:id/renovar",
   requireAuth,

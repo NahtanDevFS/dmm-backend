@@ -73,6 +73,7 @@ model contrato_prestamo {
   updated_at                                    DateTime?                     @db.Timestamp(6)
   created_by                                    Int?
   updated_by                                    Int?
+  motivo_cierre                                 String?
   contrato_prestamo                             contrato_prestamo?            @relation("contrato_prestamoTocontrato_prestamo", fields: [contrato_anterior_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_cp_contrato_anterior")
   other_contrato_prestamo                       contrato_prestamo?            @relation("contrato_prestamoTocontrato_prestamo")
   usuario_contrato_prestamo_created_byTousuario usuario?                      @relation("contrato_prestamo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cp_created_by")

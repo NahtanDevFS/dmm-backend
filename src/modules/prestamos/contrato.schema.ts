@@ -44,10 +44,20 @@ export const editarContratoSchema = z.object({
   fecha_devolucion_pactada: fechaSchema.optional(),
 });
 
+/**
+ * Cerrar un préstamo que no terminó bien. El motivo es obligatorio en los dos
+ * casos: dentro de un año, un contrato anulado sin explicación no se
+ * distingue de un error del sistema.
+ */
+export const cerrarContratoSchema = z.object({
+  motivo: z.string().trim().min(5, "Explique brevemente el motivo").max(2000),
+});
+
 export const listarContratosQuerySchema = z.object({
   estado: z
-    .enum(["VIGENTE", "DEVUELTO", "VENCIDO", "EXTENDIDO"], {
-      error: "El estado debe ser VIGENTE, DEVUELTO, VENCIDO o EXTENDIDO",
+    .enum(["VIGENTE", "DEVUELTO", "VENCIDO", "EXTENDIDO", "NO_DEVUELTO"], {
+      error:
+        "El estado debe ser VIGENTE, DEVUELTO, VENCIDO, EXTENDIDO o NO_DEVUELTO",
     })
     .optional(),
   personaId: z.coerce.number().int().positive().optional(),
