@@ -12,6 +12,7 @@ import {
   editarController,
   devolucionController,
   marcarVencidosController,
+  crearPrestamoDirectoController,
   listarMultasController,
   aplicarMultaController,
   editarMultaController,
@@ -26,6 +27,16 @@ import {
 // Las multas son decisión económica: quedan con dirección.
 const router = Router();
 
+// La puerta principal del módulo: registra la entrega del equipo y su
+// contrato de una vez. Antes de "/:id" no hace falta —"/" no colisiona— pero
+// se deja arriba por ser la acción principal.
+router.post(
+  "/directo",
+  requireAuth,
+  requireRole(OPERACION),
+  crearPrestamoDirectoController,
+);
+
 // Antes de "/:id" para que "vencidos" no se lea como un id.
 router.get(
   "/vencidos",
@@ -38,6 +49,7 @@ router.post(
   requireAuth,
   requireRole(DIRECCION),
   marcarVencidosController,
+  crearPrestamoDirectoController,
 );
 
 router.get("/", requireAuth, requireRole(OPERACION), listarController);

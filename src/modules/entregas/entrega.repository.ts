@@ -37,6 +37,12 @@ export interface DetalleEntregaRow {
   motivo_anulacion: string | null;
   fecha_anulacion: Date | null;
   tiene_prestamo: boolean;
+  /**
+   * Si ese préstamo ya se devolvió. Importa porque la devolución devolvió el
+   * stock al lote: anular la entrega después lo sumaría una segunda vez y el
+   * inventario quedaría por encima de lo que se recibió.
+   */
+  prestamo_devuelto: boolean;
   lotes: LoteDeRenglon[];
 }
 
@@ -169,6 +175,10 @@ export async function listarDetallesDeEntrega(
             de.fecha_anulacion,
             EXISTS (SELECT 1 FROM public.contrato_prestamo cp
                      WHERE cp.detalle_entrega_id = de.id) AS tiene_prestamo,
+            EXISTS (SELECT 1 FROM public.contrato_prestamo cp
+                     WHERE cp.detalle_entrega_id = de.id
+                       AND cp.fecha_devolucion_real IS NOT NULL)
+              AS prestamo_devuelto,
             COALESCE((
               SELECT json_agg(json_build_object(
                        'id', del.id,

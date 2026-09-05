@@ -307,6 +307,69 @@ export async function nombreEstado(id: number): Promise<string | null> {
 
 // ─────────────────────────────────────────────── escrituras
 
+/**
+ * Registra un préstamo completo en un solo acto: la entrega del equipo y su
+ * contrato.
+ *
+ * El préstamo no pasa por solicitud. No hay estudio previo que hacer —eso es
+ * para decidir una donación— sino un acuerdo hablado que se formaliza con un
+ * contrato firmado. Obligarlo a recorrer solicitud, aprobación, despacho y
+ * después contrato era hacerle dar cuatro vueltas a un trámite de un paso.
+ *
+ * Es posible porque desde la migración 19 una entrega puede existir sin línea
+ * de solicitud. La entrega se registra igual y aparece en Entregas, porque el
+ * equipo salió de verdad y el inventario se descontó por FEFO como siempre.
+ *
+ * Todo en una transacción: si el contrato falla, la entrega no queda hecha y
+ * el stock no se descuenta.
+ */
+export async function crearPrestamoDirecto(
+  usuarioId: number,
+  datos: {
+    persona_id: number;
+    insumo_id: number;
+    fecha_devolucion_pactada: string;
+    observaciones?: string | null;
+  },
+): Promise<{ contrato: ContratoRow; entrega_id: number }> {
+  return withUserTransaction(usuarioId, async (client) => {
+    const cabecera = await client.query<{ id: number }>(
+      `SELECT public.fn_crear_entrega($1, $2, $3, NULL, NULL) AS id`,
+      [datos.persona_id, usuarioId, datos.observaciones ?? null],
+    );
+    const entregaId = cabecera.rows[0].id;
+
+    // Una unidad por contrato: un contrato ampara un equipo concreto, con su
+    // fecha de devolución y sus multas. Dos sillas son dos préstamos.
+    await client.query(
+      `CALL public.sp_agregar_insumo_entrega($1, $2, 1, NULL)`,
+      [entregaId, datos.insumo_id],
+    );
+
+    const renglon = await client.query<{ id: number }>(
+      `SELECT id FROM public.detalle_entrega
+       WHERE entrega_id = $1 AND insumo_id = $2`,
+      [entregaId, datos.insumo_id],
+    );
+
+    const estadoVigente = await idEstado(client, "VIGENTE");
+    const contrato = await client.query<ContratoRow>(
+      `INSERT INTO public.contrato_prestamo
+         (detalle_entrega_id, fecha_devolucion_pactada, estado_id, created_by)
+       VALUES ($1, $2, $3, $4)
+       RETURNING ${COLUMNAS}`,
+      [
+        renglon.rows[0].id,
+        datos.fecha_devolucion_pactada,
+        estadoVigente,
+        usuarioId,
+      ],
+    );
+
+    return { contrato: contrato.rows[0], entrega_id: entregaId };
+  });
+}
+
 export async function crearContrato(
   usuarioId: number,
   datos: {
@@ -434,9 +497,12 @@ export async function registrarDevolucion(
  * devolución. No hay job ni trigger que lo haga: se expone como acción
  * explícita para que la DMM la corra (o un cron del servidor la invoque).
  */
+/** Nombre del tipo de multa que se aplica sola al vencer el plazo. */
+const MULTA_POR_ATRASO = "ATRASO";
+
 export async function marcarContratosVencidos(
   usuarioId: number,
-): Promise<number> {
+): Promise<{ actualizados: number; multas: number }> {
   return withUserTransaction(usuarioId, async (client) => {
     const estadoVencido = await idEstado(client, "VENCIDO");
     const result = await client.query(
@@ -451,6 +517,47 @@ export async function marcarContratosVencidos(
          )`,
       [estadoVencido, usuarioId],
     );
-    return result.rowCount ?? 0;
+
+    /*
+      La multa por atraso se aplica sola: es una consecuencia del calendario,
+      no una decisión de nadie. Las de daño sí se registran a mano, porque
+      alguien tiene que ver el equipo y valorarlo.
+
+      El monto sale de `monto_sugerido` del catálogo y no de una constante en
+      el código: cuando cambie la tarifa se edita desde Catálogos, sin tocar
+      esto.
+
+      Se aplica UNA sola vez por contrato —el NOT EXISTS— para que volver a
+      pulsar el botón no acumule multas por el mismo atraso.
+    */
+    const multas = await client.query(
+      `INSERT INTO public.multa_prestamo
+         (contrato_prestamo_id, tipo_multa_id, monto, motivo, created_by)
+       SELECT cp.id, tm.id, tm.monto_sugerido,
+              'Aplicada automáticamente: la fecha de devolución pactada ('
+                || to_char(cp.fecha_devolucion_pactada, 'DD/MM/YYYY')
+                || ') ya pasó.',
+              $1
+       FROM public.contrato_prestamo cp
+       CROSS JOIN public.tipo_multa_prestamo tm
+       WHERE tm.nombre = $2
+         AND tm.activo = true
+         AND tm.monto_sugerido IS NOT NULL
+         AND cp.activo = true
+         AND cp.estado_id = $3
+         AND cp.fecha_devolucion_real IS NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM public.multa_prestamo mp
+           WHERE mp.contrato_prestamo_id = cp.id
+             AND mp.tipo_multa_id = tm.id
+             AND mp.activo = true
+         )`,
+      [usuarioId, MULTA_POR_ATRASO, estadoVencido],
+    );
+
+    return {
+      actualizados: result.rowCount ?? 0,
+      multas: multas.rowCount ?? 0,
+    };
   });
 }

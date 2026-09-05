@@ -1,6 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
+import { existePersonaActiva } from "../entregas/entrega.repository.js";
+import { buscarInsumoActivo } from "../inventario/recepcion.repository.js";
 import {
   crearContratoSchema,
+  crearPrestamoDirectoSchema,
   renovarContratoSchema,
   editarContratoSchema,
   listarContratosQuerySchema,
@@ -20,6 +23,7 @@ import {
   existeContratoDeDetalleEntrega,
   buscarDetalleEntregaActivo,
   crearContrato,
+  crearPrestamoDirecto,
   renovarContrato,
   editarContrato,
   registrarDevolucion,
@@ -330,11 +334,70 @@ export async function marcarVencidosController(
   next: NextFunction,
 ) {
   try {
-    const actualizados = await marcarContratosVencidos(req.usuario!.id);
+    const { actualizados, multas } = await marcarContratosVencidos(
+      req.usuario!.id,
+    );
     return res.status(200).json({
       actualizados,
-      message: `${actualizados} contrato(s) marcados como VENCIDO`,
+      multas,
+      message:
+        `${actualizados} contrato(s) marcados como VENCIDO` +
+        (multas > 0
+          ? ` y ${multas} multa(s) por atraso aplicadas automáticamente`
+          : ""),
     });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+/**
+ * Registra un préstamo de principio a fin: la entrega del equipo y su
+ * contrato, en un solo acto.
+ *
+ * Es la puerta principal del módulo. El préstamo no pasa por solicitud —eso
+ * es para decidir donaciones— así que aquí se hace todo: quién se lleva qué y
+ * hasta cuándo. Las fotos del contrato firmado y del DPI se adjuntan después,
+ * sobre el contrato ya creado.
+ */
+export async function crearPrestamoDirectoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const parsed = crearPrestamoDirectoSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errores: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    if (!(await existePersonaActiva(parsed.data.persona_id))) {
+      return res
+        .status(400)
+        .json({ message: "La persona indicada no existe o no está activa" });
+    }
+
+    const insumo = await buscarInsumoActivo(parsed.data.insumo_id);
+    if (!insumo) {
+      return res
+        .status(400)
+        .json({ message: "El equipo indicado no existe o no está activo" });
+    }
+
+    try {
+      const { contrato, entrega_id } = await crearPrestamoDirecto(
+        req.usuario!.id,
+        parsed.data,
+      );
+      return res.status(201).json({ ...contrato, entrega_id });
+    } catch (error) {
+      // Incluye el rechazo por stock insuficiente de sp_agregar_insumo_entrega,
+      // que ya viene redactado en español con las cantidades exactas.
+      return next(error);
+    }
   } catch (error) {
     return next(error);
   }

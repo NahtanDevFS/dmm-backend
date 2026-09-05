@@ -10,6 +10,20 @@ const fechaPactadaSchema = z
   .string({ error: "Debe indicar la fecha de devolución pactada" })
   .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha inválida");
 
+/**
+ * Un préstamo registrado de una vez: la entrega del equipo y su contrato.
+ *
+ * No pide cantidad —es una unidad por contrato— ni receptor: quien solicita
+ * es quien firma, y si después el equipo lo usa otra persona de la casa, eso
+ * no cambia de quién es la responsabilidad.
+ */
+export const crearPrestamoDirectoSchema = z.object({
+  persona_id: z.number().int().positive("Debe indicar la persona"),
+  insumo_id: z.number().int().positive("Debe indicar el equipo"),
+  fecha_devolucion_pactada: fechaSchema,
+  observaciones: z.string().trim().max(2000).nullable().optional(),
+});
+
 export const crearContratoSchema = z.object({
   // Un contrato nuevo siempre nace de una entrega física. Las renovaciones se
   // crean por POST /:id/renovar, porque el CHECK contrato_origen_check exige
