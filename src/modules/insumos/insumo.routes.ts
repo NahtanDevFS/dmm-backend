@@ -11,6 +11,7 @@ import {
   reactivarController,
   obtenerStockController,
   listarStockController,
+  listarUnidadesController,
 } from "./insumo.controller.js";
 import presentacionRoutes from "./presentacion-insumo.routes.js";
 
@@ -26,16 +27,24 @@ router.get(
   requireAuth,
   requireRole(OPERACION),
   listarStockController,
+  listarUnidadesController,
 );
 
 router.get("/", requireAuth, requireRole(OPERACION), listarController);
 router.get("/:id", requireAuth, requireRole(OPERACION), obtenerController);
+router.get(
+  "/:id/unidades",
+  requireAuth,
+  requireRole(OPERACION),
+  listarUnidadesController,
+);
 router.get(
   "/:id/stock",
   requireAuth,
   requireRole(OPERACION),
   obtenerStockController,
   listarStockController,
+  listarUnidadesController,
 );
 router.post("/", requireAuth, requireRole(DIRECCION), crearController);
 router.patch("/:id", requireAuth, requireRole(DIRECCION), editarController);

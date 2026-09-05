@@ -47,12 +47,17 @@ export async function buscarPersonaEInsumoDeContrato(id: number): Promise<{
   persona_id: number;
   persona_nombre_completo: string;
   insumo_nombre: string;
+  /** Serie de la unidad prestada, cuando el equipo la lleva. */
+  numero_serie: string | null;
+  detalle_inventario_lote_id: number | null;
   cantidad_entregada: number;
 } | null> {
   const result = await pool.query<{
     persona_id: number;
     persona_nombre_completo: string;
     insumo_nombre: string;
+    numero_serie: string | null;
+    detalle_inventario_lote_id: number | null;
     cantidad_entregada: number;
   }>(
     `WITH RECURSIVE hacia_atras AS (
@@ -66,6 +71,18 @@ export async function buscarPersonaEInsumoDeContrato(id: number): Promise<{
      SELECT e.persona_id,
             p.nombres || ' ' || p.apellidos AS persona_nombre_completo,
             i.nombre AS insumo_nombre,
+            -- La serie de la unidad prestada: sin ella, al devolver no hay
+            -- forma de verificar que es la misma silla que salió.
+            (SELECT del.detalle_inventario_lote_id
+             FROM public.detalle_entrega_lote del
+             WHERE del.detalle_entrega_id = de.id
+             ORDER BY del.id LIMIT 1) AS detalle_inventario_lote_id,
+            (SELECT dl.codigo_lote_fabricante
+             FROM public.detalle_entrega_lote del
+             JOIN public.detalle_inventario_lote dl
+               ON dl.id = del.detalle_inventario_lote_id
+             WHERE del.detalle_entrega_id = de.id
+             ORDER BY del.id LIMIT 1) AS numero_serie,
             de.cantidad_entregada
      FROM hacia_atras h
      JOIN public.detalle_entrega de ON de.id = h.detalle_entrega_id
@@ -193,6 +210,18 @@ export async function listarContratosVencidos(): Promise<
             e.persona_id,
             p.nombres || ' ' || p.apellidos AS persona_nombre_completo,
             i.nombre AS insumo_nombre,
+            -- La serie de la unidad prestada: sin ella, al devolver no hay
+            -- forma de verificar que es la misma silla que salió.
+            (SELECT del.detalle_inventario_lote_id
+             FROM public.detalle_entrega_lote del
+             WHERE del.detalle_entrega_id = de.id
+             ORDER BY del.id LIMIT 1) AS detalle_inventario_lote_id,
+            (SELECT dl.codigo_lote_fabricante
+             FROM public.detalle_entrega_lote del
+             JOIN public.detalle_inventario_lote dl
+               ON dl.id = del.detalle_inventario_lote_id
+             WHERE del.detalle_entrega_id = de.id
+             ORDER BY del.id LIMIT 1) AS numero_serie,
             de.cantidad_entregada,
             COALESCE(m.multas_pendientes, 0)::integer AS multas_pendientes
      FROM public.contrato_prestamo cp
@@ -339,6 +368,12 @@ export async function crearPrestamoDirecto(
     insumo_id: number;
     fecha_devolucion_pactada: string;
     observaciones?: string | null;
+    /**
+     * Qué unidad concreta se lleva la persona, cuando el equipo tiene número
+     * de serie. Sin esto, FEFO elegiría una y el contrato diría una serie
+     * distinta de la silla que salió por la puerta.
+     */
+    detalle_inventario_lote_id?: number | null;
   },
 ): Promise<{ contrato: ContratoRow; entrega_id: number }> {
   return withUserTransaction(usuarioId, async (client) => {
@@ -351,8 +386,8 @@ export async function crearPrestamoDirecto(
     // Una unidad por contrato: un contrato ampara un equipo concreto, con su
     // fecha de devolución y sus multas. Dos sillas son dos préstamos.
     await client.query(
-      `CALL public.sp_agregar_insumo_entrega($1, $2, 1, NULL)`,
-      [entregaId, datos.insumo_id],
+      `CALL public.sp_agregar_insumo_entrega($1, $2, 1, NULL, $3)`,
+      [entregaId, datos.insumo_id, datos.detalle_inventario_lote_id ?? null],
     );
 
     const renglon = await client.query<{ id: number }>(

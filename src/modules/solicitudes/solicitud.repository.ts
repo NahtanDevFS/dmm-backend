@@ -128,19 +128,31 @@ export async function buscarLineaPorId(
 }
 
 /**
- * Listado sobre v_solicitudes_activas: una fila por línea pendiente, con los
- * nombres ya resueltos. La vista excluye líneas ENTREGADA y CANCELADA.
+ * Listado de líneas de solicitud, con los nombres ya resueltos.
+ *
+ * Por omisión muestra solo lo pendiente, que es para lo que se abre la
+ * pantalla. Con `incluirCerradas` aparecen también las ENTREGADA y las
+ * CANCELADA: sin eso, una solicitud entregada desaparecía del listado y con
+ * ella el acceso a sus formularios, sus documentos y su expediente, que
+ * siguen existiendo y a veces hay que consultar.
  */
 export async function listarSolicitudesActivas(params: {
   personaId?: number;
   programaId?: number;
   estadoLinea?: string;
   soloPendientesAprobacion: boolean;
+  incluirCerradas?: boolean;
   limite: number;
   desplazamiento: number;
 }): Promise<{ total: number; filas: Record<string, unknown>[] }> {
   const condiciones: string[] = [];
   const valores: unknown[] = [];
+
+  // Se consulta siempre v_solicitudes y se filtra aquí, en vez de alternar
+  // entre dos vistas: así el resto de condiciones se escribe una sola vez.
+  if (!params.incluirCerradas) {
+    condiciones.push(`linea_cerrada = false`);
+  }
 
   if (params.personaId !== undefined) {
     valores.push(params.personaId);
@@ -163,12 +175,12 @@ export async function listarSolicitudesActivas(params: {
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
 
   const totalResult = await pool.query<{ n: number }>(
-    `SELECT count(*)::int AS n FROM public.v_solicitudes_activas ${where}`,
+    `SELECT count(*)::int AS n FROM public.v_solicitudes ${where}`,
     valores,
   );
 
   const result = await pool.query(
-    `SELECT * FROM public.v_solicitudes_activas ${where}
+    `SELECT * FROM public.v_solicitudes ${where}
      ORDER BY fecha_solicitud DESC, solicitud_id DESC, detalle_solicitud_id
      LIMIT $${valores.length + 1} OFFSET $${valores.length + 2}`,
     [...valores, params.limite, params.desplazamiento],

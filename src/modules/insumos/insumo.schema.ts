@@ -19,6 +19,11 @@ export const crearInsumoSchema = z.object({
   requiere_fecha_caducidad: z.boolean().optional(),
   requiere_codigo_fabricante: z.boolean().optional(),
   bloquea_solicitud_sin_stock: z.boolean().optional(),
+  /**
+   * Cada unidad con su número de serie. Cambia el ingreso —una fila por
+   * serie— y habilita elegir la unidad concreta al entregar.
+   */
+  serie_por_unidad: z.boolean().optional(),
 });
 
 export const editarInsumoSchema = crearInsumoSchema.partial();

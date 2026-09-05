@@ -22,6 +22,11 @@ export const crearPrestamoDirectoSchema = z.object({
   insumo_id: z.number().int().positive("Debe indicar el equipo"),
   fecha_devolucion_pactada: fechaSchema,
   observaciones: z.string().trim().max(2000).nullable().optional(),
+  /**
+   * La unidad concreta que se lleva, cuando el equipo tiene número de serie.
+   * Opcional: los insumos sin serie se despachan por FEFO como siempre.
+   */
+  detalle_inventario_lote_id: z.number().int().positive().nullable().optional(),
 });
 
 export const crearContratoSchema = z.object({

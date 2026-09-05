@@ -314,6 +314,7 @@ model insumo {
   requiere_fecha_caducidad           Boolean                   @default(false)
   requiere_codigo_fabricante         Boolean                   @default(false)
   bloquea_solicitud_sin_stock        Boolean                   @default(false)
+  serie_por_unidad                   Boolean                   @default(false)
   detalle_entrega                    detalle_entrega[]
   detalle_inventario_lote            detalle_inventario_lote[]
   detalle_solicitud_apoyo            detalle_solicitud_apoyo[]
