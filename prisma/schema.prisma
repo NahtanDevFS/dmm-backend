@@ -431,17 +431,18 @@ model presentacion_insumo {
 }
 
 model programa {
-  id                                   Int               @id @default(autoincrement())
-  nombre                               String            @unique @db.VarChar(100)
-  descripcion                          String?
-  activo                               Boolean           @default(true)
-  created_at                           DateTime          @default(now()) @db.Timestamp(6)
-  updated_at                           DateTime?         @db.Timestamp(6)
-  created_by                           Int?
-  updated_by                           Int?
-  usuario_programa_created_byTousuario usuario?          @relation("programa_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_prog_created_by")
-  usuario_programa_updated_byTousuario usuario?          @relation("programa_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_prog_updated_by")
-  solicitud_apoyo                      solicitud_apoyo[]
+  id                                    Int               @id @default(autoincrement())
+  nombre                                String            @unique @db.VarChar(100)
+  descripcion                           String?
+  activo                                Boolean           @default(true)
+  created_at                            DateTime          @default(now()) @db.Timestamp(6)
+  updated_at                            DateTime?         @db.Timestamp(6)
+  created_by                            Int?
+  updated_by                            Int?
+  usuario_programa_created_byTousuario  usuario?          @relation("programa_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_prog_created_by")
+  usuario_programa_updated_byTousuario  usuario?          @relation("programa_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_prog_updated_by")
+  solicitud_apoyo                       solicitud_apoyo[]
+  usuario_usuario_programa_idToprograma usuario[]         @relation("usuario_programa_idToprograma")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -497,6 +498,7 @@ model solicitud_apoyo {
   updated_at                                    DateTime?                 @db.Timestamp(6)
   created_by                                    Int?
   updated_by                                    Int?
+  registrada_en_suplencia                       Boolean                   @default(false)
   detalle_solicitud_apoyo                       detalle_solicitud_apoyo[]
   documento_solicitud                           documento_solicitud[]
   receta_medica                                 receta_medica[]
@@ -577,6 +579,7 @@ model usuario {
   updated_at                                                                                        DateTime?                                @db.Timestamp(6)
   created_by                                                                                        Int?
   updated_by                                                                                        Int?
+  programa_id                                                                                       Int?
   auditoria_log                                                                                     auditoria_log[]
   catalogo_catalogo_created_byTousuario                                                             catalogo[]                               @relation("catalogo_created_byTousuario")
   catalogo_catalogo_updated_byTousuario                                                             catalogo[]                               @relation("catalogo_updated_byTousuario")
@@ -687,9 +690,12 @@ model usuario {
   unidad_medida_unidad_medida_updated_byTousuario                                                   unidad_medida[]                          @relation("unidad_medida_updated_byTousuario")
   usuario_usuario_created_byTousuario                                                               usuario?                                 @relation("usuario_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_created_by")
   other_usuario_usuario_created_byTousuario                                                         usuario[]                                @relation("usuario_created_byTousuario")
+  programa_usuario_programa_idToprograma                                                            programa?                                @relation("usuario_programa_idToprograma", fields: [programa_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_usuario_programa")
   rol_usuario_rol_idTorol                                                                           rol                                      @relation("usuario_rol_idTorol", fields: [rol_id], references: [id], onUpdate: NoAction, map: "fk_usuario_rol")
   usuario_usuario_updated_byTousuario                                                               usuario?                                 @relation("usuario_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_updated_by")
   other_usuario_usuario_updated_byTousuario                                                         usuario[]                                @relation("usuario_updated_byTousuario")
+
+  @@index([programa_id], map: "idx_usuario_programa", where: raw("(programa_id IS NOT NULL)"))
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

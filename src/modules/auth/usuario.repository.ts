@@ -8,6 +8,9 @@ export interface UsuarioConRol {
   activo: boolean;
   rol_id: number;
   rol_nombre: string;
+  /** Programa del que es encargada, para preseleccionarlo en solicitudes. */
+  programa_id: number | null;
+  programa_nombre: string | null;
 }
 
 export async function buscarUsuarioPorUsername(
@@ -27,6 +30,21 @@ export async function buscarUsuarioPorUsername(
     activo: usuario.activo,
     rol_id: usuario.rol_id,
     rol_nombre: usuario.rol_usuario_rol_idTorol.nombre,
+    programa_id: usuario.programa_id,
+    /*
+      El nombre se busca aparte en vez de con un include. Prisma bautiza las
+      relaciones al introspeccionar y ese nombre depende de cómo quedó la
+      clave foránea; una consulta directa por id no depende de eso y sobrevive
+      al próximo `prisma db pull`.
+    */
+    programa_nombre: usuario.programa_id
+      ? ((
+          await prisma.programa.findUnique({
+            where: { id: usuario.programa_id },
+            select: { nombre: true },
+          })
+        )?.nombre ?? null)
+      : null,
   };
 }
 

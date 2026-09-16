@@ -130,6 +130,7 @@ export async function crearController(
       username: parsed.data.username,
       passwordHash,
       rol_id: parsed.data.rol_id,
+      programa_id: parsed.data.programa_id,
     });
     return res.status(201).json(nuevo);
   } catch (error) {
@@ -160,9 +161,7 @@ export async function editarController(
       parsed.data.username === undefined &&
       parsed.data.rol_id === undefined
     ) {
-      return res
-        .status(400)
-        .json({ message: "No hay nada que actualizar" });
+      return res.status(400).json({ message: "No hay nada que actualizar" });
     }
 
     if (
