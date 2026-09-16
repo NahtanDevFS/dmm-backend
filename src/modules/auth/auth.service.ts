@@ -31,6 +31,12 @@ export interface LoginResult {
     id: number;
     username: string;
     rol: string;
+    /**
+     * Programa del que es encargada, para preseleccionarlo al crear una
+     * solicitud. Nulo para quienes no llevan uno propio.
+     */
+    programa_id: number | null;
+    programa_nombre: string | null;
   };
 }
 
@@ -74,6 +80,8 @@ export async function login(params: {
       id: usuario.id,
       username: usuario.username,
       rol: usuario.rol_nombre,
+      programa_id: usuario.programa_id,
+      programa_nombre: usuario.programa_nombre,
     },
   };
 }

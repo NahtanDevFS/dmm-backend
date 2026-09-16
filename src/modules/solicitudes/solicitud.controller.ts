@@ -21,6 +21,7 @@ import {
   buscarInsumoActivo,
   existeRecetaDeSolicitud,
   crearSolicitudConLineas,
+  programaDeUsuario,
   editarSolicitud,
   agregarLinea,
   editarLinea,
@@ -245,11 +246,25 @@ export async function crearController(
       contexto = { insumoNombre: insumo.nombre };
     }
 
+    /*
+      Suplencia: quien registra no es la encargada del programa elegido.
+      Se calcula aquí y se guarda, en vez de deducirlo al consultar: si
+      mañana a esa persona le cambian de programa, una deducción reescribiría
+      el pasado y solicitudes que fueron normales pasarían a verse como
+      suplencias.
+
+      Quien no tiene programa asignado —Directora, Alcalde, Administrador— no
+      está cubriendo a nadie: registrar es parte de su trabajo normal.
+    */
+    const programaPropio = await programaDeUsuario(req.usuario!.id);
+    const enSuplencia =
+      programaPropio !== null && programaPropio !== parsed.data.programa_id;
+
     try {
-      const creada = await crearSolicitudConLineas(
-        req.usuario!.id,
-        parsed.data,
-      );
+      const creada = await crearSolicitudConLineas(req.usuario!.id, {
+        ...parsed.data,
+        registrada_en_suplencia: enSuplencia,
+      });
       return res.status(201).json(creada);
     } catch (error) {
       return responderErrorConContexto(error, res, next, contexto);

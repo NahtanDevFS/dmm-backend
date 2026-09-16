@@ -26,6 +26,13 @@ const usernameSchema = z
     "El nombre de usuario solo admite letras, números, punto, guion y guion bajo",
   );
 
+/**
+ * De qué programa es encargada. Opcional: la Directora, el Alcalde y el
+ * Administrador no llevan uno propio, y una empleada puede no tenerlo
+ * asignado todavía.
+ */
+const programaSchema = z.number().int().positive().nullable().optional();
+
 export const crearUsuarioSchema = z.object({
   username: usernameSchema,
   password: passwordSchema,
@@ -33,11 +40,13 @@ export const crearUsuarioSchema = z.object({
     .number({ error: "Debe indicar el rol" })
     .int()
     .positive("Debe indicar el rol"),
+  programa_id: programaSchema,
 });
 
 export const editarUsuarioSchema = z.object({
   username: usernameSchema.optional(),
   rol_id: z.number().int().positive().optional(),
+  programa_id: programaSchema,
 });
 
 /** Cambio de contraseña propio: exige la actual para evitar el secuestro de una sesión abierta. */

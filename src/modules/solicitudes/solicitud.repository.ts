@@ -7,6 +7,12 @@ export interface SolicitudRow {
   id: number;
   persona_id: number;
   programa_id: number;
+  /**
+   * Quien registró no era la encargada de ese programa. Se fija al crear y no
+   * se recalcula: si después le cambian el programa a esa persona, lo que
+   * pasó no cambia.
+   */
+  registrada_en_suplencia: boolean;
   fecha_solicitud: Date;
   requiere_aprobacion: boolean;
   aprobada: boolean;
@@ -36,7 +42,7 @@ export interface LineaSolicitudRow {
 
 const COLUMNAS_SOLICITUD = `id, persona_id, programa_id, fecha_solicitud,
   requiere_aprobacion, aprobada, estado_id, fecha_aprobacion, aprobado_por,
-  observaciones_trabajo_social, activo`;
+  observaciones_trabajo_social, registrada_en_suplencia, activo`;
 
 const COLUMNAS_LINEA = `id, solicitud_id, insumo_id, cantidad_requerida,
   cantidad_entregada, estado_id, fecha_asignacion, receta_medica_id,
@@ -89,6 +95,23 @@ async function resolverCantidadBase(
   }
 
   return redondeado;
+}
+
+/**
+ * Programa del que una usuaria es encargada, o null si no lleva ninguno.
+ *
+ * Se consulta al crear una solicitud para saber si está cubriendo a otra
+ * persona. Vive aquí y no en el módulo de usuarios porque es el dato que
+ * necesita esta decisión, no la administración de cuentas.
+ */
+export async function programaDeUsuario(
+  usuarioId: number,
+): Promise<number | null> {
+  const { rows } = await pool.query<{ programa_id: number | null }>(
+    `SELECT programa_id FROM public.usuario WHERE id = $1`,
+    [usuarioId],
+  );
+  return rows[0]?.programa_id ?? null;
 }
 
 // ─────────────────────────────────────────────── lecturas
@@ -303,6 +326,8 @@ export async function crearSolicitudConLineas(
   datos: {
     persona_id: number;
     programa_id: number;
+    /** Lo calcula el controlador comparando con el programa de quien crea. */
+    registrada_en_suplencia?: boolean;
     fecha_solicitud?: string;
     requiere_aprobacion?: boolean;
     observaciones_trabajo_social?: string | null;
@@ -321,6 +346,7 @@ export async function crearSolicitudConLineas(
     const campos = [
       "persona_id",
       "programa_id",
+      "registrada_en_suplencia",
       "requiere_aprobacion",
       "observaciones_trabajo_social",
       "estado_id",
@@ -328,6 +354,7 @@ export async function crearSolicitudConLineas(
     const valores: unknown[] = [
       datos.persona_id,
       datos.programa_id,
+      datos.registrada_en_suplencia ?? false,
       datos.requiere_aprobacion ?? false,
       datos.observaciones_trabajo_social ?? null,
       estadoInicial,
@@ -400,6 +427,7 @@ export async function editarSolicitud(
 
     for (const campo of [
       "programa_id",
+      "registrada_en_suplencia",
       "requiere_aprobacion",
       "observaciones_trabajo_social",
     ] as const) {
