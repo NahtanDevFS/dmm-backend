@@ -30,6 +30,8 @@ export interface LoginResult {
   usuario: {
     id: number;
     username: string;
+    /** Nombre de la persona, para saludar y firmar con él en vez del alias. */
+    nombre_completo: string | null;
     rol: string;
     /**
      * Programa del que es encargada, para preseleccionarlo al crear una
@@ -79,6 +81,7 @@ export async function login(params: {
     usuario: {
       id: usuario.id,
       username: usuario.username,
+      nombre_completo: usuario.nombre_completo,
       rol: usuario.rol_nombre,
       programa_id: usuario.programa_id,
       programa_nombre: usuario.programa_nombre,

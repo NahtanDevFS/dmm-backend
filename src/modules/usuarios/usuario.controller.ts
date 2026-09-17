@@ -130,6 +130,7 @@ export async function crearController(
       username: parsed.data.username,
       passwordHash,
       rol_id: parsed.data.rol_id,
+      nombre_completo: parsed.data.nombre_completo,
       programa_id: parsed.data.programa_id,
     });
     return res.status(201).json(nuevo);
