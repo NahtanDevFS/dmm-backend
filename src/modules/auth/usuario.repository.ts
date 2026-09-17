@@ -5,6 +5,7 @@ export interface UsuarioConRol {
   id: number;
   username: string;
   password_hash: string;
+  nombre_completo: string | null;
   activo: boolean;
   rol_id: number;
   rol_nombre: string;
@@ -27,6 +28,7 @@ export async function buscarUsuarioPorUsername(
     id: usuario.id,
     username: usuario.username,
     password_hash: usuario.password_hash,
+    nombre_completo: usuario.nombre_completo,
     activo: usuario.activo,
     rol_id: usuario.rol_id,
     rol_nombre: usuario.rol_usuario_rol_idTorol.nombre,

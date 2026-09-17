@@ -16,6 +16,15 @@ const passwordSchema = z
   .refine((v) => /[a-zA-Z]/.test(v), "La contraseña debe incluir una letra")
   .refine((v) => /\d/.test(v), "La contraseña debe incluir un número");
 
+/**
+ * Identificador de acceso, no el nombre de la persona: para eso está
+ * `nombre_completo`.
+ *
+ * Solo ASCII. Más allá de la comodidad de teclearlo: en Unicode 'é' se puede
+ * escribir como un carácter o como 'e' más una tilde combinante, que se ven
+ * idénticas y son cadenas distintas. Alguien crearía la cuenta desde un
+ * teclado y no podría entrar desde otro, sin que nada explicara por qué.
+ */
 const usernameSchema = z
   .string({ error: "El nombre de usuario es requerido" })
   .trim()
@@ -23,8 +32,15 @@ const usernameSchema = z
   .max(50, "El nombre de usuario es demasiado largo")
   .regex(
     /^[a-zA-Z0-9._-]+$/,
-    "El nombre de usuario solo admite letras, números, punto, guion y guion bajo",
+    "El nombre de usuario no admite tildes, ñ, espacios ni otros signos: use letras sin acento, números, punto, guion o guion bajo. El nombre con tildes va en el campo de nombre completo.",
   );
+
+/** El nombre de la persona, que sí se escribe como se escribe. */
+const nombreCompletoSchema = z
+  .string()
+  .trim()
+  .min(3, "El nombre completo debe tener al menos 3 caracteres")
+  .max(150, "El nombre completo es demasiado largo");
 
 /**
  * De qué programa es encargada. Opcional: la Directora, el Alcalde y el
@@ -40,12 +56,14 @@ export const crearUsuarioSchema = z.object({
     .number({ error: "Debe indicar el rol" })
     .int()
     .positive("Debe indicar el rol"),
+  nombre_completo: nombreCompletoSchema,
   programa_id: programaSchema,
 });
 
 export const editarUsuarioSchema = z.object({
   username: usernameSchema.optional(),
   rol_id: z.number().int().positive().optional(),
+  nombre_completo: nombreCompletoSchema.optional(),
   programa_id: programaSchema,
 });
 

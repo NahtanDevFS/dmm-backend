@@ -8,7 +8,10 @@ import { withUserTransaction } from "../../db/withUserTransaction.js";
  */
 export interface UsuarioRow {
   id: number;
+  /** Identificador de acceso: ASCII, sin tildes ni espacios. */
   username: string;
+  /** El nombre de la persona, como se escribe. Nulo en cuentas anteriores. */
+  nombre_completo: string | null;
   rol_id: number;
   /**
    * Programa del que esta usuaria es encargada. Preselecciona el campo al
@@ -20,7 +23,8 @@ export interface UsuarioRow {
   activo: boolean;
 }
 
-const COLUMNAS = "id, username, rol_id, programa_id, ultimo_login, activo";
+const COLUMNAS =
+  "id, username, nombre_completo, rol_id, programa_id, ultimo_login, activo";
 
 export interface RolRow {
   id: number;
@@ -57,7 +61,7 @@ export async function listarUsuarios(params: {
   );
 
   const result = await pool.query(
-    `SELECT u.id, u.username, u.rol_id, r.nombre AS rol_nombre,
+    `SELECT u.id, u.username, u.nombre_completo, u.rol_id, r.nombre AS rol_nombre,
             u.programa_id, pr.nombre AS programa_nombre,
             u.ultimo_login, u.activo
      FROM public.usuario u
@@ -146,19 +150,22 @@ export async function crearUsuario(
     username: string;
     passwordHash: string;
     rol_id: number;
+    nombre_completo: string;
     programa_id?: number | null;
   },
 ): Promise<UsuarioRow> {
   return withUserTransaction(usuarioId, async (client) => {
     const result = await client.query<UsuarioRow>(
       `INSERT INTO public.usuario
-         (username, password_hash, rol_id, programa_id, created_by)
-       VALUES ($1, $2, $3, $4, $5)
+         (username, password_hash, rol_id, nombre_completo, programa_id,
+          created_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING ${COLUMNAS}`,
       [
         datos.username,
         datos.passwordHash,
         datos.rol_id,
+        datos.nombre_completo,
         datos.programa_id ?? null,
         usuarioId,
       ],
@@ -170,14 +177,24 @@ export async function crearUsuario(
 export async function editarUsuario(
   usuarioId: number,
   id: number,
-  datos: { username?: string; rol_id?: number; programa_id?: number | null },
+  datos: {
+    username?: string;
+    rol_id?: number;
+    nombre_completo?: string;
+    programa_id?: number | null;
+  },
 ): Promise<UsuarioRow> {
   return withUserTransaction(usuarioId, async (client) => {
     const sets: string[] = [];
     const valores: unknown[] = [];
     let i = 1;
 
-    for (const campo of ["username", "rol_id", "programa_id"] as const) {
+    for (const campo of [
+      "username",
+      "nombre_completo",
+      "rol_id",
+      "programa_id",
+    ] as const) {
       if (campo in datos) {
         sets.push(`${campo} = $${i}`);
         valores.push(datos[campo]);

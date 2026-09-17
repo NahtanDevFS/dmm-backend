@@ -580,6 +580,7 @@ model usuario {
   created_by                                                                                        Int?
   updated_by                                                                                        Int?
   programa_id                                                                                       Int?
+  nombre_completo                                                                                   String?                                  @db.VarChar(150)
   auditoria_log                                                                                     auditoria_log[]
   catalogo_catalogo_created_byTousuario                                                             catalogo[]                               @relation("catalogo_created_byTousuario")
   catalogo_catalogo_updated_byTousuario                                                             catalogo[]                               @relation("catalogo_updated_byTousuario")

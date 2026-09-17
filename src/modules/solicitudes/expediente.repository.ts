@@ -91,7 +91,7 @@ export async function cabeceraExpediente(
   const { rows } = await pool.query<CabeceraExpediente>(
     `SELECT sa.id AS solicitud_id, sa.fecha_solicitud, pr.nombre AS programa,
             es.nombre AS estado, sa.requiere_aprobacion, sa.aprobada,
-            sa.fecha_aprobacion, ua.username AS aprobado_por,
+            sa.fecha_aprobacion, COALESCE(ua.nombre_completo, ua.username) AS aprobado_por,
             sa.observaciones_trabajo_social,
 
             p.id AS persona_id, p.nombres, p.apellidos, p.cui_dpi,
@@ -234,7 +234,10 @@ export async function entregasExpediente(
                ON dl.id = del.detalle_inventario_lote_id
              WHERE del.detalle_entrega_id = de.id
              ORDER BY del.id LIMIT 1) AS numero_serie,
-            u.username AS entregado_por,
+            -- El nombre de la persona, no su alias de acceso: el expediente
+            -- se imprime y se lee, y 'prueba.empleado' no le dice nada a
+            -- quien lo revise.
+            COALESCE(u.nombre_completo, u.username) AS entregado_por,
             CASE WHEN pr.id IS NULL THEN NULL
                  ELSE pr.nombres || ' ' || pr.apellidos END AS receptor,
             (de.activo AND e.activo) AS activo
