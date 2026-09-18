@@ -170,16 +170,35 @@ describe("descuento de stock al entregar", () => {
     loteId: number,
     cantidad: number,
   ): Promise<void> {
+    // Desde la migración 19, el descuento de inventario lo dispara
+    // trg_descontar_inventario_lote sobre detalle_entrega_lote, no sobre
+    // detalle_entrega. Así que hace falta el renglón de detalle_entrega
+    // primero (el insumo en sí) y luego el reparto por lote.
+    const { rows } = await poolOwner.query<{ id: number }>(
+      `INSERT INTO public.detalle_entrega
+         (entrega_id, insumo_id, cantidad_entregada, created_by)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [entregaId, insumo.insumoId, cantidad, usuarioId],
+    );
+    const detalleEntregaId = rows[0].id;
+
     // $4 y $5 van separados aunque lleven el mismo valor: Postgres deduce el
     // tipo de cada parametro por su uso, y `cantidad_despacho_original` es
     // numeric(12,4) mientras que `cantidad_entregada` es integer. Reutilizar
     // $4 para ambas falla con "inconsistent types deduced for parameter".
     await poolOwner.query(
-      `INSERT INTO public.detalle_entrega
-         (entrega_id, detalle_inventario_lote_id, presentacion_despacho_id,
+      `INSERT INTO public.detalle_entrega_lote
+         (detalle_entrega_id, detalle_inventario_lote_id, presentacion_despacho_id,
           cantidad_despacho_original, cantidad_entregada, created_by)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [entregaId, loteId, insumo.presentacionId, cantidad, cantidad, usuarioId],
+      [
+        detalleEntregaId,
+        loteId,
+        insumo.presentacionId,
+        cantidad,
+        cantidad,
+        usuarioId,
+      ],
     );
   }
 
@@ -221,14 +240,20 @@ describe("descuento de stock al entregar", () => {
   it("nunca deja el stock negativo, ni agotando el lote exacto", async () => {
     const insumo = await crearInsumo(usuarioId);
     const lote = await crearLote(usuarioId, insumo, { cantidad: 5 });
-    const entrega = await crearEntrega(personaId);
+    const primeraEntrega = await crearEntrega(personaId);
 
-    await despachar(entrega, insumo, lote.loteId, 5);
+    await despachar(primeraEntrega, insumo, lote.loteId, 5);
     expect(await stockDisponible(lote.loteId)).toBe(0);
 
-    await expect(despachar(entrega, insumo, lote.loteId, 1)).rejects.toThrow(
-      /stock insuficiente/i,
-    );
+    // Entrega distinta a propósito: detalle_entrega tiene un índice único
+    // sobre (entrega_id, insumo_id) — el SP real (sp_agregar_insumo_entrega)
+    // nunca repite ese par, siempre crea un detalle_entrega nuevo por acto
+    // de entrega. Repetir la misma entrega aquí violaría ese índice antes
+    // de llegar a la validación de stock que se quiere probar.
+    const segundaEntrega = await crearEntrega(personaId);
+    await expect(
+      despachar(segundaEntrega, insumo, lote.loteId, 1),
+    ).rejects.toThrow(/stock insuficiente/i);
     expect(await stockDisponible(lote.loteId)).toBe(0);
   });
 
@@ -266,14 +291,23 @@ describe("descuento de stock al entregar", () => {
     const clienteA = await poolApp.connect();
     const clienteB = await poolApp.connect();
 
-    const insertar = (cliente: any, entregaId: number) =>
-      cliente.query(
+    const insertar = async (cliente: any, entregaId: number) => {
+      // Igual que despachar(): el descuento y el bloqueo del lote ahora
+      // ocurren al insertar en detalle_entrega_lote, no en detalle_entrega.
+      const { rows } = await cliente.query(
         `INSERT INTO public.detalle_entrega
-           (entrega_id, detalle_inventario_lote_id, presentacion_despacho_id,
+           (entrega_id, insumo_id, cantidad_entregada, created_by)
+         VALUES ($1, $2, 6::integer, $3) RETURNING id`,
+        [entregaId, insumo.insumoId, usuarioId],
+      );
+      return cliente.query(
+        `INSERT INTO public.detalle_entrega_lote
+           (detalle_entrega_id, detalle_inventario_lote_id, presentacion_despacho_id,
             cantidad_despacho_original, cantidad_entregada, created_by)
          VALUES ($1, $2, $3, 6::numeric, 6::integer, $4)`,
-        [entregaId, lote.loteId, insumo.presentacionId, usuarioId],
+        [rows[0].id, lote.loteId, insumo.presentacionId, usuarioId],
       );
+    };
 
     try {
       await clienteA.query("BEGIN");

@@ -41,7 +41,13 @@ const TODOS: Rol[] = ["EMPLEADO_DMM", "DIRECTORA", "ALCALDE", "ADMINISTRADOR"];
 const OPERACION: Rol[] = ["EMPLEADO_DMM", "DIRECTORA", "ADMINISTRADOR"];
 const DIRECCION: Rol[] = ["DIRECTORA", "ADMINISTRADOR"];
 const REPORTES: Rol[] = ["DIRECTORA", "ALCALDE", "ADMINISTRADOR"];
-const ADMIN: Rol[] = ["ADMINISTRADOR"];
+// Antes "ADMIN" y exclusivo de ADMINISTRADOR. Se corrigió para reflejar
+// src/config/roles.ts: el conjunto real es ADMINISTRACION, que incluye a
+// DIRECTORA por decisión de negocio (en una dirección municipal pequeña no
+// hay área de sistemas aparte, y la directora administra el sistema). El
+// nombre viejo mentía sobre quién entra, igual que el ADMIN local de este
+// archivo.
+const ADMINISTRACION: Rol[] = ["DIRECTORA", "ADMINISTRADOR"];
 
 const CASOS: Caso[] = [
   // --- Lo que motivo el cambio: ALCALDE fuera de todo el negocio -----------
@@ -130,13 +136,13 @@ const CASOS: Caso[] = [
   { metodo: "POST", ruta: "/api/recepciones", permitidos: OPERACION },
 
   // --- Exclusivo de administrador -----------------------------------------
-  { metodo: "GET", ruta: "/api/usuarios", permitidos: ADMIN },
-  { metodo: "POST", ruta: "/api/usuarios", permitidos: ADMIN },
-  { metodo: "GET", ruta: "/api/auditoria", permitidos: ADMIN },
+  { metodo: "GET", ruta: "/api/usuarios", permitidos: ADMINISTRACION },
+  { metodo: "POST", ruta: "/api/usuarios", permitidos: ADMINISTRACION },
+  { metodo: "GET", ruta: "/api/auditoria", permitidos: ADMINISTRACION },
   {
     metodo: "GET",
     ruta: "/api/roles",
-    permitidos: ADMIN,
+    permitidos: ADMINISTRACION,
     nota: "Su unico consumidor es el select de gestion de usuarios",
   },
 ];

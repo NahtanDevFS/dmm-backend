@@ -83,6 +83,10 @@ export interface OpcionesInsumo {
   requiereFechaCaducidad?: boolean;
   requiereCodigoFabricante?: boolean;
   bloqueaSolicitudSinStock?: boolean;
+  /** Migración 27: cada unidad se registra por separado, con su propio número de serie. */
+  seriePorUnidad?: boolean;
+  /** Migración 25: si la categoría admite préstamo de equipo, no solo entrega/donación. */
+  categoriaPermitePrestamo?: boolean;
 }
 
 export interface InsumoCreado {
@@ -102,12 +106,25 @@ export async function crearInsumo(
     requiereFechaCaducidad = false,
     requiereCodigoFabricante = false,
     bloqueaSolicitudSinStock = false,
+    seriePorUnidad = false,
+    categoriaPermitePrestamo = false,
   } = opciones;
 
+  // Nombre de categoría propio cuando se pide permite_prestamo: 'General' es
+  // compartida (ON CONFLICT ... DO UPDATE) por todo insumo que no la pida, y
+  // si aquí se le pusiera permite_prestamo = true sobre 'General' quedaría
+  // así para cualquier otra prueba que cree un insumo después, en el mismo
+  // proceso de pruebas, sin pedirlo.
+  const nombreCategoria = categoriaPermitePrestamo
+    ? "Equipo de prueba"
+    : "General";
+
   const cat = await poolOwner.query<{ id: number }>(
-    `INSERT INTO public.categoria_insumo (nombre, created_by) VALUES ('General', $1)
-     ON CONFLICT (nombre) DO UPDATE SET activo = true RETURNING id`,
-    [usuarioId],
+    `INSERT INTO public.categoria_insumo (nombre, permite_prestamo, created_by)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (nombre) DO UPDATE SET activo = true, permite_prestamo = $2
+     RETURNING id`,
+    [nombreCategoria, categoriaPermitePrestamo, usuarioId],
   );
   const uni = await poolOwner.query<{ id: number }>(
     `INSERT INTO public.unidad_medida (nombre, created_by) VALUES ('Unidad', $1)
@@ -119,8 +136,8 @@ export async function crearInsumo(
     `INSERT INTO public.insumo
        (categoria_id, unidad_medida_base_id, nombre,
         requiere_fecha_caducidad, requiere_codigo_fabricante,
-        bloquea_solicitud_sin_stock, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+        bloquea_solicitud_sin_stock, serie_por_unidad, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING id`,
     [
       cat.rows[0].id,
@@ -129,6 +146,7 @@ export async function crearInsumo(
       requiereFechaCaducidad,
       requiereCodigoFabricante,
       bloqueaSolicitudSinStock,
+      seriePorUnidad,
       usuarioId,
     ],
   );

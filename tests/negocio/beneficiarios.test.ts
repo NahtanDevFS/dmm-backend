@@ -8,20 +8,20 @@ import {
 import { crearUsuario, crearPersona, enDias } from "../helpers/fixtures.js";
 
 /**
- * RF-BEN-03: todo menor sin CUI/DPI debe tener un encargado vinculado.
+ * RF-BEN-03 (histórica): el encargado de un menor sin CUI/DPI.
  *
- * Lo que hace especial a esta regla es CUANDO se valida. Los dos triggers son
- * CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED, asi que la
- * comprobacion NO ocurre al INSERT sino al COMMIT.
+ * La migración 22 quitó la exigencia: hoy no tener encargado NUNCA bloquea
+ * el registro, ni siquiera en un menor sin CUI/DPI (ver TRASPASO.md §4). La
+ * interfaz lo sugiere; la base ya no lo fuerza. No hay ningún
+ * CONSTRAINT TRIGGER DEFERRABLE sobre persona/encargado_menor en el esquema
+ * actual — se confirmó que no existe ninguno con ese nombre ni función.
  *
- * Sin eso, registrar un menor con su encargado en una sola operacion seria
- * imposible: al insertar al menor todavia no existe el vinculo, y al intentar
- * crear el vinculo todavia no existe el menor. El diferimiento es lo que
- * permite que `POST /api/personas` acepte persona + encargados en un unico
- * request, que es como trabaja la DMM en ventanilla.
- *
- * De ahi que casi todas estas pruebas manejen transacciones explicitas: probar
- * esto con autocommit verificaria otra cosa.
+ * Este archivo antes probaba la regla vieja (rechazo al COMMIT). Se
+ * reescribió para afirmar el comportamiento actual: un menor sin CUI/DPI y
+ * sin encargado se registra sin problema, y desvincular al único encargado
+ * de un menor tampoco falla. El resto de los tests de este archivo (crear
+ * menor y encargado juntos, cambiar de encargado, etc.) seguían
+ * describiendo casos válidos y no se tocaron.
  */
 
 let usuarioId: number;
@@ -100,22 +100,24 @@ async function vincularEncargado(
 }
 
 describe("menor sin DPI: exigencia de encargado", () => {
-  it("rechaza al COMMIT un menor sin DPI y sin encargado", async () => {
-    await expect(
-      enTransaccion(async (cliente) => {
-        await insertarPersona(cliente, {
-          nombres: "Menor Solo",
-          fechaNacimiento: nacidoHace(10),
-          cuiDpi: null,
-        });
-        // El INSERT en si mismo NO falla: la validacion esta diferida.
+  it("permite registrar un menor sin DPI y sin encargado (migración 22)", async () => {
+    // La regla vieja exigía encargado aquí y rechazaba al COMMIT. Desde la
+    // migración 22 esto se permite: no tener encargado nunca bloquea.
+    const menorId = await enTransaccion((cliente) =>
+      insertarPersona(cliente, {
+        nombres: "Menor Solo",
+        fechaNacimiento: nacidoHace(10),
+        cuiDpi: null,
       }),
-    ).rejects.toThrow(/menor de edad y no tiene CUI\/DPI/i);
+    );
+
+    expect(menorId).toBeGreaterThan(0);
 
     const { rows } = await poolOwner.query<{ n: string }>(
-      `SELECT count(*)::text AS n FROM public.persona`,
+      `SELECT count(*)::text AS n FROM public.persona WHERE id = $1`,
+      [menorId],
     );
-    expect(rows[0].n).toBe("0");
+    expect(rows[0].n).toBe("1");
   });
 
   it("acepta menor y encargado creados en la misma transaccion", async () => {
@@ -189,20 +191,23 @@ describe("menor sin DPI: exigencia de encargado", () => {
 });
 
 describe("el limite de la mayoria de edad", () => {
-  it("exige encargado a quien cumple 18 mañana", async () => {
+  it("permite registrar sin encargado a quien cumple 18 mañana", async () => {
+    // Sigue siendo menor de edad hoy, pero la falta de encargado ya no
+    // bloquea a nadie desde la migración 22 — este caso límite tampoco es
+    // una excepción.
     const casiAdulto = new Date();
     casiAdulto.setFullYear(casiAdulto.getFullYear() - 18);
     casiAdulto.setDate(casiAdulto.getDate() + 1);
 
-    await expect(
-      enTransaccion((cliente) =>
-        insertarPersona(cliente, {
-          nombres: "Casi Adulto",
-          fechaNacimiento: casiAdulto.toISOString().slice(0, 10),
-          cuiDpi: null,
-        }),
-      ),
-    ).rejects.toThrow(/menor de edad/i);
+    const id = await enTransaccion((cliente) =>
+      insertarPersona(cliente, {
+        nombres: "Casi Adulto",
+        fechaNacimiento: casiAdulto.toISOString().slice(0, 10),
+        cuiDpi: null,
+      }),
+    );
+
+    expect(id).toBeGreaterThan(0);
   });
 
   it("no exige encargado a quien cumplio 18 ayer", async () => {
@@ -243,25 +248,26 @@ describe("desvinculacion de encargados", () => {
     });
   }
 
-  it("no permite dejar a un menor sin ningun encargado activo", async () => {
+  it("permite dejar a un menor sin ningún encargado activo", async () => {
+    // Desvincular al único encargado de un menor ya no está bloqueado:
+    // es la misma regla de la migración 22 vista desde la desvinculación
+    // en vez de la creación.
     const { menorId, encargadoId } = await crearMenorConEncargado();
 
-    await expect(
-      enTransaccion((cliente) =>
-        cliente.query(
-          `UPDATE public.encargado_menor SET activo = false
-           WHERE menor_id = $1 AND encargado_id = $2`,
-          [menorId, encargadoId],
-        ),
+    await enTransaccion((cliente) =>
+      cliente.query(
+        `UPDATE public.encargado_menor SET activo = false
+         WHERE menor_id = $1 AND encargado_id = $2`,
+        [menorId, encargadoId],
       ),
-    ).rejects.toThrow(/menor de edad y no tiene CUI\/DPI/i);
+    );
 
-    // El vinculo debe seguir activo tras el rollback.
-    const { rows } = await poolOwner.query<{ activo: boolean }>(
-      `SELECT activo FROM public.encargado_menor WHERE menor_id = $1`,
+    const { rows } = await poolOwner.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM public.encargado_menor
+       WHERE menor_id = $1 AND activo = true`,
       [menorId],
     );
-    expect(rows[0].activo).toBe(true);
+    expect(rows[0].n).toBe("0");
   });
 
   it("permite cambiar de encargado dentro de una misma transaccion", async () => {

@@ -25,10 +25,12 @@ import {
 let usuarioId: number;
 let personaId: number;
 let programaId: number;
+let modalidadDonacionId: number;
 
 beforeAll(async () => {
   await resetBaseDePruebas();
   usuarioId = await crearUsuario("solicitudes");
+  modalidadDonacionId = await idCatalogo("modalidad_solicitud", "DONACION");
 
   const prog = await poolOwner.query<{ id: number }>(
     `INSERT INTO public.programa (nombre, created_by) VALUES ('Programa de prueba', $1)
@@ -75,13 +77,13 @@ async function agregarLinea(
   const { rows } = await poolOwner.query<{ id: number; estado: string }>(
     `WITH nueva AS (
        INSERT INTO public.detalle_solicitud_apoyo
-         (solicitud_id, insumo_id, cantidad_requerida, estado_id, created_by)
-       VALUES ($1, $2, $3, 1, $4)
+         (solicitud_id, insumo_id, cantidad_requerida, estado_id, modalidad_solicitud_id, created_by)
+       VALUES ($1, $2, $3, 1, $4, $5)
        RETURNING id, estado_id
      )
      SELECT n.id, e.nombre AS estado
      FROM nueva n JOIN public.estado_solicitud_apoyo e ON e.id = n.estado_id`,
-    [solicitudId, insumo.insumoId, cantidad, usuarioId],
+    [solicitudId, insumo.insumoId, cantidad, modalidadDonacionId, usuarioId],
   );
   return rows[0];
 }
