@@ -134,9 +134,24 @@ const SEMILLAS: Array<{ tabla: string; columnas: string; filas: string }> = [
             ('ENTREGADA'), ('CANCELADA')`,
   },
   {
+    tabla: "modalidad_solicitud",
+    columnas: "nombre",
+    // Faltaba por completo en dmm_test: es un catálogo "de solo lectura"
+    // sobre el que el código se ramifica (ver comentario de la tabla en el
+    // esquema), y detalle_solicitud_apoyo.modalidad_solicitud_id es NOT
+    // NULL, así que sin esto ningún INSERT de línea de solicitud funciona
+    // en la base de pruebas.
+    filas: `('DONACION'), ('PRESTAMO')`,
+  },
+  {
     tabla: "estado_contrato_prestamo",
     columnas: "nombre",
-    filas: `('VIGENTE'), ('DEVUELTO'), ('VENCIDO'), ('EXTENDIDO')`,
+    // NO_DEVUELTO faltaba aquí (migración 26: cierre de préstamos cuyo
+    // equipo no volvió). Sin esta fila, cualquier prueba que llame
+    // idCatalogo("estado_contrato_prestamo", "NO_DEVUELTO") o ejercite
+    // cerrarContratoNoDevuelto() falla al no encontrar el estado, no porque
+    // el código esté mal sino porque la base de pruebas nunca lo sembró.
+    filas: `('VIGENTE'), ('DEVUELTO'), ('VENCIDO'), ('EXTENDIDO'), ('NO_DEVUELTO')`,
   },
   {
     tabla: "tipo_genero",

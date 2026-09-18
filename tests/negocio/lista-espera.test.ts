@@ -34,10 +34,12 @@ import {
 
 let usuarioId: number;
 let programaId: number;
+let modalidadDonacionId: number;
 
 beforeAll(async () => {
   await resetBaseDePruebas();
   usuarioId = await crearUsuario("lista_espera");
+  modalidadDonacionId = await idCatalogo("modalidad_solicitud", "DONACION");
 
   const prog = await poolOwner.query<{ id: number }>(
     `INSERT INTO public.programa (nombre, created_by) VALUES ('Programa espera', $1)
@@ -81,9 +83,9 @@ async function crearSolicitudConLinea(
 
   const linea = await poolOwner.query<{ id: number }>(
     `INSERT INTO public.detalle_solicitud_apoyo
-       (solicitud_id, insumo_id, cantidad_requerida, estado_id, created_by)
-     VALUES ($1, $2, $3, 1, $4) RETURNING id`,
-    [sol.rows[0].id, insumo.insumoId, cantidad, usuarioId],
+       (solicitud_id, insumo_id, cantidad_requerida, estado_id, modalidad_solicitud_id, created_by)
+     VALUES ($1, $2, $3, 1, $4, $5) RETURNING id`,
+    [sol.rows[0].id, insumo.insumoId, cantidad, modalidadDonacionId, usuarioId],
   );
 
   return {
@@ -473,9 +475,9 @@ describe("recalculo de la cabecera en cascada", () => {
     const primera = await crearSolicitudConLinea(insumoA, 5, "Dos insumos");
     const segunda = await poolOwner.query<{ id: number }>(
       `INSERT INTO public.detalle_solicitud_apoyo
-         (solicitud_id, insumo_id, cantidad_requerida, estado_id, created_by)
-       VALUES ($1, $2, 5, 1, $3) RETURNING id`,
-      [primera.solicitudId, insumoB.insumoId, usuarioId],
+         (solicitud_id, insumo_id, cantidad_requerida, estado_id, modalidad_solicitud_id, created_by)
+       VALUES ($1, $2, 5, 1, $3, $4) RETURNING id`,
+      [primera.solicitudId, insumoB.insumoId, modalidadDonacionId, usuarioId],
     );
 
     await entregarLinea(primera.lineaId, primera.personaId, insumoA, 5);
@@ -510,9 +512,9 @@ describe("recalculo de la cabecera en cascada", () => {
     const primera = await crearSolicitudConLinea(insumoA, 3, "Mixta");
     const segunda = await poolOwner.query<{ id: number }>(
       `INSERT INTO public.detalle_solicitud_apoyo
-         (solicitud_id, insumo_id, cantidad_requerida, estado_id, created_by)
-       VALUES ($1, $2, 3, 1, $3) RETURNING id`,
-      [primera.solicitudId, insumoB.insumoId, usuarioId],
+         (solicitud_id, insumo_id, cantidad_requerida, estado_id, modalidad_solicitud_id, created_by)
+       VALUES ($1, $2, 3, 1, $3, $4) RETURNING id`,
+      [primera.solicitudId, insumoB.insumoId, modalidadDonacionId, usuarioId],
     );
 
     await entregarLinea(primera.lineaId, primera.personaId, insumoA, 3);

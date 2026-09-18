@@ -93,11 +93,15 @@ async function registrarEntrega(
 async function despachosPorLote(): Promise<
   Array<{ lote: number; cantidad: number }>
 > {
+  // Desde la migración 19, el reparto por lote vive en detalle_entrega_lote
+  // (un renglón de detalle_entrega puede repartirse entre varios lotes),
+  // no en detalle_entrega directamente.
   const { rows } = await poolOwner.query<{ lote: number; cantidad: number }>(
-    `SELECT detalle_inventario_lote_id AS lote, cantidad_entregada AS cantidad
-     FROM public.detalle_entrega
-     WHERE activo = true
-     ORDER BY id`,
+    `SELECT del.detalle_inventario_lote_id AS lote, del.cantidad_entregada AS cantidad
+     FROM public.detalle_entrega_lote del
+     JOIN public.detalle_entrega de ON de.id = del.detalle_entrega_id
+     WHERE de.activo = true AND del.activo = true
+     ORDER BY del.id`,
   );
   return rows;
 }
@@ -292,9 +296,14 @@ describe("validaciones de sp_registrar_entrega", () => {
     );
     const linea = await poolOwner.query<{ id: number }>(
       `INSERT INTO public.detalle_solicitud_apoyo
-         (solicitud_id, insumo_id, cantidad_requerida, estado_id, created_by)
-       VALUES ($1, $2, 5, 1, $3) RETURNING id`,
-      [sol.rows[0].id, solicitado.insumoId, usuarioId],
+         (solicitud_id, insumo_id, cantidad_requerida, estado_id, modalidad_solicitud_id, created_by)
+       VALUES ($1, $2, 5, 1, $3, $4) RETURNING id`,
+      [
+        sol.rows[0].id,
+        solicitado.insumoId,
+        await idCatalogo("modalidad_solicitud", "DONACION"),
+        usuarioId,
+      ],
     );
 
     await expect(
