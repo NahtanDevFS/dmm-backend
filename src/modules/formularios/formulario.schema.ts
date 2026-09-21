@@ -2,6 +2,7 @@ import { z } from "zod";
 
 /* Administración de formularios */
 
+// Esquema de validación para la creación de un nuevo formulario
 export const crearFormularioSchema = z.object({
   nombre: z
     .string({ error: "El nombre del formulario es requerido" })
@@ -11,6 +12,7 @@ export const crearFormularioSchema = z.object({
   descripcion: z.string().trim().max(2000).nullable().optional(),
 });
 
+// Esquema de validación para editar los datos base de un formulario existente
 export const editarFormularioSchema = z.object({
   nombre: z.string().trim().min(1).max(150).optional(),
   descripcion: z.string().trim().max(2000).nullable().optional(),
@@ -86,6 +88,7 @@ const respuestaSchema = z.object({
   valor_texto: z.string().trim().max(4000).nullable(),
 });
 
+// Esquema para recibir y validar el guardado masivo de respuestas
 export const guardarRespuestasSchema = z.object({
   completado: z.boolean().default(false),
   respuestas: z

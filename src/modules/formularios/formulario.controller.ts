@@ -45,6 +45,7 @@ function idDesdeParam(valor: string | string[] | undefined): number | null {
 
 /* Catálogos reutilizables */
 
+// Recupera todos los catálogos disponibles en el sistema
 export async function listarCatalogosController(
   _req: Request,
   res: Response,
@@ -99,6 +100,7 @@ export async function listarFormulariosController(
   }
 }
 
+// Obtiene la estructura completa de un formulario con todos sus campos
 export async function obtenerFormularioController(
   req: Request,
   res: Response,
@@ -139,6 +141,7 @@ export async function listarOpcionesCampoController(
 
 /* Formularios: administración (DIRECCION) */
 
+// Registra un nuevo formulario validando previamente los datos de entrada
 export async function crearFormularioController(
   req: Request,
   res: Response,
@@ -189,6 +192,7 @@ export async function editarFormularioController(
   }
 }
 
+// Agrega un nuevo campo a un formulario validando el tipo y las opciones
 export async function agregarCampoController(
   req: Request,
   res: Response,

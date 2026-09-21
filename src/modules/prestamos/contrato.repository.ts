@@ -126,6 +126,7 @@ export async function listarContratos(params: {
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
 
+  // Cuenta el total de contratos aplicando los filtros para la paginación
   const totalResult = await pool.query<{ n: number }>(
     `${CTE_RAIZ}
      SELECT count(*)::int AS n
@@ -138,6 +139,7 @@ export async function listarContratos(params: {
     valores,
   );
 
+  // Ejecuta la consulta principal para obtener la página de contratos solicitada
   const result = await pool.query(
     `${CTE_RAIZ}
      SELECT cp.id,
@@ -240,6 +242,7 @@ export async function listarCadenaDeRenovaciones(
 ): Promise<ContratoRow[]> {
   const result = await pool.query<ContratoRow>(
     `WITH RECURSIVE hacia_atras AS (
+       -- Busca hacia atrás para encontrar el contrato raíz
        SELECT ${COLUMNAS} FROM public.contrato_prestamo WHERE id = $1
        UNION
        SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id, cp.fecha_inicio,
@@ -249,6 +252,7 @@ export async function listarCadenaDeRenovaciones(
        JOIN hacia_atras h ON h.contrato_anterior_id = cp.id
      ),
      hacia_adelante AS (
+       -- Busca hacia adelante para hallar todas las renovaciones asociadas
        SELECT ${COLUMNAS} FROM public.contrato_prestamo WHERE id = $1
        UNION
        SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id, cp.fecha_inicio,
@@ -496,6 +500,7 @@ export async function anularContratoPorError(
   motivo: string,
 ): Promise<void> {
   await withUserTransaction(usuarioId, async (client) => {
+    // Verifica el estado actual del contrato y sus datos antes de proceder a anularlo
     const { rows } = await client.query<{
       detalle_entrega_id: number | null;
       fecha_devolucion_real: Date | null;
@@ -595,6 +600,7 @@ export async function marcarContratosVencidos(
 ): Promise<{ actualizados: number; multas: number }> {
   return withUserTransaction(usuarioId, async (client) => {
     const estadoVencido = await idEstado(client, "VENCIDO");
+    // Marca como vencidos los contratos que ya excedieron su fecha pactada
     const result = await client.query(
       `UPDATE public.contrato_prestamo cp
        SET estado_id = $1, updated_by = $2
@@ -612,6 +618,7 @@ export async function marcarContratosVencidos(
     );
 
     /** La multa por atraso se aplica sola: es una consecuencia del calendario, no una decisión de nadie */
+    // Inserta una multa automática para cada contrato recién vencido
     const multas = await client.query(
       `INSERT INTO public.multa_prestamo
          (contrato_prestamo_id, tipo_multa_id, monto, motivo, created_by)

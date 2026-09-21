@@ -19,6 +19,7 @@ import rolRoutes from "../modules/usuarios/rol.routes.js";
 import catalogosLecturaRoutes from "../modules/catalogos-lectura/catalogos-lectura.routes.js";
 import archivosRoutes from "../lib/storage/archivos.routes.js";
 
+// Enrutador principal que agrupa todas las subrutas de la aplicación
 const router = Router();
 
 router.use("/auth", authRoutes);
@@ -42,7 +43,7 @@ router.use("/auditoria", auditoriaRoutes);
 router.use("/usuarios", usuarioRoutes);
 router.use("/roles", rolRoutes);
 
-// Aquí se irán agregando las rutas de los demás módulos
+// Espacio reservado para montar futuros módulos a medida que se implementen
 // router.use('/beneficiarios', beneficiariosRoutes);
 
 export default router;
