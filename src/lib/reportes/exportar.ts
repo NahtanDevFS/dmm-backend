@@ -2,26 +2,16 @@ import type { Response } from "express";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 
-/**
- * Exportación de reportes a Excel y PDF (RF-REP-05). Resuelve la decisión
- * pendiente #2 del documento maestro.
- *
- * Elección: **exceljs** para Excel y **pdfkit** para PDF. Se descartó
- * puppeteer/headless Chrome pese a que permitiría maquetar con HTML: arrastra
- * un navegador completo (~300 MB) y necesita librerías del sistema, lo cual es
- * desproporcionado para un VPS modesto y para reportes que son tablas. pdfkit
- * genera el PDF en proceso, sin binarios externos, a cambio de maquetar la
- * tabla a mano — que es lo que hace `escribirTablaPdf`.
- */
+/** Exportación de reportes a Excel y PDF (RF-REP-05) */
 
 export type FormatoReporte = "json" | "xlsx" | "pdf";
 
 export interface ColumnaReporte {
-  /** Clave en las filas devueltas por la consulta. */
+  /** Clave en las filas devueltas por la consulta */
   campo: string;
-  /** Encabezado legible para el usuario. */
+  /** Encabezado legible para el usuario */
   titulo: string;
-  /** Ancho relativo; se usa tanto en Excel como en el PDF. */
+  /** Ancho relativo; se usa tanto en Excel como en el PDF */
   ancho?: number;
 }
 
@@ -37,8 +27,7 @@ function formatearValor(valor: unknown): string {
 function nombreArchivo(titulo: string, extension: string): string {
   const base = titulo
     .toLowerCase()
-    // NFD separa la letra de su acento y el filtro siguiente descarta el acento,
-    // así "población" queda "poblacion" y no "poblaci-n".
+// NFD separa la letra de su acento y el filtro siguiente descarta el acento,así "población" queda "poblacion" y no "poblaci-n"
     .normalize("NFD")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
@@ -56,7 +45,7 @@ export async function responderExcel(
   libro.creator = "Sistema DMM Usumatlán";
   libro.created = new Date();
 
-  // El nombre de una hoja de Excel no admite : \ / ? * [ ] y va hasta 31 chars.
+// El nombre de una hoja de Excel no admite : \ / ? * [ ] y va hasta 31 chars
   const hoja = libro.addWorksheet(titulo.replace(/[:\\/?*[\]]/g, "").slice(0, 31));
 
   hoja.columns = columnas.map((c) => ({
@@ -81,9 +70,7 @@ export async function responderExcel(
     to: { row: 1, column: columnas.length },
   };
 
-  // Los DATE de Postgres llegan como Date de JS y Excel los mostraría con hora y
-  // zona horaria. Se detecta la columna por su primer valor y se le fija formato
-  // de fecha, para que la Directora vea "2026-08-08" y no un timestamp.
+// Los DATE de Postgres llegan como Date de JS y Excel los mostraría con hora yzona horaria
   columnas.forEach((c, indice) => {
     const primerValor = filas.find((f) => f[c.campo] != null)?.[c.campo];
     if (primerValor instanceof Date) {
@@ -104,11 +91,7 @@ export async function responderExcel(
   res.end();
 }
 
-/**
- * Los NUMERIC de Postgres llegan como string para no perder precisión. En Excel
- * conviene que sean números para poder sumarlos, así que se reconvierten cuando
- * la cadena es numérica.
- */
+/** Los NUMERIC de Postgres llegan como string para no perder precisión */
 function normalizarParaExcel(valor: unknown): unknown {
   if (valor === null || valor === undefined) return "";
   if (typeof valor === "string" && valor !== "" && !Number.isNaN(Number(valor))) {
@@ -125,7 +108,7 @@ export function responderPdf(
   filas: Fila[],
   subtitulo?: string,
 ): void {
-  // landscape: los reportes son anchos y en vertical no caben las columnas.
+// Landscape: los reportes son anchos y en vertical no caben las columnas
   const doc = new PDFDocument({ size: "LETTER", layout: "landscape", margin: 36 });
 
   res.setHeader("Content-Type", "application/pdf");
@@ -165,11 +148,7 @@ export function responderPdf(
   doc.end();
 }
 
-/**
- * Tabla paginada. pdfkit no tiene tablas, así que se calculan los anchos
- * proporcionalmente al espacio disponible y se repite el encabezado en cada
- * página nueva.
- */
+/** Tabla paginada */
 function escribirTablaPdf(
   doc: PDFKit.PDFDocument,
   columnas: ColumnaReporte[],
@@ -216,7 +195,7 @@ function escribirTablaPdf(
       doc.fontSize(7.5).font("Helvetica");
     }
 
-    // Franja alterna para que la fila se siga con la vista en tablas anchas.
+// Franja alterna para que la fila se siga con la vista en tablas anchas
     if (indice % 2 === 1) {
       doc
         .rect(izquierda, y, disponible, alturaFila)

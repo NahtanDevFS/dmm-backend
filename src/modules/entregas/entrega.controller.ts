@@ -64,7 +64,7 @@ async function resolverEntrega(
   return { ok: true, id };
 }
 
-// ─────────────────────────────────────────────── lecturas
+//lecturas
 
 export async function listarController(
   req: Request,
@@ -117,11 +117,7 @@ export async function obtenerController(
   }
 }
 
-/**
- * Vista previa del orden FEFO/FIFO: de qué lotes va a salir el despacho. Solo
- * lee la vista, sin reordenar ni decidir nada: la selección real la hace
- * sp_registrar_entrega recorriendo la misma vista.
- */
+/** Vista previa del orden FEFO/FIFO: de qué lotes va a salir el despacho */
 export async function lotesFifoController(
   req: Request,
   res: Response,
@@ -149,7 +145,7 @@ export async function lotesFifoController(
   }
 }
 
-// ─────────────────────────────────────────────── registro
+//registro
 
 export async function registrarController(
   req: Request,
@@ -188,8 +184,7 @@ export async function registrarController(
       }
     }
 
-    // Cada insumo se valida por separado. Si uno solo falla no se registra
-    // nada: la entrega es un acto único y no tiene sentido guardar la mitad.
+// Cada insumo se valida por separado
     const nombresInsumo: string[] = [];
 
     for (const [indice, renglon] of parsed.data.insumos.entries()) {
@@ -203,11 +198,7 @@ export async function registrarController(
       }
       nombresInsumo.push(insumo.nombre);
 
-      // Reglas que la base de datos NO cubre para el despacho contra una línea
-      // de solicitud. sp_agregar_insumo_entrega valida existencia y coherencia
-      // del insumo, y el CHECK de detalle_solicitud_apoyo impide exceder lo
-      // requerido, pero nada impide entregar contra una línea cancelada o una
-      // solicitud que todavía espera aprobación.
+// Reglas que la base de datos NO cubre para el despacho contra una líneade solicitud
       if (renglon.detalle_solicitud_id == null) continue;
 
       const linea = await buscarLineaParaEntrega(renglon.detalle_solicitud_id);
@@ -232,12 +223,7 @@ export async function registrarController(
             "no se puede entregar, la línea de solicitud ya fue entregada por completo.",
         });
       }
-      /*
-        Los formularios se verificaban solo al aprobar, así que una línea que
-        no requiere aprobación podía despacharse sin haber llenado ninguno: el
-        equipo salía y el estudio socioeconómico nunca se hacía. Se comprueba
-        también aquí, que es el último momento en que todavía se puede evitar.
-      */
+      /** Los formularios se verificaban solo al aprobar, así que una línea que no requiere aprobación podía despacharse sin haber llenado ninguno: el equipo salía y el estudio socioeconómico nunca se hacía */
       if (await tieneFormulariosPendientes(renglon.detalle_solicitud_id)) {
         return res.status(409).json({
           message:
@@ -306,8 +292,7 @@ export async function anularController(
       });
     }
 
-    // Que la entrega exista y esté activa lo valida sp_desactivar_entrega; su
-    // excepción la traduce el errorHandler a 409.
+// Que la entrega exista y esté activa lo valida sp_desactivar_entrega; suexcepción la traduce el errorHandler a 409
     await anularEntrega(req.usuario!.id, ruta.id, parsed.data.motivo);
 
     const [entrega, detalles] = await Promise.all([
@@ -320,15 +305,7 @@ export async function anularController(
   }
 }
 
-/**
- * Anula un solo insumo de la entrega. La entrega sigue vigente con el resto
- * de sus renglones; el trigger del renglón devuelve su stock y recalcula la
- * línea de solicitud si la tenía.
- *
- * El procedimiento rechaza los casos que no se pueden deshacer así —un
- * préstamo vigente, o uno ya devuelto cuyo stock volvió al inventario— y el
- * errorHandler traduce esa excepción a 409.
- */
+/** Anula un solo insumo de la entrega */
 export async function anularDetalleController(
   req: Request,
   res: Response,
@@ -372,7 +349,7 @@ export async function anularDetalleController(
   }
 }
 
-// ─────────────────────────────────────────────── evidencias
+//evidencias
 
 export async function listarEvidenciasController(
   req: Request,

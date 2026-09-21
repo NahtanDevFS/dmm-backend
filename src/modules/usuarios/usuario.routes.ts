@@ -16,12 +16,10 @@ import {
   cambiarPasswordPropiaController,
 } from "./usuario.controller.js";
 
-// Gestionar usuarios es exclusivo de ADMINISTRADOR (matriz de roles): incluye
-// crear cuentas y cambiar el rol de otros, que es control de acceso puro.
+// Gestionar usuarios es exclusivo de ADMINISTRADOR (matriz de roles): incluyecrear cuentas y cambiar el rol de otros, que es control de acceso puro
 const router = Router();
 
-// Cambiar la propia contraseña no es administrar usuarios: lo hace cualquiera
-// con sesión, y va antes de "/:id" para que "mi-password" no se lea como un id.
+// Cambiar la propia contraseña no es administrar usuarios: lo hace cualquieracon sesión, y va antes de "/:id" para que "mi-password" no se lea como un id
 router.patch(
   "/mi-password",
   requireAuth,

@@ -75,7 +75,7 @@ export async function crearEvidenciaContrato(
   });
 }
 
-/** Borrado lógico: el archivo queda en disco, igual que el resto de adjuntos. */
+/** Borrado lógico: el archivo queda en disco, igual que el resto de adjuntos */
 export async function eliminarEvidenciaContrato(
   usuarioId: number,
   id: number,

@@ -1,21 +1,9 @@
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
 
-/**
- * Formularios configurables (migración 15): qué formulario exige una
- * categoría de insumo, de qué campos se compone cada uno, y las respuestas
- * capturadas para una línea de solicitud concreta.
- *
- * Todo aquí usa SQL crudo, no Prisma: estas tablas se crearon directo en la
- * base y prisma/schema.prisma todavía no las conoce (hace falta `prisma db
- * pull` en un entorno con acceso real a la base antes de poder usarlas desde
- * el cliente generado). El patrón —pool para lecturas, withUserTransaction
- * para escrituras que necesitan auditoría— es el mismo que ya usan
- * receta-medica.repository.ts y entrega.repository.ts para sus tramos de
- * SQL directo.
- */
+/** Formularios configurables (migración 15): qué formulario exige unacategoría de insumo, de qué campos se compone cada uno, y las respuestascapturadas para una línea de solicitud concreta */
 
-/* ═══════════════════════════ Tipos ═══════════════════════════ */
+/* Tipos */
 
 export interface CatalogoRow {
   id: number;
@@ -65,7 +53,7 @@ export interface FormularioCampoOpcionRow {
   activo: boolean;
 }
 
-/** Un formulario con sus campos ya resueltos, listo para que el frontend lo renderice. */
+/** Un formulario con sus campos ya resueltos, listo para que el frontend lo renderice */
 export interface FormularioConCampos extends FormularioRow {
   campos: FormularioCampoRow[];
 }
@@ -75,7 +63,7 @@ export interface CategoriaInsumoFormularioRow {
   categoria_insumo_id: number;
   formulario_id: number;
   orden: number;
-  /** null = aplica a cualquier modalidad. */
+  /** Null = aplica a cualquier modalidad */
   modalidad_solicitud_id: number | null;
   activo: boolean;
 }
@@ -97,7 +85,7 @@ export interface RespuestaRow {
   activo: boolean;
 }
 
-/* ═══════════════════════════ Catálogos reutilizables (lectura) ═══════════════════════════ */
+/* Catálogos reutilizables (lectura) */
 
 export async function listarCatalogos(): Promise<CatalogoRow[]> {
   const { rows } = await pool.query<CatalogoRow>(
@@ -128,7 +116,7 @@ export async function listarTiposDatoCampo(): Promise<TipoDatoCampoRow[]> {
   return rows;
 }
 
-/* ═══════════════════════════ Formularios (lectura) ═══════════════════════════ */
+/* Formularios (lectura) */
 
 export async function listarFormularios(): Promise<FormularioRow[]> {
   const { rows } = await pool.query<FormularioRow>(
@@ -148,11 +136,7 @@ export async function buscarFormularioPorId(
   return rows[0] ?? null;
 }
 
-/**
- * Un formulario con sus campos, listo para el frontend: cada campo ya trae
- * el nombre de su tipo de dato resuelto (no solo el id), para que el
- * cliente sepa qué control renderizar sin una consulta aparte.
- */
+/** Un formulario con sus campos, listo para el frontend: cada campo ya traeel nombre de su tipo de dato resuelto (no solo el id), para que elcliente sepa qué control renderizar sin una consulta aparte */
 export async function buscarFormularioConCampos(
   id: number,
   incluirInactivos = false,
@@ -160,13 +144,7 @@ export async function buscarFormularioConCampos(
   const formulario = await buscarFormularioPorId(id);
   if (!formulario) return null;
 
-  /*
-    `incluirInactivos` es solo para la pantalla de administración. Al LLENAR
-    un formulario los campos desactivados no deben aparecer —esa es la razón
-    de desactivarlos— pero al DEFINIRLO hay que verlos: siguen ocupando su
-    número de orden, que la base exige único por formulario, y sin verlos no
-    hay forma de reactivar uno.
-  */
+  /** `incluirInactivos` es solo para la pantalla de administración */
   const { rows: campos } = await pool.query<FormularioCampoRow>(
     `SELECT fc.id, fc.formulario_id, fc.etiqueta, fc.tipo_dato_id,
             tdc.nombre AS tipo_dato_nombre, fc.catalogo_id, fc.obligatorio,
@@ -195,11 +173,7 @@ export async function listarOpcionesDeCampo(
   return rows;
 }
 
-/**
- * Formularios que exige la categoría de un insumo. Es lo que consulta el
- * flujo de solicitudes para saber si una línea nueva necesita formularios
- * antes de poder aprobarse.
- */
+/** Formularios que exige la categoría de un insumo */
 export async function listarFormulariosDeCategoria(
   categoriaInsumoId: number,
 ): Promise<FormularioRow[]> {
@@ -214,19 +188,7 @@ export async function listarFormulariosDeCategoria(
   return rows;
 }
 
-/**
- * Formularios que exigirá un insumo, resuelto a partir de su categoría y de
- * la modalidad bajo la que se piensa entregar.
- *
- * Existe para poder avisarlo al CREAR la solicitud, cuando la persona
- * todavía está en la ventanilla. Antes solo se podía preguntar por una línea
- * ya existente, así que los tres formularios de una silla de ruedas se
- * descubrían al intentar aprobar — con la persona ya en su casa y el estudio
- * socioeconómico imposible de llenar.
- *
- * Sin `modalidadSolicitudId` devuelve todos los formularios de la categoría,
- * que es lo que corresponde cuando aún no se ha decidido la figura.
- */
+/** Formularios que exigirá un insumo, resuelto a partir de su categoría y dela modalidad bajo la que se piensa entregar */
 export async function listarFormulariosDeInsumo(
   insumoId: number,
   modalidadSolicitudId?: number,
@@ -246,12 +208,7 @@ export async function listarFormulariosDeInsumo(
   return rows;
 }
 
-/**
- * Las asignaciones de una categoría tal como se administran: con la
- * modalidad a la que aplica cada una y el nombre del formulario. Es lo que
- * necesita la pantalla de Catálogos, distinto de `listarFormulariosDeCategoria`,
- * que solo devuelve los formularios resueltos.
- */
+/** Las asignaciones de una categoría tal como se administran: con lamodalidad a la que aplica cada una y el nombre del formulario */
 export interface AsignacionCategoriaRow {
   id: number;
   categoria_insumo_id: number;
@@ -284,7 +241,7 @@ export async function listarAsignaciones(
   return rows;
 }
 
-/* ═══════════════════════════ Formularios (administración — DIRECCION) ═══════════════════════════ */
+/* Formularios (administración — DIRECCION) */
 
 export async function crearFormulario(
   usuarioId: number,
@@ -327,12 +284,7 @@ export async function editarFormulario(
   });
 }
 
-/**
- * Agrega un campo a un formulario. catalogo_id y con_opciones_propias son
- * mutuamente excluyentes (lo exige fn_validar_catalogo_campo_formulario /
- * fn_validar_opciones_campo_formulario en la base); este repository no
- * duplica esa validación, deja que el trigger la haga cumplir.
- */
+/** Agrega un campo a un formulario */
 export async function agregarCampoFormulario(
   usuarioId: number,
   datos: {
@@ -379,23 +331,7 @@ export async function agregarCampoFormulario(
   });
 }
 
-/**
- * Intercambia un campo con su vecino, para reordenar el formulario.
- *
- * El orden importa al llenar —los campos se leen de arriba abajo— pero al
- * definirlos nadie sabe de antemano que uno va en la posición 14. Por eso se
- * mueve de a un lugar en vez de pedir el número: escribirlo a mano choca
- * contra la unicidad de (formulario, orden) en cuanto se equivoca.
- *
- * El intercambio pasa por un valor temporal negativo porque esa restricción
- * es inmediata, no diferida: poner el orden de A en B antes de liberar el de
- * A rompería a mitad de camino. Los negativos no existen en uso normal, así
- * que no chocan con nada.
- *
- * El intercambio ocurre solo entre campos activos. Los desactivados no
- * aparecen al llenar el formulario, así que su posición no significa nada:
- * conservan su número —que la base exige único— pero no participan.
- */
+/** Intercambia un campo con su vecino, para reordenar el formulario */
 export async function moverCampoFormulario(
   usuarioId: number,
   campoId: number,
@@ -417,21 +353,14 @@ export async function moverCampoFormulario(
     }
     const actual = actuales[0];
 
-    // Un campo desactivado no se muestra al llenar el formulario, así que su
-    // posición no significa nada. Conserva su número —que la base exige
-    // único— pero no participa del reordenamiento.
+// Un campo desactivado no se muestra al llenar el formulario, así que suposición no significa nada
     if (!actual.activo) {
       throw new Error(
         "Un campo desactivado no se puede reordenar: no aparece al llenar el formulario. Reactívelo primero.",
       );
     }
 
-    // El vecino inmediato en la dirección pedida. Si no hay, el campo ya está
-    // en un extremo y no hay nada que hacer.
-    // Solo entre activos: si el intercambio contara los desactivados, mover
-    // un campo se cambiaría con uno invisible y parecería que no pasó nada.
-    // Que un inactivo quede con un número intermedio es inofensivo, porque
-    // nadie lo lee.
+// El vecino inmediato en la dirección pedida
     const { rows: vecinos } = await client.query<{ id: number; orden: number }>(
       direccion === "arriba"
         ? `SELECT id, orden FROM public.formulario_campo
@@ -517,7 +446,7 @@ export async function asignarFormularioACategoria(
     categoriaInsumoId: number;
     formularioId: number;
     orden?: number;
-    /** null = el formulario aplica a cualquier modalidad. */
+    /** Null = el formulario aplica a cualquier modalidad */
     modalidadSolicitudId?: number | null;
   },
 ): Promise<CategoriaInsumoFormularioRow> {
@@ -560,13 +489,9 @@ export async function quitarFormularioDeCategoria(
   });
 }
 
-/* ═══════════════════════════ Respuestas de una línea de solicitud ═══════════════════════════ */
+/* Respuestas de una línea de solicitud */
 
-/**
- * Los formularios que le corresponden a una línea, con su estado de avance
- * (completado o no) si ya se instanció detalle_solicitud_formulario para
- * ella, o null si todavía no se ha empezado a llenar.
- */
+/** Los formularios que le corresponden a una línea, con su estado de avance(completado o no) si ya se instanció detalle_solicitud_formulario paraella, o null si todavía no se ha empezado a llenar */
 export interface FormularioDeLineaRow extends FormularioRow {
   detalle_solicitud_formulario_id: number | null;
   completado: boolean | null;
@@ -587,16 +512,7 @@ export async function listarFormulariosDeLinea(
   return rows;
 }
 
-/**
- * true si la línea tiene al menos un formulario exigido que todavía no está
- * completo (o ni siquiera se ha empezado). Es lo que bloquea la aprobación
- * de la solicitud (RF-PRO, ver solicitud.controller).
- *
- * Consulta la misma vista que el listado, no el listado mismo: así la
- * pantalla que muestra los formularios y la validación que decide si falta
- * alguno no pueden desalinearse. Un préstamo no arrastra los formularios
- * marcados como propios de donación.
- */
+/** True si la línea tiene al menos un formulario exigido que todavía no estácompleto (o ni siquiera se ha empezado) */
 export async function tieneFormulariosPendientes(
   detalleSolicitudId: number,
 ): Promise<boolean> {
@@ -636,13 +552,7 @@ export async function listarRespuestas(
   return rows;
 }
 
-/**
- * Guarda (crea o sustituye) todas las respuestas de un formulario para una
- * línea, en una sola transacción: crea detalle_solicitud_formulario si no
- * existe, borra las respuestas previas de esos campos y escribe las nuevas.
- * Sustituir en vez de UPDATE campo por campo es más simple y evita dejar
- * respuestas huérfanas de una fila de grupo_repetible que el usuario quitó.
- */
+/** Guarda (crea o sustituye) todas las respuestas de un formulario para unalínea, en una sola transacción: crea detalle_solicitud_formulario si noexiste, borra las respuestas previas de esos campos y escribe las nuevas */
 export async function guardarRespuestasFormulario(
   usuarioId: number,
   datos: {

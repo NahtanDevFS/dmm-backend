@@ -19,6 +19,7 @@ import rolRoutes from "../modules/usuarios/rol.routes.js";
 import catalogosLecturaRoutes from "../modules/catalogos-lectura/catalogos-lectura.routes.js";
 import archivosRoutes from "../lib/storage/archivos.routes.js";
 
+// Enrutador principal que agrupa todas las subrutas de la aplicación
 const router = Router();
 
 router.use("/auth", authRoutes);
@@ -26,8 +27,7 @@ router.use("/", catalogosRoutes);
 router.use("/", geografiaRoutes);
 router.use("/", catalogosLecturaRoutes);
 router.use("/", archivosRoutes);
-// /categorias-insumo ya no se monta aquí: desde el esquema v3 es un catálogo
-// simple y lo sirve catalogosRoutes por su entrada en catalogo-simple.config.
+// /categorias-insumo ya no se monta aquí: desde el esquema es un catálogo simple y lo sirve catalogosRoutes por su entrada en catalogo-simple
 router.use("/comunidades", comunidadRoutes);
 router.use("/personas", personaRoutes);
 router.use("/insumos", insumoRoutes);
@@ -43,7 +43,7 @@ router.use("/auditoria", auditoriaRoutes);
 router.use("/usuarios", usuarioRoutes);
 router.use("/roles", rolRoutes);
 
-// Aquí se irán agregando las rutas de los demás módulos
+// Espacio reservado para montar futuros módulos a medida que se implementen
 // router.use('/beneficiarios', beneficiariosRoutes);
 
 export default router;

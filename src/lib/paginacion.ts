@@ -1,30 +1,12 @@
 import { z } from "zod";
 
-/**
- * Paginación uniforme para los listados de negocio.
- *
- * Regla del proyecto, aplicada a propósito y no por omisión:
- *
- * - **Listados de negocio paginados**: personas, insumos, recepciones,
- *   solicitudes, entregas, contratos, usuarios y auditoría. Crecen sin techo con
- *   el uso, así que devuelven siempre el mismo sobre con `total` y `hay_mas`.
- * - **Catálogos de selección sin paginar**: discapacidades, programas, unidades
- *   de medida, marcas, categorías, tipos de… y la geografía. Están acotados por
- *   naturaleza (decenas de filas) y su único consumidor es un `<select>` del
- *   frontend, que necesita la lista completa. Paginarlos solo agregaría fricción.
- *
- * Los reportes tampoco se paginan: se consumen enteros para exportarlos a Excel
- * o PDF, y ya traen su propio sobre con los filtros aplicados.
- */
+/** Paginación uniforme para los listados de negocio */
 
-/** Tope por página. Evita que un `limite=999999` se convierta en un volcado. */
+/** Tope por página */
 export const LIMITE_MAXIMO = 200;
 export const LIMITE_POR_DEFECTO = 50;
 
-/**
- * Fragmento para mezclar en el schema de query de cada listado:
- * `z.object({ ...misFiltros, ...paginacionShape })`.
- */
+/** Fragmento para mezclar en el schema de query de cada listado:`z */
 export const paginacionShape = {
   limite: z.coerce
     .number()
@@ -54,10 +36,7 @@ export interface RespuestaPaginada<T> {
   datos: T[];
 }
 
-/**
- * Arma el sobre. `hay_mas` se calcula aquí para que el frontend no tenga que
- * repetir la aritmética en cada pantalla.
- */
+/** Arma el sobre */
 export function paginar<T>(
   filas: T[],
   total: number,
@@ -72,11 +51,7 @@ export function paginar<T>(
   };
 }
 
-/**
- * Cláusula LIMIT/OFFSET para consultas con `pg`, a partir del número de
- * parámetros ya usados. Devuelve también los valores a concatenar, para que el
- * repositorio no tenga que llevar la cuenta de los `$n` a mano.
- */
+/** Cláusula LIMIT/OFFSET para consultas con `pg`, a partir del número deparámetros ya usados */
 export function limitOffset(
   paginacion: Paginacion,
   parametrosUsados: number,

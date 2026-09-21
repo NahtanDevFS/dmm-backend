@@ -1,7 +1,7 @@
 import { pool } from "../../db/pool.js";
 
 export interface AuditoriaRow {
-  /** bigserial: pg lo devuelve como string, así que no rompe JSON.stringify. */
+  /* Bigserial: pg lo devuelve como string, así que no rompe JSON */
   id: string;
   tabla_afectada: string;
   registro_id: number;
@@ -13,16 +13,7 @@ export interface AuditoriaRow {
   valores_nuevos: Record<string, unknown> | null;
 }
 
-/**
- * `fn_auditoria` guarda la fila completa con `to_jsonb(NEW)`, sin distinguir
- * columnas sensibles. Eso deja el hash de contraseña de `usuario` y el hash del
- * token de sesión dentro de `auditoria_log`, así que este endpoint tiene que
- * redactarlos antes de responder: son material de credenciales y no deben salir
- * del backend, ni siquiera hacia un ADMINISTRADOR.
- *
- * Sanear la propia función de auditoría en la base de datos sería mejor, pero es
- * un cambio de esquema; mientras tanto la API no los expone.
- */
+/** `fn_auditoria` guarda la fila completa con `to_jsonb(NEW)`, sin distinguircolumnas sensibles */
 const CAMPOS_REDACTADOS: Record<string, string[]> = {
   usuario: ["password_hash"],
   sesion: ["token_hash"],
@@ -71,8 +62,7 @@ export async function listarAuditoria(params: {
   if (params.accion) agregar((n) => `t.nombre = ${n}`, params.accion);
   if (params.desde)
     agregar((n) => `a.fecha_hora >= ${n}::timestamp`, params.desde);
-  // `hasta` se interpreta como el día completo: una fecha sin hora significaría
-  // medianoche y dejaría fuera todo lo del propio día.
+// `hasta` se interpreta como el día completo: una fecha sin hora significaríamedianoche y dejaría fuera todo lo del propio día
   if (params.hasta)
     agregar(
       (n) => `a.fecha_hora < (${n}::date + INTERVAL '1 day')`,
@@ -112,7 +102,7 @@ export async function listarAuditoria(params: {
   };
 }
 
-/** Tablas que tienen registros de auditoría, para poblar el filtro. */
+/** Tablas que tienen registros de auditoría, para poblar el filtro */
 export async function listarTablasAuditadas(): Promise<
   { tabla: string; registros: number }[]
 > {
@@ -125,7 +115,7 @@ export async function listarTablasAuditadas(): Promise<
   return result.rows;
 }
 
-/** Historial completo de un registro concreto, del más antiguo al más reciente. */
+/** Historial completo de un registro concreto, del más antiguo al más reciente */
 export async function historialDeRegistro(
   tabla: string,
   registroId: number,

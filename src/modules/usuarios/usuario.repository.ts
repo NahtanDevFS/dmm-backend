@@ -2,22 +2,15 @@ import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
 
-/**
- * `password_hash` no aparece en ninguna de estas consultas a propósito: nunca
- * debe salir del backend, ni siquiera hacia un ADMINISTRADOR.
- */
+/** `password_hash` no aparece en ninguna de estas consultas a propósito: nuncadebe salir del backend, ni siquiera hacia un ADMINISTRADOR */
 export interface UsuarioRow {
   id: number;
-  /** Identificador de acceso: ASCII, sin tildes ni espacios. */
+  /** Identificador de acceso: ASCII, sin tildes ni espacios */
   username: string;
-  /** El nombre de la persona, como se escribe. Nulo en cuentas anteriores. */
+  /** El nombre de la persona, como se escribe */
   nombre_completo: string | null;
   rol_id: number;
-  /**
-   * Programa del que esta usuaria es encargada. Preselecciona el campo al
-   * crear una solicitud; no restringe qué puede registrar, porque cuando una
-   * falta otra la cubre. Nulo para Directora, Alcalde y Administrador.
-   */
+  /** Programa del que esta usuaria es encargada */
   programa_id: number | null;
   ultimo_login: Date | null;
   activo: boolean;
@@ -86,7 +79,7 @@ export async function buscarUsuarioPorId(
   return result.rows[0] ?? null;
 }
 
-/** Solo para verificar la contraseña actual; el hash no sale de este módulo. */
+/** Solo para verificar la contraseña actual; el hash no sale de este módulo */
 export async function buscarHashDeUsuario(id: number): Promise<string | null> {
   const result = await pool.query<{ password_hash: string }>(
     `SELECT password_hash FROM public.usuario WHERE id = $1`,
@@ -116,12 +109,7 @@ export async function existeRolActivo(id: number): Promise<boolean> {
   return rol?.activo === true;
 }
 
-/**
- * `rol` es de solo lectura por diseño: los permisos están codificados en el
- * backend (requireRole en cada ruta), así que un rol creado desde una pantalla
- * de catálogos no tendría ningún permiso real. Esta lista existe únicamente
- * para poblar el select al crear o editar un usuario.
- */
+/** `rol` es de solo lectura por diseño: los permisos están codificados en elbackend (requireRole en cada ruta), así que un rol creado desde una pantallade catálogos no tendría ningún permiso real */
 export async function listarRoles(): Promise<RolRow[]> {
   return prisma.rol.findMany({
     where: { activo: true },
@@ -130,7 +118,7 @@ export async function listarRoles(): Promise<RolRow[]> {
   });
 }
 
-/** Cuántos ADMINISTRADOR activos quedan, sin contar al usuario indicado. */
+/** Cuántos ADMINISTRADOR activos quedan, sin contar al usuario indicado */
 export async function contarOtrosAdministradoresActivos(
   excluirId: number,
 ): Promise<number> {
@@ -217,12 +205,7 @@ export async function editarUsuario(
   });
 }
 
-/**
- * Cambiar la contraseña revoca las demás sesiones del usuario: si la contraseña
- * se cambió porque estaba comprometida, dejar sesiones abiertas con la anterior
- * anularía el propósito. Se conserva la sesión indicada en `sesionVigenteId`
- * (la del propio usuario que hace el cambio) para no cerrarle la suya.
- */
+/** Cambiar la contraseña revoca las demás sesiones del usuario: si la contraseñase cambió porque estaba comprometida, dejar sesiones abiertas con la anterioranularía el propósito */
 export async function actualizarPassword(
   usuarioId: number,
   idAfectado: number,
@@ -250,11 +233,7 @@ export async function actualizarPassword(
   });
 }
 
-/**
- * Desactivar revoca todas las sesiones del usuario. requireAuth ya rechaza a un
- * usuario inactivo, pero dejar las filas sin revocar daría una lectura falsa de
- * "sesiones activas" en auditoría.
- */
+/** Desactivar revoca todas las sesiones del usuario */
 export async function cambiarEstadoUsuario(
   usuarioId: number,
   id: number,

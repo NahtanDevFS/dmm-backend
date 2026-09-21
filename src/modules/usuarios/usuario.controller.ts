@@ -22,7 +22,7 @@ import {
   cambiarEstadoUsuario,
 } from "./usuario.repository.js";
 
-/** Mismo coste que usa el resto del sistema para los hashes existentes. */
+/** Mismo coste que usa el resto del sistema para los hashes existentes */
 const BCRYPT_ROUNDS = 12;
 
 async function resolverUsuario(
@@ -41,7 +41,7 @@ async function resolverUsuario(
   return { ok: true, id };
 }
 
-// ─────────────────────────────────────────────── roles
+// roles
 
 export async function listarRolesController(
   _req: Request,
@@ -55,7 +55,7 @@ export async function listarRolesController(
   }
 }
 
-// ─────────────────────────────────────────────── usuarios
+// usuarios
 
 export async function listarController(
   req: Request,
@@ -181,8 +181,7 @@ export async function editarController(
           .json({ message: "El rol indicado no existe o no está activo" });
       }
 
-      // Cambiarse el rol a uno mismo es la forma más fácil de perder el acceso
-      // de administración sin querer.
+// Cambiarse el rol a uno mismo es la forma más fácil de perder el accesode administración sin querer
       if (ruta.id === req.usuario!.id) {
         return res.status(409).json({
           message:
@@ -190,8 +189,7 @@ export async function editarController(
         });
       }
 
-      // Y si es el último administrador, cambiarle el rol dejaría el sistema sin
-      // nadie que pueda gestionar usuarios.
+// Y si es el último administrador, cambiarle el rol dejaría el sistema sinnadie que pueda gestionar usuarios
       if (
         req.usuario!.rol === "ADMINISTRADOR" &&
         (await contarOtrosAdministradoresActivos(ruta.id)) === 0
@@ -269,9 +267,9 @@ export async function reactivarController(
   }
 }
 
-// ─────────────────────────────────────────────── contraseñas
+// contraseñas
 
-/** Cambio de la contraseña propia: cualquier usuario autenticado. */
+/** Cambio de la contraseña propia: cualquier usuario autenticado */
 export async function cambiarPasswordPropiaController(
   req: Request,
   res: Response,
@@ -306,7 +304,7 @@ export async function cambiarPasswordPropiaController(
       parsed.data.password_nueva,
       BCRYPT_ROUNDS,
     );
-    // Se conserva la sesión desde la que se hace el cambio y se revocan las demás.
+// Se conserva la sesión desde la que se hace el cambio y se revocan las demás
     await actualizarPassword(
       req.usuario!.id,
       req.usuario!.id,
@@ -323,7 +321,7 @@ export async function cambiarPasswordPropiaController(
   }
 }
 
-/** Reseteo por administrador: no requiere la contraseña actual. */
+/** Reseteo por administrador: no requiere la contraseña actual */
 export async function resetearPasswordController(
   req: Request,
   res: Response,
@@ -347,7 +345,7 @@ export async function resetearPasswordController(
       parsed.data.password_nueva,
       BCRYPT_ROUNDS,
     );
-    // Sin sesión a conservar: al usuario afectado se le cierran todas.
+// Sin sesión a conservar: al usuario afectado se le cierran todas
     await actualizarPassword(req.usuario!.id, ruta.id, passwordHash);
 
     return res.status(200).json({

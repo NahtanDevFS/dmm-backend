@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-/* ═══════════════════════════ Administración de formularios ═══════════════════════════ */
+/* Administración de formularios */
 
+// Esquema de validación para la creación de un nuevo formulario
 export const crearFormularioSchema = z.object({
   nombre: z
     .string({ error: "El nombre del formulario es requerido" })
@@ -11,19 +12,14 @@ export const crearFormularioSchema = z.object({
   descripcion: z.string().trim().max(2000).nullable().optional(),
 });
 
+// Esquema de validación para editar los datos base de un formulario existente
 export const editarFormularioSchema = z.object({
   nombre: z.string().trim().min(1).max(150).optional(),
   descripcion: z.string().trim().max(2000).nullable().optional(),
   activo: z.boolean().optional(),
 });
 
-/**
- * Un campo usa exactamente un mecanismo de opciones: catalogo_id (catálogo
- * reutilizable) u opciones_propias (lista de etiquetas propia de este
- * campo). El refine replica en el borde lo que los triggers de la base ya
- * exigen, para devolver un 400 claro antes de tocarla en vez de dejar que
- * la base rechace con un mensaje pensado para otro contexto.
- */
+/** Un campo usa exactamente un mecanismo de opciones: catalogo_id (catálogoreutilizable) u opciones_propias (lista de etiquetas propia de estecampo) */
 export const agregarCampoFormularioSchema = z
   .object({
     etiqueta: z
@@ -36,7 +32,7 @@ export const agregarCampoFormularioSchema = z
       .int()
       .positive(),
     catalogo_id: z.number().int().positive().nullable().optional(),
-    // Solo se usa cuando catalogo_id es null: las opciones propias de este campo.
+// Solo se usa cuando catalogo_id es null: las opciones propias de este campo
     opciones_propias: z.array(z.string().trim().min(1).max(150)).optional(),
     obligatorio: z.boolean().default(false),
     orden: z.number().int().nonnegative(),
@@ -69,34 +65,30 @@ export const asignarFormularioCategoriaSchema = z.object({
   categoria_insumo_id: z.number().int().positive(),
   formulario_id: z.number().int().positive(),
   orden: z.number().int().min(0).optional(),
-  /**
-   * A qué modalidad aplica el formulario. Ausente o null significa que
-   * aplica a todas, que es el comportamiento de siempre y el valor con el
-   * que quedaron las asignaciones anteriores a la migración 20.
-   */
+  /** A qué modalidad aplica el formulario */
   modalidad_solicitud_id: z.number().int().positive().nullable().optional(),
 });
 
-/** Filtros del listado de asignaciones para la pantalla de Catálogos. */
+/** Filtros del listado de asignaciones para la pantalla de Catálogos */
 export const listarAsignacionesQuerySchema = z.object({
   categoriaId: z.coerce.number().int().positive().optional(),
 });
 
-/** Para anticipar los formularios de un insumo antes de crear la línea. */
+/** Para anticipar los formularios de un insumo antes de crear la línea */
 export const formulariosDeInsumoQuerySchema = z.object({
   modalidadId: z.coerce.number().int().positive().optional(),
 });
 
-/* ═══════════════════════════ Respuestas de una línea de solicitud ═══════════════════════════ */
+/* Respuestas de una línea de solicitud */
 
 const respuestaSchema = z.object({
   formulario_campo_id: z.number().int().positive(),
-  // Filas de un grupo_repetible (grupo familiar, egresos): 1 para la
-  // primera repetición, 2 para la segunda, etc. Campos sueltos siempre 1.
+// Filas de un grupo_repetible (grupo familiar, egresos): 1 para laprimera repetición, 2 para la segunda, etc
   numero_fila: z.number().int().positive().default(1),
   valor_texto: z.string().trim().max(4000).nullable(),
 });
 
+// Esquema para recibir y validar el guardado masivo de respuestas
 export const guardarRespuestasSchema = z.object({
   completado: z.boolean().default(false),
   respuestas: z

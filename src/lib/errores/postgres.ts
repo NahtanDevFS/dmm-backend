@@ -1,27 +1,11 @@
-/**
- * Interceptor genérico de errores de Postgres (RNF-USA-02: mensajes no
- * técnicos). Resuelve la decisión pendiente #5 del documento maestro.
- *
- * La lógica de negocio del sistema vive en la base de datos (triggers, checks y
- * stored procedures) y el backend no la reimplementa. La contrapartida es que
- * las violaciones de esas reglas llegan como errores de Postgres, y sin traducir
- * terminan en un 500 con un mensaje ilegible del tipo
- * "el nuevo registro para la relación «x» viola la restricción «check» «y»".
- *
- * Este módulo convierte esos errores en respuestas HTTP con mensaje útil. Lo usa
- * el errorHandler para toda la aplicación, y los módulos que tienen contexto
- * extra (nombres en vez de ids) pueden invocarlo directamente pasándolo.
- */
+/** Interceptor genérico de errores de Postgres (RNF-USA-02: mensajes notécnicos) */
 
 export interface ErrorTraducido {
   status: number;
   message: string;
 }
 
-/**
- * Datos que el controller ya conoce y sirven para reemplazar los ids crudos que
- * los mensajes de los triggers interpolan ("El insumo 8 exige...").
- */
+/** Datos que el controller ya conoce y sirven para reemplazar los ids crudos quelos mensajes de los triggers interpolan ("El insumo 8 exige */
 export interface ContextoError {
   insumoNombre?: string;
   presentacionNombre?: string;
@@ -33,11 +17,7 @@ interface ErrorPostgres {
   message?: string;
 }
 
-/**
- * Mensajes por nombre de constraint. Cubre CHECK y UNIQUE de todas las tablas
- * con reglas que el usuario puede violar desde la interfaz. Agregar una entrada
- * aquí es más barato que replicar la validación en TypeScript.
- */
+/** Mensajes por nombre de constraint */
 const MENSAJES_POR_CONSTRAINT: Record<string, ErrorTraducido> = {
   // ── inventario / recepción de donaciones
   recepcion_donacion_lote_fecha_valida_check: {
@@ -151,12 +131,7 @@ const MENSAJES_POR_CONSTRAINT: Record<string, ErrorTraducido> = {
   },
 };
 
-/**
- * Excepciones de trigger (P0001) que en realidad son datos mal enviados y no un
- * conflicto con el estado actual. El resto de los P0001 se responde 409: son
- * reglas de negocio que dependen del estado de la base (sin stock, línea ya
- * entregada, lote ya inactivo), no del formato de la petición.
- */
+/** Excepciones de trigger (P0001) que en realidad son datos mal enviados y no unconflicto con el estado actual */
 const PATRONES_400: RegExp[] = [
   /no corresponde al insumo declarado/i,
   /no pertenece al insumo/i,
@@ -178,8 +153,7 @@ function humanizarMensajeTrigger(
     `El insumo "${contexto.insumoNombre}"`,
   );
 
-  // La incoherencia presentación↔insumo llega con los dos ids numéricos, que no
-  // le dicen nada al usuario: se reescribe por completo.
+// La incoherencia presentación↔insumo llega con los dos ids numéricos, que nole dicen nada al usuario: se reescribe por completo
   if (/no corresponde al insumo declarado/.test(mensaje)) {
     salida = contexto.presentacionNombre
       ? `La presentación "${contexto.presentacionNombre}" no pertenece al insumo "${contexto.insumoNombre}". Elija una presentación registrada para ese insumo.`
@@ -222,9 +196,7 @@ export function traducirErrorPostgres(
     return { status: 400, message: "Falta un dato obligatorio." };
   }
 
-  // raise_exception: las excepciones de los triggers y stored procedures ya
-  // están redactadas en español para el usuario final, así que se devuelven tal
-  // cual (con los ids sustituidos por nombres si hay contexto).
+// Raise_exception: las excepciones de los triggers y stored procedures yaestán redactadas en español para el usuario final, así que se devuelven talcual (con los ids sustituidos por nombres si hay contexto)
   if (err.code === "P0001" && err.message) {
     const message = humanizarMensajeTrigger(err.message, contexto);
     const esDatoInvalido = PATRONES_400.some((re) => re.test(err.message!));

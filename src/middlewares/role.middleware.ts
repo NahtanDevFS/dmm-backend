@@ -1,11 +1,7 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 import type { Rol } from "../config/roles.js";
 
-/*
-Los middlewares que produce este archivo se marcan con una propiedad para
-que la guarda de arranque (src/lib/rutas-protegidas.ts) pueda reconocerlos
-al recorrer el arbol de rutas.
-*/
+/** Los middlewares que produce este archivo se marcan con una propiedad para que la guarda de arranque (src/lib/rutas-protegidas */
 export interface HandlerConPermisos extends RequestHandler {
   /* Roles que este requireRole deja pasar*/
   rolesPermitidos?: readonly string[];
@@ -13,10 +9,7 @@ export interface HandlerConPermisos extends RequestHandler {
   motivoSinRol?: string;
 }
 
-/*
-Acepta tanto `requireRole(...ROLES)` como `requireRole(ROLES)`, para que los
-conjuntos de src/config/roles.ts se pasen sin desestructurar
-*/
+/** Acepta tanto `requireRole( */
 export function requireRole(
   ...roles: Array<Rol | string | readonly (Rol | string)[]>
 ): HandlerConPermisos {
@@ -51,14 +44,7 @@ export function requireRole(
   return handler;
 }
 
-/*
-Declara que una ruta es deliberadamente accesible sin restriccion de rol, y
-obliga a escribir el motivo en el mismo sitio donde se declara la ruta.
-Es la unica forma de que la guarda de arranque acepte una ruta sin
-requireRole. No hace nada en tiempo de ejecucion: existe para que la
-decision quede visible en la revision del codigo y no en una lista aparte
-que nadie vuelve a mirar.
- */
+/** Declara que una ruta es deliberadamente accesible sin restriccion de rol, y obliga a escribir el motivo en el mismo sitio donde se declara la ruta */
 export function permitirSinRol(motivo: string): HandlerConPermisos {
   if (!motivo?.trim()) {
     throw new Error("permitirSinRol exige un motivo escrito.");

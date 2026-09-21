@@ -8,17 +8,10 @@ import {
   historialController,
 } from "./auditoria.controller.js";
 
-/**
- * Solo lectura: los triggers de la base de datos son los únicos que escriben en
- * auditoria_log, y no hay ni debe haber endpoint para modificarla o borrarla —
- * una bitácora que el sistema puede alterar no sirve como bitácora.
- *
- * Reservado a ADMINISTRADOR: el log contiene el contenido completo de cada fila
- * modificada de todo el sistema.
- */
+/** Solo lectura: los triggers de la base de datos son los únicos que escriben enauditoria_log, y no hay ni debe haber endpoint para modificarla o borrarla —una bitácora que el sistema puede alterar no sirve como bitácora */
 const router = Router();
 
-// Antes de las rutas con parámetros para que "tablas" no se lea como una tabla.
+// Antes de las rutas con parámetros para que "tablas" no se lea como una tabla
 router.get("/tablas", requireAuth, requireRole(ADMINISTRACION), tablasController);
 
 router.get("/", requireAuth, requireRole(ADMINISTRACION), listarController);

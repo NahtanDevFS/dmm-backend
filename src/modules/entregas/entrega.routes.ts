@@ -15,11 +15,10 @@ import {
   eliminarEvidenciaController,
 } from "./entrega.controller.js";
 
-// Despachar es la operación diaria del personal de la DMM.
-// Anular una entrega revierte inventario: queda con dirección.
+// Despachar es la operación diaria del personal de la DMM
 const router = Router();
 
-// Antes de "/:id" para que "lotes-fifo" no se lea como un id.
+// Antes de "/:id" para que "lotes-fifo" no se lea como un id
 router.get(
   "/lotes-fifo",
   requireAuth,
@@ -31,7 +30,7 @@ router.get("/", requireAuth, requireRole(OPERACION), listarController);
 router.get("/:id", requireAuth, requireRole(OPERACION), obtenerController);
 router.post("/", requireAuth, requireRole(OPERACION), registrarController);
 
-// POST y no PATCH: no edita la entrega, la anula y devuelve el stock a los lotes.
+// POST y no PATCH: no edita la entrega, la anula y devuelve el stock a los lotes
 router.post(
   "/:id/anular",
   requireAuth,

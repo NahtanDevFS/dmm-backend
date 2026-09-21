@@ -61,7 +61,7 @@ export async function crearDocumentoRecepcion(
   });
 }
 
-/** Borrado lógico: el archivo permanece en disco, igual que documento_persona. */
+/** Borrado lógico: el archivo permanece en disco, igual que documento_persona */
 export async function eliminarDocumentoRecepcion(
   usuarioId: number,
   id: number,

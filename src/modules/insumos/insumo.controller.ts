@@ -250,12 +250,7 @@ export async function reactivarController(
   }
 }
 
-/**
- * Stock de todos los insumos en una sola respuesta. Sin paginación a
- * propósito: quien la consume necesita el catálogo completo para armar un
- * desplegable, y partirlo en páginas obligaría a que la pantalla supiera
- * pedir más justo cuando el usuario está escribiendo.
- */
+/** Stock de todos los insumos en una sola respuesta */
 export async function listarStockController(
   req: Request,
   res: Response,
@@ -281,10 +276,7 @@ export async function listarStockController(
   }
 }
 
-/**
- * Unidades identificables disponibles de un insumo, para poder elegir cuál se
- * entrega. Vacío si el insumo no lleva serie.
- */
+/** Unidades identificables disponibles de un insumo, para poder elegir cuál seentrega */
 export async function listarUnidadesController(
   req: Request,
   res: Response,
@@ -322,9 +314,7 @@ export async function obtenerStockController(
       obtenerStockPorPresentacion(id),
     ]);
 
-    // Insumo desactivado: no está en v_stock_insumo, pero puede conservar
-    // existencias. Se reporta el total y se deja explícito que no hay
-    // información de caducidad disponible.
+// Insumo desactivado: no está en v_stock_insumo, pero puede conservarexistencias
     if (!stock) {
       return res.status(200).json({
         insumo_id: id,

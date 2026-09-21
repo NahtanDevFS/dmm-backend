@@ -47,7 +47,7 @@ function recorrer(
 
     const sub = capa?.handle;
 
-    // Middleware suelto montado con .use(): protege todo lo que cuelga de él.
+// Middleware suelto montado con
     if (
       typeof sub === "function" &&
       (sub as any).rolesPermitidos !== undefined
@@ -62,14 +62,7 @@ function recorrer(
   }
 }
 
-/**
- * Recorre el router de `/api` y lanza si alguna ruta no declara sus roles.
- *
- * Si el recorrido en sí falla (por ejemplo porque una versión futura de Express
- * cambia la forma del stack), se registra el problema y se deja arrancar: una
- * guarda rota no debe impedir un despliegue, pero tampoco debe pasar
- * desapercibida.
- */
+/** Recorre el router de `/api` y lanza si alguna ruta no declara sus roles */
 export function verificarRutasProtegidas(routerApi: any): RutaEncontrada[] {
   const rutas: RutaEncontrada[] = [];
 

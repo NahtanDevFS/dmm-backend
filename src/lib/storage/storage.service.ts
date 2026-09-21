@@ -19,7 +19,7 @@ export type CategoriaArchivo =
   | "documentos-recepcion"
   | "contratos-prestamo"
   | "evidencia-contrato-prestamo"
-  // Legajo escaneado de una solicitud: formularios firmados, constancias.
+// Legajo escaneado de una solicitud: formularios firmados, constancias
   | "documentos-solicitud";
 
 export interface ArchivoGuardado {

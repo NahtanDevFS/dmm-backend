@@ -25,11 +25,10 @@ import {
   eliminarRecetaController,
 } from "./solicitud.controller.js";
 
-// Registrar y dar seguimiento a solicitudes es operación diaria.
-// Aprobar o rechazar es decisión de dirección (RF-PRO).
+// Registrar y dar seguimiento a solicitudes es operación diaria
 const router = Router();
 
-// Antes de "/:id" para que "lista-espera" no se interprete como un id.
+// Antes de "/:id" para que "lista-espera" no se interprete como un id
 router.get(
   "/lista-espera",
   requireAuth,
@@ -86,11 +85,7 @@ router.post(
   cancelarLineaController,
 );
 
-// Legajo escaneado de la solicitud: formularios firmados, recetas,
-// constancias. Reemplaza en la práctica a /recetas, que nació cuando la
-// medicina pasaba por solicitud.
-// El expediente completo en PDF. GET y no POST: no cambia nada, solo arma un
-// documento con lo que ya está registrado.
+// Legajo escaneado de la solicitud: formularios firmados, recetas,constancias
 router.get(
   "/:id/expediente.pdf",
   requireAuth,

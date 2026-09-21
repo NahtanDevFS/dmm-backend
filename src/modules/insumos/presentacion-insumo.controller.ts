@@ -19,11 +19,7 @@ import {
   cambiarEstadoPresentacion,
 } from "./presentacion-insumo.repository.js";
 
-/**
- * Resuelve y valida los ids de la ruta anidada. Devuelve el mensaje de error y
- * su status cuando algo no cuadra, para que cada controller no repita las
- * mismas cuatro comprobaciones.
- */
+/** Resuelve y valida los ids de la ruta anidada */
 async function resolverRuta(
   req: Request,
   conPresentacion: boolean,
@@ -122,8 +118,7 @@ export async function crearController(
       });
     }
 
-    // La primera presentación de un insumo se marca default aunque no se pida:
-    // así ningún insumo queda sin presentación por defecto.
+// La primera presentación de un insumo se marca default aunque no se pida:así ningún insumo queda sin presentación por defecto
     const esPrimera = (await contarPresentacionesActivas(ruta.insumoId)) === 0;
     const es_default = esPrimera ? true : (parsed.data.es_default ?? false);
 
@@ -181,9 +176,7 @@ export async function editarController(
       });
     }
 
-    // Quitar el flag directamente dejaría al insumo sin default. La forma
-    // correcta de cambiarlo es marcar otra presentación como default, lo que
-    // desmarca esta automáticamente.
+// Quitar el flag directamente dejaría al insumo sin default
     if (parsed.data.es_default === false && existente.es_default) {
       return res.status(409).json({
         message:
@@ -229,8 +222,7 @@ export async function desactivarController(
       });
     }
 
-    // Si es la default y quedan otras activas, el insumo se quedaría sin
-    // presentación por defecto.
+// Si es la default y quedan otras activas, el insumo se quedaría sinpresentación por defecto
     if (
       existente.es_default &&
       (await contarPresentacionesActivas(ruta.insumoId)) > 1

@@ -11,10 +11,7 @@ export interface ContratoRow {
   fecha_devolucion_pactada: Date;
   fecha_devolucion_real: Date | null;
   estado_id: number;
-  /**
-   * Por qué se anuló el contrato o por qué se dio el equipo por no devuelto.
-   * Vacío mientras el préstamo sigue su curso normal.
-   */
+  /** Por qué se anuló el contrato o por qué se dio el equipo por no devuelto */
   motivo_cierre: string | null;
   activo: boolean;
 }
@@ -31,7 +28,7 @@ async function idEstado(client: PoolClient, nombre: string): Promise<number> {
   return result.rows[0].id;
 }
 
-// ─────────────────────────────────────────────── lecturas
+// lecturas
 
 export async function buscarContratoPorId(
   id: number,
@@ -47,7 +44,7 @@ export async function buscarPersonaEInsumoDeContrato(id: number): Promise<{
   persona_id: number;
   persona_nombre_completo: string;
   insumo_nombre: string;
-  /** Serie de la unidad prestada, cuando el equipo la lleva. */
+  /** Serie de la unidad prestada, cuando el equipo la lleva */
   numero_serie: string | null;
   detalle_inventario_lote_id: number | null;
   cantidad_entregada: number;
@@ -95,13 +92,7 @@ export async function buscarPersonaEInsumoDeContrato(id: number): Promise<{
   return result.rows[0] ?? null;
 }
 
-/**
- * Listado con el beneficiario y el insumo resueltos. Ninguno de los dos está en
- * `contrato_prestamo`: se alcanzan por detalle_entrega -> entrega -> persona y
- * detalle_entrega -> insumo. En una renovación esas
- * columnas son NULL, así que se sube por la cadena con un CTE recursivo hasta el
- * contrato raíz, que es el que sí tiene la entrega física.
- */
+/** Listado con el beneficiario y el insumo resueltos */
 const CTE_RAIZ = `
   WITH RECURSIVE cadena AS (
     SELECT id, id AS raiz_id, detalle_entrega_id, contrato_anterior_id
@@ -135,6 +126,7 @@ export async function listarContratos(params: {
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
 
+  // Cuenta el total de contratos aplicando los filtros para la paginación
   const totalResult = await pool.query<{ n: number }>(
     `${CTE_RAIZ}
      SELECT count(*)::int AS n
@@ -147,6 +139,7 @@ export async function listarContratos(params: {
     valores,
   );
 
+  // Ejecuta la consulta principal para obtener la página de contratos solicitada
   const result = await pool.query(
     `${CTE_RAIZ}
      SELECT cp.id,
@@ -192,11 +185,7 @@ export async function listarContratos(params: {
   return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
-/**
- * Contratos con la devolución atrasada: la fecha pactada ya pasó y no hay
- * devolución real registrada. Se calcula por fechas y no por `estado_id`,
- * porque nada en la base de datos mueve el estado a VENCIDO por sí solo.
- */
+/** Contratos con la devolución atrasada: la fecha pactada ya pasó y no haydevolución real registrada */
 export async function listarContratosVencidos(): Promise<
   Record<string, unknown>[]
 > {
@@ -247,12 +236,13 @@ export async function listarContratosVencidos(): Promise<
   return result.rows;
 }
 
-/** Cadena completa de renovaciones a la que pertenece un contrato. */
+/** Cadena completa de renovaciones a la que pertenece un contrato */
 export async function listarCadenaDeRenovaciones(
   id: number,
 ): Promise<ContratoRow[]> {
   const result = await pool.query<ContratoRow>(
     `WITH RECURSIVE hacia_atras AS (
+       -- Busca hacia atrás para encontrar el contrato raíz
        SELECT ${COLUMNAS} FROM public.contrato_prestamo WHERE id = $1
        UNION
        SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id, cp.fecha_inicio,
@@ -262,6 +252,7 @@ export async function listarCadenaDeRenovaciones(
        JOIN hacia_atras h ON h.contrato_anterior_id = cp.id
      ),
      hacia_adelante AS (
+       -- Busca hacia adelante para hallar todas las renovaciones asociadas
        SELECT ${COLUMNAS} FROM public.contrato_prestamo WHERE id = $1
        UNION
        SELECT cp.id, cp.detalle_entrega_id, cp.contrato_anterior_id, cp.fecha_inicio,
@@ -279,11 +270,7 @@ export async function listarCadenaDeRenovaciones(
   return result.rows;
 }
 
-/**
- * Contrato raíz de la cadena: el único que tiene `detalle_entrega_id` y por
- * tanto el que sp_registrar_devolucion_prestamo puede procesar, porque el SP
- * hace JOIN con detalle_entrega para devolver las unidades al lote.
- */
+/** Contrato raíz de la cadena: el único que tiene `detalle_entrega_id` y portanto el que sp_registrar_devolucion_prestamo puede procesar, porque el SPhace JOIN con detalle_entrega para devolver las unidades al lote */
 export async function buscarContratoRaiz(
   id: number,
 ): Promise<ContratoRow | null> {
@@ -303,7 +290,7 @@ export async function buscarContratoRaiz(
   return result.rows[0] ?? null;
 }
 
-/** El UNIQUE de detalle_entrega_id permite un solo contrato por renglón entregado. */
+/** El UNIQUE de detalle_entrega_id permite un solo contrato por renglón entregado */
 export async function existeContratoDeDetalleEntrega(
   detalleEntregaId: number,
 ): Promise<boolean> {
@@ -343,24 +330,9 @@ export async function nombreEstado(id: number): Promise<string | null> {
   return estado?.nombre ?? null;
 }
 
-// ─────────────────────────────────────────────── escrituras
+// escrituras
 
-/**
- * Registra un préstamo completo en un solo acto: la entrega del equipo y su
- * contrato.
- *
- * El préstamo no pasa por solicitud. No hay estudio previo que hacer —eso es
- * para decidir una donación— sino un acuerdo hablado que se formaliza con un
- * contrato firmado. Obligarlo a recorrer solicitud, aprobación, despacho y
- * después contrato era hacerle dar cuatro vueltas a un trámite de un paso.
- *
- * Es posible porque desde la migración 19 una entrega puede existir sin línea
- * de solicitud. La entrega se registra igual y aparece en Entregas, porque el
- * equipo salió de verdad y el inventario se descontó por FEFO como siempre.
- *
- * Todo en una transacción: si el contrato falla, la entrega no queda hecha y
- * el stock no se descuenta.
- */
+/** Registra un préstamo completo en un solo acto: la entrega del equipo y sucontrato */
 export async function crearPrestamoDirecto(
   usuarioId: number,
   datos: {
@@ -368,11 +340,7 @@ export async function crearPrestamoDirecto(
     insumo_id: number;
     fecha_devolucion_pactada: string;
     observaciones?: string | null;
-    /**
-     * Qué unidad concreta se lleva la persona, cuando el equipo tiene número
-     * de serie. Sin esto, FEFO elegiría una y el contrato diría una serie
-     * distinta de la silla que salió por la puerta.
-     */
+    /** Qué unidad concreta se lleva la persona, cuando el equipo tiene númerode serie */
     detalle_inventario_lote_id?: number | null;
   },
 ): Promise<{ contrato: ContratoRow; entrega_id: number }> {
@@ -383,8 +351,7 @@ export async function crearPrestamoDirecto(
     );
     const entregaId = cabecera.rows[0].id;
 
-    // Una unidad por contrato: un contrato ampara un equipo concreto, con su
-    // fecha de devolución y sus multas. Dos sillas son dos préstamos.
+// Una unidad por contrato: un contrato ampara un equipo concreto, con sufecha de devolución y sus multas
     await client.query(
       `CALL public.sp_agregar_insumo_entrega($1, $2, 1, NULL, $3)`,
       [entregaId, datos.insumo_id, datos.detalle_inventario_lote_id ?? null],
@@ -455,12 +422,7 @@ export async function crearContrato(
   });
 }
 
-/**
- * Renovación: contrato nuevo encadenado al anterior. No lleva
- * `detalle_entrega_id` (el CHECK contrato_origen_check lo prohíbe: el equipo
- * físico ya salió con la entrega del contrato raíz) y el anterior queda como
- * EXTENDIDO para que deje de aparecer entre los reclamables.
- */
+/** Renovación: contrato nuevo encadenado al anterior */
 export async function renovarContrato(
   usuarioId: number,
   contratoAnteriorId: number,
@@ -506,13 +468,7 @@ export async function editarContrato(
   });
 }
 
-/**
- * Devolución. sp_registrar_devolucion_prestamo devuelve las unidades al lote de
- * origen y marca DEVUELTO, pero solo acepta el contrato que tiene la entrega
- * física. Si la devolución se registra sobre una renovación, se invoca el SP
- * sobre el contrato raíz (donde está el stock) y además se marca la renovación
- * como DEVUELTA, para que la cadena quede coherente.
- */
+/** Devolución */
 export async function registrarDevolucion(
   usuarioId: number,
   contratoId: number,
@@ -536,34 +492,15 @@ export async function registrarDevolucion(
   });
 }
 
-/**
- * Pone en VENCIDO los contratos cuya fecha pactada ya pasó y siguen sin
- * devolución. No hay job ni trigger que lo haga: se expone como acción
- * explícita para que la DMM la corra (o un cron del servidor la invoque).
- */
-/**
- * Anula un préstamo registrado por error: deshace el contrato Y la entrega,
- * devolviendo el equipo al inventario.
- *
- * Es para el caso "me equivoqué al capturar", no para "la persona no
- * devolvió". La diferencia importa: aquí el equipo nunca salió de verdad —o
- * volvió enseguida— así que el stock tiene que restituirse. Darlo por perdido
- * es otra cosa y usa cerrarContratoNoDevuelto.
- *
- * Solo se permite si el préstamo no tuvo movimientos: sin devolución
- * registrada y sin multas pagadas. Si los tuvo, no fue un error de captura y
- * borrarlo perdería el rastro de algo que sí ocurrió.
- *
- * El orden importa: primero se desactiva el contrato y después el renglón,
- * porque sp_desactivar_detalle_entrega rechaza anular un renglón que tenga un
- * contrato vigente.
- */
+/** Pone en VENCIDO los contratos cuya fecha pactada ya pasó y siguen sindevolución */
+/** Anula un préstamo registrado por error: deshace el contrato Y la entrega,devolviendo el equipo al inventario */
 export async function anularContratoPorError(
   usuarioId: number,
   contratoId: number,
   motivo: string,
 ): Promise<void> {
   await withUserTransaction(usuarioId, async (client) => {
+    // Verifica el estado actual del contrato y sus datos antes de proceder a anularlo
     const { rows } = await client.query<{
       detalle_entrega_id: number | null;
       fecha_devolucion_real: Date | null;
@@ -606,8 +543,7 @@ export async function anularContratoPorError(
       [contratoId, motivo, usuarioId],
     );
 
-    // Las multas del contrato anulado dejan de tener sentido: se cobraban por
-    // un préstamo que no existió.
+// Las multas del contrato anulado dejan de tener sentido: se cobraban porun préstamo que no existió
     await client.query(
       `UPDATE public.multa_prestamo
        SET activo = false, updated_by = $2
@@ -628,16 +564,7 @@ export async function anularContratoPorError(
   });
 }
 
-/**
- * Cierra un préstamo cuyo equipo no volvió.
- *
- * El contrato se da por terminado pero el stock NO se restituye, porque el
- * equipo efectivamente no está. Anularlo como si nunca hubiera existido diría
- * que hay una silla disponible que nadie tiene.
- *
- * El contrato queda activo: es un hecho ocurrido que hay que poder consultar,
- * con sus multas si las tuvo.
- */
+/** Cierra un préstamo cuyo equipo no volvió */
 export async function cerrarContratoNoDevuelto(
   usuarioId: number,
   contratoId: number,
@@ -665,7 +592,7 @@ export async function cerrarContratoNoDevuelto(
   });
 }
 
-/** Nombre del tipo de multa que se aplica sola al vencer el plazo. */
+/** Nombre del tipo de multa que se aplica sola al vencer el plazo */
 const MULTA_POR_ATRASO = "ATRASO";
 
 export async function marcarContratosVencidos(
@@ -673,6 +600,7 @@ export async function marcarContratosVencidos(
 ): Promise<{ actualizados: number; multas: number }> {
   return withUserTransaction(usuarioId, async (client) => {
     const estadoVencido = await idEstado(client, "VENCIDO");
+    // Marca como vencidos los contratos que ya excedieron su fecha pactada
     const result = await client.query(
       `UPDATE public.contrato_prestamo cp
        SET estado_id = $1, updated_by = $2
@@ -689,18 +617,8 @@ export async function marcarContratosVencidos(
       [estadoVencido, usuarioId],
     );
 
-    /*
-      La multa por atraso se aplica sola: es una consecuencia del calendario,
-      no una decisión de nadie. Las de daño sí se registran a mano, porque
-      alguien tiene que ver el equipo y valorarlo.
-
-      El monto sale de `monto_sugerido` del catálogo y no de una constante en
-      el código: cuando cambie la tarifa se edita desde Catálogos, sin tocar
-      esto.
-
-      Se aplica UNA sola vez por contrato —el NOT EXISTS— para que volver a
-      pulsar el botón no acumule multas por el mismo atraso.
-    */
+    /** La multa por atraso se aplica sola: es una consecuencia del calendario, no una decisión de nadie */
+    // Inserta una multa automática para cada contrato recién vencido
     const multas = await client.query(
       `INSERT INTO public.multa_prestamo
          (contrato_prestamo_id, tipo_multa_id, monto, motivo, created_by)

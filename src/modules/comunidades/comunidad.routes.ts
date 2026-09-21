@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 
-// Alimenta el filtro `comunidadId` de los reportes, por eso ALCALDE la lee.
+// Alimenta el filtro `comunidadId` de los reportes, por eso ALCALDE la lee
 router.get(
   "/",
   requireAuth,

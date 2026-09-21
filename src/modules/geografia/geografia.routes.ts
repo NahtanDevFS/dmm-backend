@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 
-// Jerarquizan `comunidad`, que es filtro de reportes: ALCALDE las necesita.
+// Jerarquizan `comunidad`, que es filtro de reportes: ALCALDE las necesita
 router.get(
   "/departamentos",
   requireAuth,

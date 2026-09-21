@@ -18,6 +18,6 @@ export const listarAuditoriaQuerySchema = z.object({
     .string()
     .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha 'hasta' inválida")
     .optional(),
-  // Mismo sobre y mismos topes que el resto de los listados del sistema.
+// Mismo sobre y mismos topes que el resto de los listados del sistema
   ...paginacionShape,
 });

@@ -30,13 +30,10 @@ export interface LoginResult {
   usuario: {
     id: number;
     username: string;
-    /** Nombre de la persona, para saludar y firmar con él en vez del alias. */
+    /** Nombre de la persona, para saludar y firmar con él en vez del alias */
     nombre_completo: string | null;
     rol: string;
-    /**
-     * Programa del que es encargada, para preseleccionarlo al crear una
-     * solicitud. Nulo para quienes no llevan uno propio.
-     */
+    /** Programa del que es encargada, para preseleccionarlo al crear unasolicitud */
     programa_id: number | null;
     programa_nombre: string | null;
   };
