@@ -17,8 +17,7 @@ import {
 
 const router = Router();
 
-// Ninguno de estos catalogos alimenta un filtro de reportes, asi que ALCALDE no
-// los necesita: todos van con OPERACION.
+// Ninguno de estos catalogos alimenta un filtro de reportes, asi que ALCALDE nolos necesita: todos van con OPERACION
 
 router.get(
   "/estados-civiles",

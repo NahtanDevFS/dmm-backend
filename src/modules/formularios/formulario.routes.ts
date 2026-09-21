@@ -44,9 +44,7 @@ router.get(
   listarTiposDatoController,
 );
 
-// Los dos GET que faltaban. Sin ellos, la configuración de formularios solo
-// se podía leer entrando a la base, y la exigencia de un insumo solo se
-// descubría cuando la aprobación ya estaba bloqueada.
+// Los dos GET que faltaban
 router.get(
   "/categorias-formulario",
   requireAuth,
@@ -97,8 +95,7 @@ router.post(
   requireRole(DIRECCION),
   agregarCampoController,
 );
-// Reordenar: mueve un campo un lugar arriba o abajo. Va aparte del PATCH
-// porque no edita un valor del campo, lo intercambia con otro registro.
+// Reordenar: mueve un campo un lugar arriba o abajo
 router.post(
   "/campos/:campoId/mover",
   requireAuth,

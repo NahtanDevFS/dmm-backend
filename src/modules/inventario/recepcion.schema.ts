@@ -8,7 +8,7 @@ const fechaSchema = z
 export const crearRecepcionSchema = z.object({
   institucion_id: z.number().int().positive("institucion_id es requerido"),
   codigo_lote: z.string().trim().max(50).nullable().optional(),
-  // La BD tiene CHECK fecha_recepcion <= CURRENT_DATE y default CURRENT_DATE.
+// La BD tiene CHECK fecha_recepcion <= CURRENT_DATE y default CURRENT_DATE
   fecha_recepcion: fechaSchema.optional(),
   observaciones_generales: z.string().trim().max(2000).nullable().optional(),
 });
@@ -24,18 +24,8 @@ export const listarRecepcionesQuerySchema = z.object({
   ...paginacionShape,
 });
 
-/**
- * Renglón de inventario. No incluye `cantidad_inicial` ni
- * `cantidad_disponible`: las calcula el trigger trg_calcular_recepcion_lote
- * como FLOOR(cantidad_recepcion_original * unidades_por_presentacion_lote).
- */
-/**
- * Ingreso de unidades identificables: una fila por número de serie.
- *
- * No pide cantidad —la da la lista de series— ni unidades por presentación:
- * cada unidad es una. Pedir la cantidad además de las series permitiría que
- * se contradijeran.
- */
+/** Renglón de inventario */
+/** Ingreso de unidades identificables: una fila por número de serie */
 export const crearUnidadesSchema = z.object({
   insumo_id: z.number().int().positive("insumo_id es requerido"),
   presentacion_recepcion_id: z

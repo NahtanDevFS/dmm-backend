@@ -1,17 +1,7 @@
 import prisma from "../../db/prisma.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
 
-/**
- * El legajo escaneado de una solicitud: los formularios firmados en papel,
- * recetas, constancias, cualquier respaldo.
- *
- * Va por SOLICITUD y no por cada formulario llenado porque en la práctica los
- * tres formularios de una silla de ruedas son un solo expediente, y quien los
- * busca los busca juntos. `formulario_id` permite decir a cuál corresponde
- * cada escaneo, pero es opcional: hay documentos del legajo que no son
- * ninguno de los formularios, y forzar una clasificación que no existe
- * empuja a elegir cualquiera con tal de poder guardar.
- */
+/** El legajo escaneado de una solicitud: los formularios firmados en papel,recetas, constancias, cualquier respaldo */
 export interface DocumentoSolicitudRow {
   id: number;
   solicitud_id: number;
@@ -82,12 +72,7 @@ export async function crearDocumentoSolicitud(
   });
 }
 
-/**
- * Borrado lógico, igual que documento_persona y documento_recepcion: el
- * archivo permanece en disco. Un documento retirado de la vista puede haber
- * respaldado una aprobación que ya ocurrió, y borrarlo de verdad dejaría esa
- * decisión sin sustento.
- */
+/** Borrado lógico, igual que documento_persona y documento_recepcion: elarchivo permanece en disco */
 export async function eliminarDocumentoSolicitud(
   usuarioId: number,
   id: number,

@@ -14,10 +14,7 @@ export interface CatalogoSimpleRow {
   [campoExtra: string]: unknown;
 }
 
-/**
- * Campos que el catálogo acepta al crear/editar, en orden: `nombre`,
- * `descripcion` (solo si la tabla la tiene) y los campos extra de la config.
- */
+/** Campos que el catálogo acepta al crear/editar, en orden: `nombre`,`descripcion` (solo si la tabla la tiene) y los campos extra de la config */
 function camposEditables(config: CatalogoSimpleConfig): string[] {
   return [
     "nombre",
@@ -69,12 +66,7 @@ export async function existeNombreDuplicado(
   return true;
 }
 
-/**
- * Devuelve la primera dependencia que impide desactivar el registro, o `null`
- * si ninguna lo bloquea. Se devuelve la dependencia completa (y no un booleano)
- * para que el controller pueda responder con el mensaje de esa tabla en
- * concreto: un catálogo puede tener varias, como `unidad_medida`.
- */
+/** Devuelve la primera dependencia que impide desactivar el registro, o `null`si ninguna lo bloquea */
 export async function buscarDependenciaBloqueante(
   config: CatalogoSimpleConfig,
   id: number,

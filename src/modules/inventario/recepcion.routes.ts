@@ -18,8 +18,7 @@ import {
   eliminarDocumentoController,
 } from "./recepcion.controller.js";
 
-// Recibir donaciones es operación diaria, a diferencia de los catálogos:
-// EMPLEADO_DMM entra aquí (matriz de roles, módulo INV).
+// Recibir donaciones es operación diaria, a diferencia de los catálogos:EMPLEADO_DMM entra aquí (matriz de roles, módulo INV)
 const router = Router();
 
 router.get("/", requireAuth, requireRole(OPERACION), listarController);
@@ -52,10 +51,7 @@ router.post(
   crearLoteController,
 );
 
-// Ingreso de equipo con número de serie: una unidad por serie, en vez de un
-// lote con cantidad. Recurso aparte porque lo que se pregunta es distinto —no
-// cuánto llegó sino cuáles llegaron— y mezclarlos en el mismo endpoint
-// obligaría a adivinar cuál de las dos formas quiso usar quien llama.
+// Ingreso de equipo con número de serie: una unidad por serie, en vez de unlote con cantidad
 router.post(
   "/:id/unidades",
   requireAuth,

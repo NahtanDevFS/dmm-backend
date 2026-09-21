@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { paginacionShape } from "../../lib/paginacion.js";
 
-/**
- * Un insumo dentro de una entrega. `detalle_solicitud_id` con valor significa
- * que este renglón despacha una línea de solicitud; en null, que es entrega
- * directa de medicina o comida.
- */
+/** Un insumo dentro de una entrega */
 export const renglonEntregaSchema = z.object({
   insumo_id: z.number().int().positive("insumo_id es requerido"),
   cantidad: z
@@ -22,7 +18,7 @@ export const registrarEntregaSchema = z
       .array(renglonEntregaSchema)
       .min(1, "Debe indicar al menos un insumo")
       .max(20, "Demasiados insumos en una sola entrega"),
-    // Receptor distinto al beneficiario (RF-ENT-05).
+// Receptor distinto al beneficiario (RF-ENT-05)
     persona_receptor_id: z.number().int().positive().nullable().optional(),
     tipo_parentesco_receptor_id: z
       .number()
@@ -50,9 +46,7 @@ export const registrarEntregaSchema = z
     },
   )
   .refine(
-    // Regla de origen único: o todos los renglones despachan una solicitud, o
-    // ninguno. Se valida también en la base; aquí se adelanta el mensaje para
-    // no gastar una transacción en algo que ya se sabe mal.
+// Regla de origen único: o todos los renglones despachan una solicitud, oninguno
     (d) =>
       d.insumos.every((i) => i.detalle_solicitud_id == null) ||
       d.insumos.every((i) => i.detalle_solicitud_id != null),
@@ -63,7 +57,7 @@ export const registrarEntregaSchema = z
     },
   );
 
-/** Mismo cuerpo para anular una entrega completa o un solo renglón. */
+/** Mismo cuerpo para anular una entrega completa o un solo renglón */
 export const anularEntregaSchema = z.object({
   motivo: z
     .string({ error: "Debe indicar el motivo de la anulación" })

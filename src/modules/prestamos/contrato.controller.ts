@@ -87,7 +87,7 @@ async function resolverMulta(
   return { ok: true, contratoId: base.id, multaId };
 }
 
-// ─────────────────────────────────────────────── lecturas
+// lecturas
 
 export async function listarController(
   req: Request,
@@ -155,7 +155,7 @@ export async function obtenerController(
   }
 }
 
-// ─────────────────────────────────────────────── contratos
+// contratos
 
 export async function crearController(
   req: Request,
@@ -185,8 +185,7 @@ export async function crearController(
       });
     }
 
-    // El UNIQUE de detalle_entrega_id ya lo impediría, pero el mensaje explícito
-    // es más útil que el genérico del constraint.
+// El UNIQUE de detalle_entrega_id ya lo impediría, pero el mensaje explícitoes más útil que el genérico del constraint
     if (await existeContratoDeDetalleEntrega(parsed.data.detalle_entrega_id)) {
       return res.status(409).json({
         message: "Ese renglón de entrega ya tiene un contrato de préstamo",
@@ -228,8 +227,7 @@ export async function renovarController(
         message: "No se puede renovar un contrato ya devuelto",
       });
     }
-    // El UNIQUE de contrato_anterior_id solo permite una renovación por
-    // contrato: la cadena es lineal, no un árbol.
+// El UNIQUE de contrato_anterior_id solo permite una renovación porcontrato: la cadena es lineal, no un árbol
     if (await existeRenovacionDe(ruta.id)) {
       return res.status(409).json({
         message:
@@ -306,9 +304,7 @@ export async function devolucionController(
       });
     }
 
-    // sp_registrar_devolucion_prestamo devuelve el equipo al lote, pero solo
-    // acepta el contrato que tiene la entrega física. En una cadena de
-    // renovaciones ese es el contrato raíz.
+// Sp_registrar_devolucion_prestamo devuelve el equipo al lote, pero soloacepta el contrato que tiene la entrega física
     const raiz = await buscarContratoRaiz(ruta.id);
     if (!raiz) {
       return res.status(409).json({
@@ -317,8 +313,7 @@ export async function devolucionController(
       });
     }
 
-    // Las validaciones de estado (contrato inactivo, devolución ya registrada)
-    // están en el SP y su excepción la traduce el errorHandler a 409.
+// Las validaciones de estado (contrato inactivo, devolución ya registrada)están en el SP y su excepción la traduce el errorHandler a 409
     await registrarDevolucion(req.usuario!.id, ruta.id, raiz.id);
 
     const [actualizado, multas] = await Promise.all([
@@ -354,15 +349,7 @@ export async function marcarVencidosController(
   }
 }
 
-/**
- * Registra un préstamo de principio a fin: la entrega del equipo y su
- * contrato, en un solo acto.
- *
- * Es la puerta principal del módulo. El préstamo no pasa por solicitud —eso
- * es para decidir donaciones— así que aquí se hace todo: quién se lleva qué y
- * hasta cuándo. Las fotos del contrato firmado y del DPI se adjuntan después,
- * sobre el contrato ya creado.
- */
+/** Registra un préstamo de principio a fin: la entrega del equipo y sucontrato, en un solo acto */
 export async function crearPrestamoDirectoController(
   req: Request,
   res: Response,
@@ -397,8 +384,7 @@ export async function crearPrestamoDirectoController(
       );
       return res.status(201).json({ ...contrato, entrega_id });
     } catch (error) {
-      // Incluye el rechazo por stock insuficiente de sp_agregar_insumo_entrega,
-      // que ya viene redactado en español con las cantidades exactas.
+// Incluye el rechazo por stock insuficiente de sp_agregar_insumo_entrega,que ya viene redactado en español con las cantidades exactas
       return next(error);
     }
   } catch (error) {
@@ -406,10 +392,7 @@ export async function crearPrestamoDirectoController(
   }
 }
 
-/**
- * Anula un préstamo registrado por error: deshace contrato y entrega, y el
- * equipo vuelve al inventario.
- */
+/** Anula un préstamo registrado por error: deshace contrato y entrega, y elequipo vuelve al inventario */
 export async function anularContratoController(
   req: Request,
   res: Response,
@@ -436,10 +419,7 @@ export async function anularContratoController(
   }
 }
 
-/**
- * Cierra un préstamo cuyo equipo no volvió. El stock NO se restituye: el
- * equipo efectivamente no está.
- */
+/** Cierra un préstamo cuyo equipo no volvió */
 export async function noDevueltoController(
   req: Request,
   res: Response,
@@ -473,7 +453,7 @@ export async function noDevueltoController(
   }
 }
 
-// ─────────────────────────────────────────────── multas
+// multas
 
 export async function listarMultasController(
   req: Request,
@@ -524,7 +504,7 @@ export async function aplicarMultaController(
       });
     }
 
-    // El monto es opcional: si no viene se toma el monto_sugerido del tipo.
+// El monto es opcional: si no viene se toma el monto_sugerido del tipo
     const monto =
       parsed.data.monto ??
       (tipo.monto_sugerido !== null ? Number(tipo.monto_sugerido) : null);
@@ -650,16 +630,9 @@ export async function anularMultaController(
   }
 }
 
-// ─────────────────────────────────────────────── evidencias
+// evidencias
 
-/**
- * Evidencias del contrato: el documento firmado (tipo CONTRATO_FIRMADO), el
- * DPI de quien firma (frontal y reverso), y la foto de recepción del
- * equipo -- todo vive aquí, ya no hay una columna dedicada solo para el
- * documento firmado. Un préstamo no exige formularios de estudio
- * socioeconómico -- eso es solo para donación definitiva -- así que estas
- * evidencias son todo lo que un préstamo necesita.
- */
+/** Evidencias del contrato: el documento firmado (tipo CONTRATO_FIRMADO), elDPI de quien firma (frontal y reverso), y la foto de recepción delequipo -- todo vive aquí, ya no hay una columna dedicada solo para eldocumento firmado */
 export async function listarEvidenciasContratoController(
   req: Request,
   res: Response,

@@ -38,9 +38,9 @@ export interface SemaforoRow {
   cantidad_disponible: number;
   cantidad_inicial: number;
   semaforo: string;
-  /** Código impreso por el fabricante, distinto del código del envío. */
+  /** Código impreso por el fabricante, distinto del código del envío */
   codigo_lote_fabricante: string | null;
-  /** En qué presentación llegó este lote (caja, quintal, unidad). */
+  /** En qué presentación llegó este lote (caja, quintal, unidad) */
   presentacion_nombre: string;
   institucion_nombre: string;
 }
@@ -124,11 +124,7 @@ export async function existeMarcaActiva(id: number): Promise<boolean> {
   return marca?.activo === true;
 }
 
-/**
- * La presentación se consulta con `pg` porque el índice único parcial
- * idx_presentacion_default_unica hace que Prisma modele
- * insumo→presentaciones como 1:1 en lugar de 1:N.
- */
+/** La presentación se consulta con `pg` porque el índice único parcialidx_presentacion_default_unica hace que Prisma modeleinsumo→presentaciones como 1:1 en lugar de 1:N */
 export async function buscarPresentacionActiva(
   id: number,
 ): Promise<{ id: number; insumo_id: number; unidad_nombre: string } | null> {
@@ -163,8 +159,7 @@ export async function crearRecepcion(
       datos.observaciones_generales ?? null,
     ];
 
-    // fecha_recepcion tiene default CURRENT_DATE: solo se envía si el usuario
-    // registra una donación recibida en una fecha anterior.
+// Fecha_recepcion tiene default CURRENT_DATE: solo se envía si el usuarioregistra una donación recibida en una fecha anterior
     if (datos.fecha_recepcion !== undefined) {
       campos.push("fecha_recepcion");
       valores.push(datos.fecha_recepcion);
@@ -264,20 +259,7 @@ export async function buscarLotePorId(
   return result.rows[0] ?? null;
 }
 
-/**
- * Inserta el renglón de inventario y procesa la lista de espera en la misma
- * transacción.
- *
- * `cantidad_inicial` y `cantidad_disponible` se envían en 0 solo porque las
- * columnas son NOT NULL: trg_calcular_recepcion_lote (BEFORE INSERT) las
- * sobrescribe con FLOOR(cantidad_recepcion_original * unidades_por_presentacion_lote).
- *
- * sp_procesar_donacion_pendientes NO es automático: hay que invocarlo tras cada
- * inserción para que las líneas de solicitud en PENDIENTE_ADQUISICION pasen a
- * PENDIENTE_ENTREGA si el stock recién ingresado alcanza. Va dentro de la misma
- * transacción para que el lote y la reasignación de la lista de espera sean
- * atómicos y queden auditados con el mismo app.usuario_id.
- */
+/** Inserta el renglón de inventario y procesa la lista de espera en la mismatransacción */
 export async function crearLoteYProcesarPendientes(
   usuarioId: number,
   recepcionId: number,
@@ -324,19 +306,7 @@ export async function crearLoteYProcesarPendientes(
   });
 }
 
-/**
- * Registra varias unidades identificables de un mismo insumo, una fila por
- * número de serie.
- *
- * Es el ingreso de equipo: cinco sillas de ruedas son cinco unidades con cinco
- * series, no un lote de cinco. Sin esto, el código de fabricante —que la base
- * exige— se llenaba con la serie de una sola de ellas, y al prestar no había
- * forma de saber cuál se llevó la persona.
- *
- * Todas van en una transacción: si la tercera serie está repetida, no queda
- * ninguna registrada. Mejor eso que dos unidades cargadas y tres perdidas
- * sin que nadie sepa cuáles fueron.
- */
+/** Registra varias unidades identificables de un mismo insumo, una fila pornúmero de serie */
 export async function crearUnidadesSerializadas(
   usuarioId: number,
   recepcionId: number,
@@ -375,8 +345,7 @@ export async function crearUnidadesSerializadas(
       creados.push(result.rows[0]);
     }
 
-    // Una vez, al final: las líneas en espera se resuelven con el stock total
-    // ingresado, no unidad por unidad.
+// Una vez, al final: las líneas en espera se resuelven con el stock totalingresado, no unidad por unidad
     await client.query(`CALL public.sp_procesar_donacion_pendientes($1, $2)`, [
       datos.insumo_id,
       recepcionId,
@@ -386,11 +355,7 @@ export async function crearUnidadesSerializadas(
   });
 }
 
-/**
- * `sp_dar_baja_insumo_vencido` hace su propio `set_config('app.usuario_id')`,
- * pero se invoca igual dentro de withUserTransaction para que el resto de la
- * transacción quede auditada de forma consistente.
- */
+/** `sp_dar_baja_insumo_vencido` hace su propio `set_config('app */
 export async function darBajaLote(
   usuarioId: number,
   loteId: number,
@@ -422,16 +387,7 @@ export async function listarSemaforoInventario(params: {
   }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
-  /**
-   * Se parte de la vista y se le agregan por join los datos que no expone:
-   * de qué presentación se recibió el lote, con qué código de fabricante y de
-   * qué institución vino.
-   *
-   * Van aquí y no dentro de la vista para no tener que migrarla: la vista
-   * calcula el semáforo, que es su razón de ser, y estos son datos de
-   * contexto que solo necesita esta pantalla. El alias `v` mantiene los
-   * nombres de columna intactos, así que el ORDER BY de abajo sigue igual.
-   */
+  /** Se parte de la vista y se le agregan por join los datos que no expone:de qué presentación se recibió el lote, con qué código de fabricante y dequé institución vino */
   const result = await pool.query<SemaforoRow>(
     `SELECT v.detalle_inventario_lote_id, v.insumo_id, v.insumo_nombre,
             v.codigo_lote, v.fecha_caducidad, v.fecha_recepcion,

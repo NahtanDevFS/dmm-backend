@@ -79,8 +79,7 @@ export async function poblacionPorProgramaController(
   }
 }
 
-// Mismo esquema de query que poblacionPorPrograma: no vale la pena declarar
-// otro par desde/hasta para el mismo par de campos.
+// Mismo esquema de query que poblacionPorPrograma: no vale la pena declararotro par desde/hasta para el mismo par de campos
 export async function poblacionPorGeneroController(
   req: Request,
   res: Response,

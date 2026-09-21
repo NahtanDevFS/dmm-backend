@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 
-// Vista transversal del inventario: no cuelga de una recepción concreta.
+// Vista transversal del inventario: no cuelga de una recepción concreta
 router.get(
   "/semaforo",
   requireAuth,
@@ -17,9 +17,7 @@ router.get(
   semaforoController,
 );
 
-// Baja por vencimiento o daño (sp_dar_baja_insumo_vencido). Es POST y no PATCH
-// porque no es una edición del lote: descarta las existencias y deja constancia
-// del motivo en las observaciones.
+// Baja por vencimiento o daño (sp_dar_baja_insumo_vencido)
 router.post(
   "/lotes/:loteId/baja",
   requireAuth,

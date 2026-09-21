@@ -1,14 +1,7 @@
 import { z } from "zod";
 import { paginacionShape } from "../../lib/paginacion.js";
 
-/**
- * Requisitos mínimos de contraseña. No los impone la base de datos (guarda un
- * hash, no puede juzgar la fuerza del original) y hasta ahora los usuarios se
- * creaban por SQL directo sin ninguna validación, así que es aquí donde toca.
- *
- * 8 caracteres con al menos una letra y un dígito: suficiente para descartar
- * "admin" o "123456" sin volver el alta impracticable para la DMM.
- */
+/** Requisitos mínimos de contraseña */
 const passwordSchema = z
   .string({ error: "La contraseña es requerida" })
   .min(8, "La contraseña debe tener al menos 8 caracteres")
@@ -16,15 +9,7 @@ const passwordSchema = z
   .refine((v) => /[a-zA-Z]/.test(v), "La contraseña debe incluir una letra")
   .refine((v) => /\d/.test(v), "La contraseña debe incluir un número");
 
-/**
- * Identificador de acceso, no el nombre de la persona: para eso está
- * `nombre_completo`.
- *
- * Solo ASCII. Más allá de la comodidad de teclearlo: en Unicode 'é' se puede
- * escribir como un carácter o como 'e' más una tilde combinante, que se ven
- * idénticas y son cadenas distintas. Alguien crearía la cuenta desde un
- * teclado y no podría entrar desde otro, sin que nada explicara por qué.
- */
+/** Identificador de acceso, no el nombre de la persona: para eso está`nombre_completo` */
 const usernameSchema = z
   .string({ error: "El nombre de usuario es requerido" })
   .trim()
@@ -35,18 +20,14 @@ const usernameSchema = z
     "El nombre de usuario no admite tildes, ñ, espacios ni otros signos: use letras sin acento, números, punto, guion o guion bajo. El nombre con tildes va en el campo de nombre completo.",
   );
 
-/** El nombre de la persona, que sí se escribe como se escribe. */
+/** El nombre de la persona, que sí se escribe como se escribe */
 const nombreCompletoSchema = z
   .string()
   .trim()
   .min(3, "El nombre completo debe tener al menos 3 caracteres")
   .max(150, "El nombre completo es demasiado largo");
 
-/**
- * De qué programa es encargada. Opcional: la Directora, el Alcalde y el
- * Administrador no llevan uno propio, y una empleada puede no tenerlo
- * asignado todavía.
- */
+/** De qué programa es encargada */
 const programaSchema = z.number().int().positive().nullable().optional();
 
 export const crearUsuarioSchema = z.object({
@@ -67,7 +48,7 @@ export const editarUsuarioSchema = z.object({
   programa_id: programaSchema,
 });
 
-/** Cambio de contraseña propio: exige la actual para evitar el secuestro de una sesión abierta. */
+/** Cambio de contraseña propio: exige la actual para evitar el secuestro de una sesión abierta */
 export const cambiarPasswordPropiaSchema = z.object({
   password_actual: z
     .string({ error: "Debe indicar su contraseña actual" })
@@ -75,7 +56,7 @@ export const cambiarPasswordPropiaSchema = z.object({
   password_nueva: passwordSchema,
 });
 
-/** Reseteo por administrador: no pide la actual, porque el admin no la conoce. */
+/** Reseteo por administrador: no pide la actual, porque el admin no la conoce */
 export const resetearPasswordSchema = z.object({
   password_nueva: passwordSchema,
 });

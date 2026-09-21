@@ -9,12 +9,7 @@ import {
   poblacionPorGeneroController,
 } from "./panel.controller.js";
 
-/**
- * Datos agregados para las gráficas de Inicio. OPERACION y no REPORTES,
- * a propósito: es el mismo conjunto de roles que ya ve el resto del panel
- * (EMPLEADO_DMM, DIRECTORA, ADMINISTRADOR). ALCALDE no entra aquí porque
- * tampoco entra a Inicio — su único módulo sigue siendo /reportes.
- */
+/** Datos agregados para las gráficas de Inicio */
 const router = Router();
 
 router.get(

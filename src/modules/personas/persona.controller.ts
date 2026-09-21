@@ -36,7 +36,7 @@ import {
   existeTipoParentescoActivo,
 } from "../catalogos-lectura/catalogos-lectura.repository.js";
 
-/** Valida los catálogos referenciados antes de tocar la base. */
+/** Valida los catálogos referenciados antes de tocar la base */
 async function validarGeneroYComunidad(datos: {
   genero_id?: number | null;
   comunidad_id?: number | null;
@@ -151,12 +151,7 @@ export async function crearController(
       }
     }
 
-    // El encargado ya NO bloquea (migración 22). Se puede vincular a
-    // cualquier persona y se recomienda para menores y para quienes tienen
-    // alguna discapacidad registrada, pero negarse a registrar a alguien por
-    // no tener ese dato a mano no protege a nadie: en la práctica se termina
-    // inventando el dato, o la persona no queda registrada y su ayuda
-    // tampoco. La interfaz lo advierte; la base ya no lo exige.
+// El encargado ya NO bloquea (migración 22)
 
     const nueva = await crearPersonaConRelaciones(
       req.usuario!.id,

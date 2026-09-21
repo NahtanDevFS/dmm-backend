@@ -127,10 +127,7 @@ export async function editarMulta(
   });
 }
 
-/**
- * El CHECK multa_prestamo_pago_coherente exige que `pagada` y `fecha_pago` se
- * muevan juntas, así que se actualizan en la misma sentencia.
- */
+/** El CHECK multa_prestamo_pago_coherente exige que `pagada` y `fecha_pago` semuevan juntas, así que se actualizan en la misma sentencia */
 export async function marcarMultaPagada(
   usuarioId: number,
   id: number,
@@ -150,7 +147,7 @@ export async function marcarMultaPagada(
   });
 }
 
-/** Borrado lógico: una multa mal aplicada se anula, no se borra. */
+/** Borrado lógico: una multa mal aplicada se anula, no se borra */
 export async function anularMulta(
   usuarioId: number,
   id: number,

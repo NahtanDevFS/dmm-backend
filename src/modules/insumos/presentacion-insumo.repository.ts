@@ -7,7 +7,7 @@ export interface PresentacionInsumoRow {
   insumo_id: number;
   unidad_medida_id: number;
   es_default: boolean;
-  /** Unidades base que contiene, de forma nominal. Llega como string por NUMERIC. */
+  /** Unidades base que contiene, de forma nominal */
   unidades_por_presentacion: string;
   activo: boolean;
 }
@@ -15,12 +15,7 @@ export interface PresentacionInsumoRow {
 const COLUMNAS = `id, insumo_id, unidad_medida_id, es_default,
   unidades_por_presentacion, activo`;
 
-/**
- * Se consulta con `pg` en vez de Prisma a propósito: el índice único parcial
- * `idx_presentacion_default_unica` (insumo_id WHERE es_default = true) hace que
- * la introspección de Prisma marque `insumo_id` como único y modele la relación
- * insumo→presentaciones como 1:1, cuando en realidad es 1:N.
- */
+/** Se consulta con `pg` en vez de Prisma a propósito: el índice único parcial`idx_presentacion_default_unica` (insumo_id WHERE es_default = true) hace quela introspección de Prisma marque `insumo_id` como único y modele la relacióninsumo→presentaciones como 1:1, cuando en realidad es 1:N */
 export async function listarPresentacionesDeInsumo(params: {
   insumoId: number;
   incluirInactivas: boolean;
@@ -87,12 +82,7 @@ export async function tieneLotesActivos(
   return (result.rowCount ?? 0) > 0;
 }
 
-/**
- * Desmarca la presentación default vigente del insumo. Obligatorio antes de
- * marcar otra: `idx_presentacion_default_unica` es un índice único parcial no
- * diferible, así que dos filas con es_default = true para el mismo insumo son
- * rechazadas por Postgres incluso dentro de la misma transacción.
- */
+/** Desmarca la presentación default vigente del insumo */
 async function desmarcarDefaultVigente(
   client: PoolClient,
   insumoId: number,
@@ -134,8 +124,7 @@ export async function crearPresentacion(
         insumoId,
         datos.unidad_medida_id,
         datos.es_default,
-        // La predeterminada expresa la unidad base: su factor es 1 por
-        // definición, no algo que el usuario elija.
+// La predeterminada expresa la unidad base: su factor es 1 pordefinición, no algo que el usuario elija
         datos.es_default ? 1 : (datos.unidades_por_presentacion ?? 1),
         usuarioId,
       ],
@@ -175,8 +164,7 @@ export async function editarPresentacion(
       }
     }
 
-    // Volverla predeterminada la convierte en la unidad base, así que su
-    // factor pasa a 1 aunque nadie lo haya pedido explícitamente.
+// Volverla predeterminada la convierte en la unidad base, así que sufactor pasa a 1 aunque nadie lo haya pedido explícitamente
     if (datos.es_default === true && datos.unidades_por_presentacion == null) {
       sets.push(`unidades_por_presentacion = 1`);
     }

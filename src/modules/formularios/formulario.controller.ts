@@ -43,7 +43,7 @@ function idDesdeParam(valor: string | string[] | undefined): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-/* ═══════════════════════════ Catálogos reutilizables ═══════════════════════════ */
+/* Catálogos reutilizables */
 
 export async function listarCatalogosController(
   _req: Request,
@@ -85,7 +85,7 @@ export async function listarTiposDatoController(
   }
 }
 
-/* ═══════════════════════════ Formularios: lectura ═══════════════════════════ */
+/*  Formularios: lectura */
 
 export async function listarFormulariosController(
   _req: Request,
@@ -109,8 +109,7 @@ export async function obtenerFormularioController(
     if (!id)
       return res.status(400).json({ message: "Id de formulario inválido" });
 
-    // Solo la pantalla de administración pide los campos desactivados; al
-    // llenar el formulario no deben verse.
+// Solo la pantalla de administración pide los campos desactivados; alllenar el formulario no deben verse
     const incluirInactivos = req.query.incluirInactivos === "true";
 
     const formulario = await buscarFormularioConCampos(id, incluirInactivos);
@@ -138,7 +137,7 @@ export async function listarOpcionesCampoController(
   }
 }
 
-/* ═══════════════════════════ Formularios: administración (DIRECCION) ═══════════════════════════ */
+/* Formularios: administración (DIRECCION) */
 
 export async function crearFormularioController(
   req: Request,
@@ -220,8 +219,7 @@ export async function agregarCampoController(
       ayuda: parsed.data.ayuda ?? null,
     });
 
-    // Opciones propias del campo, si el formulario no usa un catálogo
-    // reutilizable. Se agregan una por una, en el orden recibido.
+// Opciones propias del campo, si el formulario no usa un catálogoreutilizable
     if (
       parsed.data.catalogo_id == null &&
       parsed.data.opciones_propias?.length
@@ -237,8 +235,7 @@ export async function agregarCampoController(
 
     return res.status(201).json(campo);
   } catch (error) {
-    // fn_validar_catalogo_campo_formulario / fn_validar_opciones_campo_formulario
-    // (P0001) llegan aquí si, pese a la validación de schema, algo se coló.
+// Fn_validar_catalogo_campo_formulario / fn_validar_opciones_campo_formulario(P0001) llegan aquí si, pese a la validación de schema, algo se coló
     const traducido = traducirErrorPostgres(error);
     if (traducido)
       return res.status(traducido.status).json({ message: traducido.message });
@@ -295,11 +292,7 @@ export async function editarCampoController(
   }
 }
 
-/**
- * Las asignaciones categoría → formulario, con su modalidad. Alimenta la
- * pantalla de Catálogos, que hasta ahora no existía: configurar un
- * formulario exigía insertar filas por SQL a mano.
- */
+/** Las asignaciones categoría → formulario, con su modalidad */
 export async function listarAsignacionesController(
   req: Request,
   res: Response,
@@ -318,10 +311,7 @@ export async function listarAsignacionesController(
   }
 }
 
-/**
- * Qué formularios va a exigir un insumo. Se consulta al armar la solicitud,
- * para poder avisarlo con la persona todavía presente.
- */
+/** Qué formularios va a exigir un insumo */
 export async function formulariosDeInsumoController(
   req: Request,
   res: Response,
@@ -393,7 +383,7 @@ export async function quitarFormularioCategoriaController(
   }
 }
 
-/* ═══════════════════════════ Respuestas de una línea de solicitud ═══════════════════════════ */
+/* Respuestas de una línea de solicitud  */
 
 export async function listarFormulariosDeLineaController(
   req: Request,
@@ -430,9 +420,7 @@ export async function obtenerRespuestasController(
       formularioId,
     );
     if (!detalleFormulario) {
-      // Formulario exigido pero todavía sin empezar a llenar: no es un
-      // error, es el estado inicial válido. El frontend distingue "vacío"
-      // de "no existe" por este 200 con arreglo vacío.
+// Formulario exigido pero todavía sin empezar a llenar: no es unerror, es el estado inicial válido
       return res.status(200).json({ detalle: null, respuestas: [] });
     }
 

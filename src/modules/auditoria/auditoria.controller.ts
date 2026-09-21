@@ -47,7 +47,7 @@ export async function tablasController(
   }
 }
 
-/** Historial de un registro concreto: útil para "¿quién cambió esta ficha?". */
+/** Historial de un registro concreto: útil para "¿quién cambió esta ficha?" */
 export async function historialController(
   req: Request,
   res: Response,

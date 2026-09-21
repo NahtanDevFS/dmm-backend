@@ -12,16 +12,12 @@ export interface InsumoRow {
   requiere_fecha_caducidad: boolean;
   requiere_codigo_fabricante: boolean;
   bloquea_solicitud_sin_stock: boolean;
-  /**
-   * Si cada unidad es una pieza identificable con su propio número de serie.
-   * Cambia cómo se ingresa —una fila por serie, no un lote con cantidad— y
-   * permite elegir qué unidad concreta se entrega.
-   */
+  /** Si cada unidad es una pieza identificable con su propio número de serie */
   serie_por_unidad: boolean;
   activo: boolean;
 }
 
-/** Stock agregado tal como lo expone la vista v_stock_insumo. */
+/** Stock agregado tal como lo expone la vista v_stock_insumo */
 export interface StockInsumoRow {
   insumo_id: number;
   insumo_nombre: string;
@@ -35,15 +31,12 @@ export interface StockInsumoRow {
   semaforo: string | null;
 }
 
-/** Una fila del listado de stock: lo de la vista más la categoría por id. */
+/** Una fila del listado de stock: lo de la vista más la categoría por id */
 export interface StockInsumoListadoRow extends StockInsumoRow {
   categoria_id: number;
-  /**
-   * Si la categoría admite préstamo. Sin esto la pantalla ofrecería prestar
-   * paracetamol: prestar solo tiene sentido con lo que se devuelve.
-   */
+  /** Si la categoría admite préstamo */
   permite_prestamo: boolean;
-  /** Si cada unidad tiene su propia serie y se elige al entregar. */
+  /** Si cada unidad tiene su propia serie y se elige al entregar */
   serie_por_unidad: boolean;
 }
 
@@ -115,11 +108,7 @@ export async function buscarInsumoPorId(id: number): Promise<InsumoRow | null> {
   return prisma.insumo.findUnique({ where: { id }, select: SELECT_PUBLICO });
 }
 
-/**
- * Unicidad compuesta (nombre, categoria_id): el mismo nombre puede repetirse
- * en categorías distintas, así que el duplicado se valida siempre contra una
- * categoría concreta.
- */
+/** Unicidad compuesta (nombre, categoria_id): el mismo nombre puede repetirseen categorías distintas, así que el duplicado se valida siempre contra unacategoría concreta */
 export async function existeNombreDuplicadoEnCategoria(
   nombre: string,
   categoriaId: number,
@@ -250,12 +239,7 @@ export async function cambiarEstadoInsumo(
   });
 }
 
-/**
- * La vista v_stock_insumo filtra por `insumo.activo = true`, así que un insumo
- * desactivado no aparece aunque conserve existencias. En ese caso se devuelve
- * el total con fn_stock_disponible y sin datos de caducidad, en vez de
- * reimplementar aquí la agregación de la vista.
- */
+/** La vista v_stock_insumo filtra por `insumo */
 export async function obtenerStockInsumo(
   id: number,
 ): Promise<StockInsumoRow | null> {
@@ -270,16 +254,7 @@ export async function obtenerStockInsumo(
   return result.rows[0] ?? null;
 }
 
-/**
- * Stock de todos los insumos de una sola vez, tal como lo expone
- * v_stock_insumo. Existe para las pantallas que necesitan mostrar las
- * existencias *antes* de que el usuario elija —el desplegable de la entrega
- * directa, sobre todo—: preguntar insumo por insumo obligaría a una llamada
- * por opción y quien atiende no podría contestar "sí hay" sin abrir nada.
- *
- * La vista filtra por `insumo.activo = true`, así que los desactivados no
- * aparecen. Es lo correcto aquí: no se entrega lo que está dado de baja.
- */
+/** Stock de todos los insumos de una sola vez, tal como lo exponev_stock_insumo */
 export async function listarStockInsumos(params: {
   categoriaId?: number;
   busqueda?: string;
@@ -298,8 +273,7 @@ export async function listarStockInsumos(params: {
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
 
-  // La vista no expone categoria_id, solo el nombre. Se une con insumo para
-  // poder filtrar y agrupar por id, que es lo que usa el frontend.
+// La vista no expone categoria_id, solo el nombre
   const result = await pool.query<StockInsumoListadoRow>(
     `SELECT v.insumo_id, v.insumo_nombre, i.categoria_id, v.categoria_nombre,
             ci.permite_prestamo, i.serie_por_unidad,
@@ -316,17 +290,7 @@ export async function listarStockInsumos(params: {
   return result.rows;
 }
 
-/**
- * Unidades identificables disponibles de un insumo, una por número de serie.
- *
- * Es lo que se le muestra a quien entrega para que elija la pieza que tiene
- * en la mano. Sin esto, FEFO elegiría una por su cuenta y el registro diría
- * una serie mientras la persona se lleva otra —que en préstamos importa,
- * porque hay que saber cuál silla devolver.
- *
- * Devuelve vacío para insumos que no llevan serie: ahí la unidad concreta no
- * significa nada y el reparto automático es lo correcto.
- */
+/** Unidades identificables disponibles de un insumo, una por número de serie */
 export interface UnidadDisponibleRow {
   detalle_inventario_lote_id: number;
   insumo_id: number;

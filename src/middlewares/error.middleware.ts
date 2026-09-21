@@ -14,9 +14,7 @@ export function errorHandler(
     return res.status(400).json({ message: err.message });
   }
 
-  // Reglas de negocio que viven en la base de datos: triggers, checks y stored
-  // procedures. Sin esto llegarían como 500 con un mensaje técnico en la cara
-  // del usuario (RNF-USA-02).
+// Reglas de negocio que viven en la base de datos: triggers, checks y storedprocedures
   const traducido = traducirErrorPostgres(err);
   if (traducido) {
     return res.status(traducido.status).json({ message: traducido.message });
@@ -29,7 +27,6 @@ export function errorHandler(
       .json({ message: err.message || "Error en la solicitud" });
   }
 
-  // Cualquier otra cosa es un fallo no previsto: no se expone el detalle al
-  // cliente, ya quedó en el log del servidor.
+// Cualquier otra cosa es un fallo no previsto: no se expone el detalle alcliente, ya quedó en el log del servidor
   return res.status(500).json({ message: "Error interno del servidor" });
 }

@@ -13,25 +13,17 @@ export const crearInsumoSchema = z.object({
     .min(1, "El nombre es requerido")
     .max(150, "El nombre es demasiado largo"),
   descripcion: z.string().trim().max(2000).nullable().optional(),
-  // Los tres flags viven en `insumo` desde el esquema v3: los leen
-  // fn_calcular_recepcion_lote (caducidad y código de fabricante) y
-  // fn_validar_stock_linea_solicitud (bloqueo sin stock).
+// Los tres flags viven en `insumo` desde el esquema v3: los leenfn_calcular_recepcion_lote (caducidad y código de fabricante) yfn_validar_stock_linea_solicitud (bloqueo sin stock)
   requiere_fecha_caducidad: z.boolean().optional(),
   requiere_codigo_fabricante: z.boolean().optional(),
   bloquea_solicitud_sin_stock: z.boolean().optional(),
-  /**
-   * Cada unidad con su número de serie. Cambia el ingreso —una fila por
-   * serie— y habilita elegir la unidad concreta al entregar.
-   */
+  /** Cada unidad con su número de serie */
   serie_por_unidad: z.boolean().optional(),
 });
 
 export const editarInsumoSchema = crearInsumoSchema.partial();
 
-/**
- * Filtros del listado de stock. Sin paginación: la respuesta es el catálogo
- * completo, pensado para armar un desplegable de una sola vez.
- */
+/** Filtros del listado de stock */
 export const listarStockQuerySchema = z.object({
   categoriaId: z.coerce.number().int().positive().optional(),
   busqueda: z.string().trim().min(1).optional(),

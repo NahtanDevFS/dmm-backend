@@ -19,46 +19,22 @@ export interface CatalogoSimpleConfig {
     | "grado_academico"
     | "ocupacion";
   tableName: string;
-  /**
-   * No todas las tablas de catálogo tienen columna `descripcion`: hoy solo
-   * `programa` la tiene. Cuando es `false` la columna se omite del select,
-   * del insert, del update y del schema de validación — antes se asumía
-   * presente en todos y rompía con `no existe la columna «descripcion»`.
-   */
+  /** No todas las tablas de catálogo tienen columna `descripcion`: hoy solo `programa` la tiene */
   tieneDescripcion: boolean;
-  /**
-   * Quien puede LEER el catalogo. La gestion siempre es DIRECCION; lo que varia
-   * es la lectura: los catalogos que alimentan un filtro de reportes
-   * (discapacidad, programa, categoria de insumo) los necesita tambien ALCALDE,
-   * que por lo demas no entra a ningun modulo de negocio.
-   */
+  /** Quien puede LEER el catalogo */
   rolesLectura: Rol[];
-  /**
-   * Tablas que impiden desactivar el registro si tienen filas activas
-   * apuntándolo (RF-CAT-03). Se evalúan en orden y gana el primer bloqueo,
-   * así que conviene poner primero la dependencia más explicativa para el
-   * usuario. Lista vacía = nada bloquea la desactivación.
-   */
+  /** Tablas que impiden desactivar el registro si tienen filas activas apuntándolo (RF-CAT-03) */
   dependencias: DependenciaCatalogo[];
   camposExtra?: Array<{
     nombre: string;
-    /**
-     * "telefono" y "correo" no son solo texto libre: se validan con su
-     * formato. Un teléfono de tres dígitos guardado en una institución no
-     * se detecta hasta que alguien intenta llamar.
-     */
+    /** "telefono" y "correo" no son solo texto libre: se validan con su formato */
     tipo: "string" | "telefono" | "correo";
     requerido: boolean;
   }>;
 }
 
 export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
-  /**
-   * Escolaridad y ocupación son administrables a propósito: ningún código se
-   * ramifica sobre sus valores, son etiquetas descriptivas del estudio
-   * socioeconómico. Que la Dirección agregue una ocupación que no estaba
-   * prevista sin esperar una migración es justamente lo que debe poder hacer.
-   */
+  /** Escolaridad y ocupación son administrables a propósito: ningún código seramifica sobre sus valores, son etiquetas descriptivas del estudiosocioeconómico */
   "grados-academicos": {
     slug: "grados-academicos",
     prismaModel: "grado_academico",
@@ -119,10 +95,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
       },
     ],
   },
-  // Antes era un módulo a medida por sus 3 flags booleanos. El esquema v3 los
-  // movió a `insumo` (los leen fn_calcular_recepcion_lote y
-  // fn_validar_stock_linea_solicitud), así que la tabla quedó como un catálogo
-  // simple más y encaja en este molde.
+// Antes era un módulo a medida por sus 3 flags booleanos
   "categorias-insumo": {
     slug: "categorias-insumo",
     prismaModel: "categoria_insumo",
@@ -138,8 +111,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
       },
     ],
   },
-  // Tabla nueva del esquema v3. La marca se declara por lote recibido, no por
-  // insumo: la FK vive en detalle_inventario_lote.marca_id.
+// Tabla nueva del esquema
   "marcas-insumo": {
     slug: "marcas-insumo",
     prismaModel: "marca_insumo",
@@ -155,8 +127,7 @@ export const CATALOGOS_SIMPLES: Record<string, CatalogoSimpleConfig> = {
       },
     ],
   },
-  // Dos dependencias: la unidad puede estar en uso como unidad base de un
-  // insumo o como unidad de una de sus presentaciones.
+// Dos dependencias: la unidad puede estar en uso como unidad base de uninsumo o como unidad de una de sus presentaciones
   "unidades-medida": {
     slug: "unidades-medida",
     prismaModel: "unidad_medida",

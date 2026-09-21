@@ -11,27 +11,12 @@ export interface PersonaRow {
   genero_id: number | null;
   comunidad_id: number | null;
   telefono: string | null;
-  /**
-   * Los cinco campos que pide el estudio socioeconómico en su sección I.
-   *
-   * `direccion`, `grado_academico` y `ocupacion` existían en la tabla desde
-   * antes pero ningún código las leía ni las escribía: eran columnas
-   * muertas. `estado_civil_id` y `lugar_nacimiento` llegaron con la
-   * migración 23.
-   *
-   * Están aquí para que la ficha de la persona sea la única fuente de esos
-   * datos, en vez de volver a preguntarlos dentro de cada formulario, donde
-   * quedarían como copias que pueden discrepar y no sirven para buscar.
-   */
+  /** Los cinco campos que pide el estudio socioeconómico en su sección I */
   direccion: string | null;
   estado_civil_id: number | null;
   grado_academico_id: number | null;
   ocupacion_id: number | null;
-  /**
-   * Municipio donde nació, que cuelga de su departamento. Distinto de
-   * comunidad_id, que es dónde vive hoy: se puede nacer en un sitio y residir
-   * en otro, y el estudio socioeconómico distingue las dos cosas.
-   */
+  /** Municipio donde nació, que cuelga de su departamento */
   municipio_nacimiento_id: number | null;
   activo: boolean;
 }
@@ -125,8 +110,7 @@ export async function listarPersonas(
     : `ORDER BY apellidos ASC, nombres ASC`;
   if (busqueda) valores.push(busqueda);
 
-  // El conteo reutiliza las condiciones pero no el ORDER BY: cuando hay busqueda,
-  // el ultimo parametro es solo para la similitud del orden y aqui no aplica.
+// El conteo reutiliza las condiciones pero no el ORDER BY: cuando hay busqueda,el ultimo parametro es solo para la similitud del orden y aqui no aplica
   const totalResult = await client.query<{ n: number }>(
     `SELECT count(*)::int AS n FROM public.persona ${where}`,
     busqueda ? valores.slice(0, -1) : valores,

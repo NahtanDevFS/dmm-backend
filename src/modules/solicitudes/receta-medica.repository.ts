@@ -65,11 +65,7 @@ export async function crearRecetaMedica(
   });
 }
 
-/**
- * Borrado lógico: el archivo permanece en disco, igual que documento_persona y
- * documento_recepcion. La FK de detalle_solicitud_apoyo.receta_medica_id es
- * ON DELETE SET NULL, pero al no borrar la fila el vínculo se conserva.
- */
+/** Borrado lógico: el archivo permanece en disco, igual que documento_persona ydocumento_recepcion */
 export async function eliminarRecetaMedica(
   usuarioId: number,
   id: number,

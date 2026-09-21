@@ -25,13 +25,10 @@ import {
   eliminarEvidenciaContratoController,
 } from "./contrato.controller.js";
 
-// Prestar y recibir equipo es operación diaria.
-// Las multas son decisión económica: quedan con dirección.
+// Prestar y recibir equipo es operación diaria
 const router = Router();
 
-// La puerta principal del módulo: registra la entrega del equipo y su
-// contrato de una vez. Antes de "/:id" no hace falta —"/" no colisiona— pero
-// se deja arriba por ser la acción principal.
+// La puerta principal del módulo: registra la entrega del equipo y sucontrato de una vez
 router.post(
   "/directo",
   requireAuth,
@@ -41,7 +38,7 @@ router.post(
   noDevueltoController,
 );
 
-// Antes de "/:id" para que "vencidos" no se lea como un id.
+// Antes de "/:id" para que "vencidos" no se lea como un id
 router.get(
   "/vencidos",
   requireAuth,
@@ -62,10 +59,7 @@ router.get("/", requireAuth, requireRole(OPERACION), listarController);
 router.get("/:id", requireAuth, requireRole(OPERACION), obtenerController);
 router.post("/", requireAuth, requireRole(OPERACION), crearController);
 router.patch("/:id", requireAuth, requireRole(OPERACION), editarController);
-// Dos finales distintos que no hay que confundir: anular deshace el registro
-// y devuelve el stock; no-devuelto cierra el contrato SIN restituirlo, porque
-// el equipo no está. Ambos son de DIRECCION: uno revierte inventario y el
-// otro asume una pérdida.
+// Dos finales distintos que no hay que confundir: anular deshace el registroy devuelve el stock; no-devuelto cierra el contrato SIN restituirlo, porqueel equipo no está
 router.post(
   "/:id/anular",
   requireAuth,

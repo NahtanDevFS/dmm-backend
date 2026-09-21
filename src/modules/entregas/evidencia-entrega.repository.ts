@@ -65,7 +65,7 @@ export async function crearEvidenciaEntrega(
   });
 }
 
-/** Borrado lógico: el archivo queda en disco, igual que el resto de adjuntos. */
+/** Borrado lógico: el archivo queda en disco, igual que el resto de adjuntos */
 export async function eliminarEvidenciaEntrega(
   usuarioId: number,
   id: number,

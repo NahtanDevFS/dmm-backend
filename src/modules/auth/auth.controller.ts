@@ -63,9 +63,7 @@ export async function logoutController(
   next: NextFunction,
 ) {
   try {
-    // req.sesion la coloca requireAuth (auth.middleware.ts). Si no hay
-    // sesión activa, no hay nada que revocar; se responde 200 igual
-    // (logout es idempotente desde la perspectiva del cliente).
+// Req
     if (req.sesion && req.usuario) {
       await logout({
         sesionId: req.sesion.id,
@@ -80,14 +78,7 @@ export async function logoutController(
   }
 }
 
-/**
- * Devuelve la sesión vigente. Sin este endpoint el frontend no puede recuperar
- * quién está autenticado al recargar la página: la cookie es HttpOnly, así que
- * JavaScript no puede leerla ni deducir el usuario de ella.
- *
- * requireAuth ya validó la sesión y colgó req.usuario, así que aquí solo se
- * devuelve lo mismo que entrega el login.
- */
+/** Devuelve la sesión vigente */
 export async function meController(req: Request, res: Response) {
   return res.status(200).json({ usuario: req.usuario });
 }

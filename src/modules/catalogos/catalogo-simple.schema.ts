@@ -10,24 +10,18 @@ const baseShape = {
     .max(150, "El nombre es demasiado largo"),
 };
 
-/**
- * El esquema se arma acumulando el *shape* y creando el objeto una sola vez
- * al final. Antes se encadenaban `.extend()` con un `as typeof schema` para
- * silenciar al compilador; eso funcionaba mientras todos los campos extra
- * fueran ZodString, pero teléfono y correo llevan transformaciones y el
- * casteo dejó de ser cierto.
- */
+/** El esquema se arma acumulando el *shape* y creando el objeto una sola vezal final */
 export function buildCrearSchema(config: CatalogoSimpleConfig) {
   const shape: Record<string, z.ZodTypeAny> = { ...baseShape };
 
-  // `descripcion` solo se acepta si la tabla realmente tiene la columna.
+// `descripcion` solo se acepta si la tabla realmente tiene la columna
   if (config.tieneDescripcion) {
     shape.descripcion = z.string().trim().max(2000).nullable().optional();
   }
 
   const correoSchema = z.string().trim().max(200).email("Correo inválido");
 
-  /** Deja pasar el campo vacío y lo guarda como null en vez de "". */
+  /** Deja pasar el campo vacío y lo guarda como null en vez de "" */
   const opcional = <T extends z.ZodTypeAny>(esquema: T) =>
     z
       .union([esquema, z.literal(""), z.null()])
@@ -49,10 +43,7 @@ export function buildCrearSchema(config: CatalogoSimpleConfig) {
     }
   }
 
-  // El shape se arma dinámicamente y el tipo estático se perdería. Se declara
-  // el resultado como "nombre garantizado, más lo que traiga la
-  // configuración", que es exactamente el contrato que espera el controlador,
-  // conservando ZodObject para que buildEditarSchema pueda usar .partial().
+// El shape se arma dinámicamente y el tipo estático se perdería
   return z.object(shape as z.ZodRawShape) as unknown as z.ZodObject<{
     nombre: z.ZodType<string>;
   }> &

@@ -20,11 +20,7 @@ import {
   type FormatoReporte,
 } from "../../lib/reportes/exportar.js";
 
-/**
- * Entrega el reporte en el formato pedido. El JSON incluye los filtros
- * aplicados para que el frontend pueda mostrarlos junto a la tabla; en Excel y
- * PDF esa misma descripción va en el subtítulo del documento.
- */
+/** Entrega el reporte en el formato pedido */
 async function responder(
   res: Response,
   formato: FormatoReporte,
@@ -56,7 +52,7 @@ function describir(filtros: Record<string, unknown>): string {
   return partes.length ? `Filtros — ${partes.join(" · ")}` : "Sin filtros";
 }
 
-// ─────────────────────────────────────────────── personas atendidas
+// personas atendidas
 
 const COLUMNAS_PERSONAS: ColumnaReporte[] = [
   { campo: "fecha_entrega", titulo: "Fecha", ancho: 11 },
@@ -170,7 +166,7 @@ export async function personasAtendidasController(
   }
 }
 
-// ─────────────────────────────────────────────── stock por categoría
+// stock por categoría
 
 const COLUMNAS_STOCK: ColumnaReporte[] = [
   { campo: "categoria_nombre", titulo: "Categoría", ancho: 30 },
@@ -232,7 +228,7 @@ export async function stockPorCategoriaController(
   }
 }
 
-// ─────────────────────────────────────────────── población beneficiada
+// población beneficiada
 
 const COLUMNAS_POBLACION: ColumnaReporte[] = [
   { campo: "mes", titulo: "Mes", ancho: 11 },

@@ -7,11 +7,7 @@ export interface SolicitudRow {
   id: number;
   persona_id: number;
   programa_id: number;
-  /**
-   * Quien registró no era la encargada de ese programa. Se fija al crear y no
-   * se recalcula: si después le cambian el programa a esa persona, lo que
-   * pasó no cambia.
-   */
+  /** Quien registró no era la encargada de ese programa */
   registrada_en_suplencia: boolean;
   fecha_solicitud: Date;
   requiere_aprobacion: boolean;
@@ -32,9 +28,9 @@ export interface LineaSolicitudRow {
   estado_id: number;
   fecha_asignacion: Date | null;
   receta_medica_id: number | null;
-  /** Donación o préstamo. Inmutable una vez creada la línea. */
+  /** Donación o préstamo */
   modalidad_solicitud_id: number;
-  /** Cómo se expresó el pedido, si se expresó por presentación. */
+  /** Cómo se expresó el pedido, si se expresó por presentación */
   presentacion_solicitud_id: number | null;
   cantidad_presentacion: string | null;
   activo: boolean;
@@ -49,19 +45,7 @@ const COLUMNAS_LINEA = `id, solicitud_id, insumo_id, cantidad_requerida,
   modalidad_solicitud_id, presentacion_solicitud_id, cantidad_presentacion,
   activo`;
 
-/**
- * Convierte lo pedido a unidad base cuando vino expresado en una presentación
- * ("2 cajas" → 200 tabletas).
- *
- * El cálculo se hace aquí y no en el cliente a propósito: el número que se
- * guarda gobierna stock, despacho y lista de espera, así que no puede
- * depender de que el navegador haya multiplicado bien. Si la línea ya trae
- * cantidad en unidad base, se respeta tal cual.
- *
- * El factor es NOMINAL: los lotes reales pueden traer otra cantidad por caja.
- * Eso es correcto — la solicitud queda por las 200 tabletas que la persona
- * necesita, y el despacho toma las cajas que hagan falta para cubrirlas.
- */
+/** Convierte lo pedido a unidad base cuando vino expresado en una presentación("2 cajas" → 200 tabletas) */
 async function resolverCantidadBase(
   client: PoolClient,
   linea: {
@@ -97,13 +81,7 @@ async function resolverCantidadBase(
   return redondeado;
 }
 
-/**
- * Programa del que una usuaria es encargada, o null si no lleva ninguno.
- *
- * Se consulta al crear una solicitud para saber si está cubriendo a otra
- * persona. Vive aquí y no en el módulo de usuarios porque es el dato que
- * necesita esta decisión, no la administración de cuentas.
- */
+/** Programa del que una usuaria es encargada, o null si no lleva ninguno */
 export async function programaDeUsuario(
   usuarioId: number,
 ): Promise<number | null> {
@@ -114,7 +92,7 @@ export async function programaDeUsuario(
   return rows[0]?.programa_id ?? null;
 }
 
-// ─────────────────────────────────────────────── lecturas
+// lecturas
 
 export async function buscarSolicitudPorId(
   id: number,
@@ -150,15 +128,7 @@ export async function buscarLineaPorId(
   return result.rows[0] ?? null;
 }
 
-/**
- * Listado de líneas de solicitud, con los nombres ya resueltos.
- *
- * Por omisión muestra solo lo pendiente, que es para lo que se abre la
- * pantalla. Con `incluirCerradas` aparecen también las ENTREGADA y las
- * CANCELADA: sin eso, una solicitud entregada desaparecía del listado y con
- * ella el acceso a sus formularios, sus documentos y su expediente, que
- * siguen existiendo y a veces hay que consultar.
- */
+/** Listado de líneas de solicitud, con los nombres ya resueltos */
 export async function listarSolicitudesActivas(params: {
   personaId?: number;
   programaId?: number;
@@ -171,8 +141,7 @@ export async function listarSolicitudesActivas(params: {
   const condiciones: string[] = [];
   const valores: unknown[] = [];
 
-  // Se consulta siempre v_solicitudes y se filtra aquí, en vez de alternar
-  // entre dos vistas: así el resto de condiciones se escribe una sola vez.
+// Se consulta siempre v_solicitudes y se filtra aquí, en vez de alternarentre dos vistas: así el resto de condiciones se escribe una sola vez
   if (!params.incluirCerradas) {
     condiciones.push(`linea_cerrada = false`);
   }
@@ -212,7 +181,7 @@ export async function listarSolicitudesActivas(params: {
   return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
-/** Lista de espera: líneas en PENDIENTE_ADQUISICION o PENDIENTE_ENTREGA_PARCIAL. */
+/** Lista de espera: líneas en PENDIENTE_ADQUISICION o PENDIENTE_ENTREGA_PARCIAL */
 export async function listarListaEspera(
   insumoNombre?: string,
 ): Promise<Record<string, unknown>[]> {
@@ -224,7 +193,7 @@ export async function listarListaEspera(
   return result.rows;
 }
 
-// ─────────────────────────────────────────────── validaciones de FK activas
+// validaciones de FK activas
 
 export async function existePersonaActiva(id: number): Promise<boolean> {
   const persona = await prisma.persona.findUnique({
@@ -264,7 +233,7 @@ export async function existeRecetaDeSolicitud(
   return (result.rowCount ?? 0) > 0;
 }
 
-// ─────────────────────────────────────────────── escrituras
+// escrituras
 
 async function idEstado(client: PoolClient, nombre: string): Promise<number> {
   const result = await client.query<{ id: number }>(
@@ -274,17 +243,7 @@ async function idEstado(client: PoolClient, nombre: string): Promise<number> {
   return result.rows[0].id;
 }
 
-/**
- * Deriva el estado de la cabecera a partir del estado que los triggers
- * asignaron a sus líneas.
- *
- * La base de datos no define el estado inicial de la cabecera: `estado_id` es
- * NOT NULL sin default, `trg_estado_inicial_linea_solicitud` solo actúa sobre
- * las líneas, y `fn_recalcular_cabecera_solicitud` sale temprano mientras no
- * haya entregas. Así que le toca al backend, con el criterio mínimo: si alguna
- * línea todavía necesita adquisición, el trámite está en PENDIENTE_ADQUISICION;
- * si todas tienen stock reservado, en PENDIENTE_ENTREGA.
- */
+/** Deriva el estado de la cabecera a partir del estado que los triggersasignaron a sus líneas */
 async function sincronizarEstadoCabecera(
   client: PoolClient,
   solicitudId: number,
@@ -314,19 +273,13 @@ async function sincronizarEstadoCabecera(
   );
 }
 
-/**
- * Cabecera + líneas en una sola transacción. El estado de cada línea lo pone
- * trg_estado_inicial_linea_solicitud según el stock disponible, y
- * trg_validar_stock_linea_solicitud puede abortar la transacción completa si el
- * insumo bloquea solicitudes sin stock: en ese caso no queda una cabecera
- * huérfana.
- */
+/** Cabecera + líneas en una sola transacción */
 export async function crearSolicitudConLineas(
   usuarioId: number,
   datos: {
     persona_id: number;
     programa_id: number;
-    /** Lo calcula el controlador comparando con el programa de quien crea. */
+    /** Lo calcula el controlador comparando con el programa de quien crea */
     registrada_en_suplencia?: boolean;
     fecha_solicitud?: string;
     requiere_aprobacion?: boolean;
@@ -378,8 +331,7 @@ export async function crearSolicitudConLineas(
     const solicitudId = cabecera.rows[0].id;
 
     for (const linea of datos.lineas) {
-      // estado_id se envía solo porque la columna es NOT NULL: el trigger
-      // BEFORE INSERT lo sobrescribe según el stock real del insumo.
+// Estado_id se envía solo porque la columna es NOT NULL: el triggerBEFORE INSERT lo sobrescribe según el stock real del insumo
       await client.query(
         `INSERT INTO public.detalle_solicitud_apoyo
            (solicitud_id, insumo_id, cantidad_requerida, estado_id,
@@ -522,11 +474,7 @@ export async function editarLinea(
   });
 }
 
-/**
- * Aprobación. No toca `estado_id`: `aprobada` es una columna propia y el estado
- * refleja el avance del despacho, que lo administran los triggers. El CHECK de
- * la tabla exige que aprobada/fecha_aprobacion/aprobado_por se muevan juntos.
- */
+/** Aprobación */
 export async function aprobarSolicitud(
   usuarioId: number,
   id: number,
@@ -546,15 +494,7 @@ export async function aprobarSolicitud(
   });
 }
 
-/**
- * Rechazo. Cancela las líneas pendientes con sp_cancelar_solicitud_completa
- * (que registra el motivo en observaciones_trabajo_social) y después fija la
- * cabecera en RECHAZADA.
- *
- * El orden importa: el SP termina llamando a fn_recalcular_cabecera_solicitud,
- * que al ver todas las líneas cerradas pondría la cabecera en ENTREGADA. El
- * UPDATE posterior corrige eso, porque un trámite rechazado no se entregó.
- */
+/** Rechazo */
 export async function rechazarSolicitud(
   usuarioId: number,
   id: number,

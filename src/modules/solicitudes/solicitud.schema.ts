@@ -8,27 +8,19 @@ const fechaSchema = z
 const lineaSchema = z
   .object({
     insumo_id: z.number().int().positive("insumo_id es requerido"),
-    /**
-     * En unidad base. Opcional si se pide por presentación: en ese caso el
-     * backend la calcula, para que el número guardado no dependa de que el
-     * cliente haya multiplicado bien.
-     */
+    /** En unidad base */
     cantidad_requerida: z
       .number()
       .int()
       .positive("La cantidad requerida debe ser mayor que cero")
       .optional(),
-    /** Cómo se expresó el pedido: "2 cajas". Ambas o ninguna. */
+    /** Cómo se expresó el pedido: "2 cajas" */
     presentacion_solicitud_id: z.number().int().positive().optional(),
     cantidad_presentacion: z
       .number()
       .positive("La cantidad debe ser mayor que cero")
       .optional(),
-    /**
-     * Bajo qué figura se entrega este insumo: donación definitiva o préstamo.
-     * Decide qué formularios se exigen, y no se puede cambiar después — la
-     * base lo impide con un trigger. Si la figura cambia, es otra solicitud.
-     */
+    /** Bajo qué figura se entrega este insumo: donación definitiva o préstamo */
     modalidad_solicitud_id: z
       .number()
       .int()
@@ -55,7 +47,7 @@ const lineaSchema = z
 export const crearSolicitudSchema = z.object({
   persona_id: z.number().int().positive("persona_id es requerido"),
   programa_id: z.number().int().positive("programa_id es requerido"),
-  // La BD tiene CHECK fecha_solicitud <= CURRENT_DATE y default CURRENT_DATE.
+// La BD tiene CHECK fecha_solicitud <= CURRENT_DATE y default CURRENT_DATE
   fecha_solicitud: fechaSchema.optional(),
   requiere_aprobacion: z.boolean().optional(),
   observaciones_trabajo_social: z
@@ -104,10 +96,7 @@ export const rechazarSchema = z.object({
 });
 
 export const listarSolicitudesQuerySchema = z.object({
-  /**
-   * Incluye las líneas ya entregadas o canceladas. Falso por omisión: la
-   * pantalla se abre para ver lo que falta hacer, no el archivo.
-   */
+  /** Incluye las líneas ya entregadas o canceladas */
   incluirCerradas: z
     .string()
     .optional()
@@ -135,10 +124,7 @@ export const listarSolicitudesQuerySchema = z.object({
   ...paginacionShape,
 });
 
-/**
- * Documento del legajo. `formulario_id` es opcional a propósito: no todo lo
- * que se adjunta es uno de los formularios.
- */
+/** Documento del legajo */
 export const crearDocumentoSolicitudSchema = z.object({
   formulario_id: z.coerce.number().int().positive().optional(),
   descripcion: z.string().trim().max(255).optional(),

@@ -58,11 +58,7 @@ import {
 } from "../../lib/errores/postgres.js";
 import { tieneFormulariosPendientes } from "../formularios/formulario.repository.js";
 
-/**
- * Traduce el error con el nombre del insumo, para que los mensajes de los
- * triggers no salgan con ids crudos. El resto de los errores los resuelve el
- * errorHandler global.
- */
+/** Traduce el error con el nombre del insumo, para que los mensajes de lostriggers no salgan con ids crudos */
 function responderErrorConContexto(
   error: unknown,
   res: Response,
@@ -92,7 +88,7 @@ async function resolverSolicitud(
   return { ok: true, id };
 }
 
-/** Verifica además que la línea pertenezca a la solicitud de la URL. */
+/** Verifica además que la línea pertenezca a la solicitud de la URL */
 async function resolverLinea(
   req: Request,
 ): Promise<
@@ -124,7 +120,7 @@ async function resolverLinea(
   return { ok: true, solicitudId: base.id, lineaId };
 }
 
-// ─────────────────────────────────────────────── listados
+// listados
 
 export async function listarController(
   req: Request,
@@ -179,10 +175,7 @@ export async function obtenerController(
       return res.status(ruta.status).json({ message: ruta.message });
     }
 
-    // `recetas` se conserva por compatibilidad, pero el legajo real vive en
-    // `documentos`: la tabla receta_medica nació cuando la medicina pasaba
-    // por solicitud y con el flujo actual la receta va como evidencia de la
-    // entrega directa.
+// `recetas` se conserva por compatibilidad, pero el legajo real vive en`documentos`: la tabla receta_medica nació cuando la medicina pasabapor solicitud y con el flujo actual la receta va como evidencia de laentrega directa
     const [solicitud, lineas, recetas, documentos] = await Promise.all([
       buscarSolicitudPorId(ruta.id),
       listarLineasDeSolicitud(ruta.id, false),
@@ -196,7 +189,7 @@ export async function obtenerController(
   }
 }
 
-// ─────────────────────────────────────────────── cabecera
+// cabecera
 
 export async function crearController(
   req: Request,
@@ -224,8 +217,7 @@ export async function crearController(
       });
     }
 
-    // Insumo repetido dentro del propio payload: la restricción UNIQUE de la
-    // tabla lo detectaría, pero el mensaje es más claro señalando el envío.
+// Insumo repetido dentro del propio payload: la restricción UNIQUE de latabla lo detectaría, pero el mensaje es más claro señalando el envío
     const insumoIds = parsed.data.lineas.map((l) => l.insumo_id);
     if (new Set(insumoIds).size !== insumoIds.length) {
       return res.status(400).json({
@@ -233,8 +225,7 @@ export async function crearController(
       });
     }
 
-    // Se valida solo que el insumo esté activo, que es lo que la FK no cubre.
-    // Que haya stock o no lo decide trg_validar_stock_linea_solicitud.
+// Se valida solo que el insumo esté activo, que es lo que la FK no cubre
     let contexto: ContextoError = {};
     for (const linea of parsed.data.lineas) {
       const insumo = await buscarInsumoActivo(linea.insumo_id);
@@ -246,16 +237,7 @@ export async function crearController(
       contexto = { insumoNombre: insumo.nombre };
     }
 
-    /*
-      Suplencia: quien registra no es la encargada del programa elegido.
-      Se calcula aquí y se guarda, en vez de deducirlo al consultar: si
-      mañana a esa persona le cambian de programa, una deducción reescribiría
-      el pasado y solicitudes que fueron normales pasarían a verse como
-      suplencias.
-
-      Quien no tiene programa asignado —Directora, Alcalde, Administrador— no
-      está cubriendo a nadie: registrar es parte de su trabajo normal.
-    */
+    /** Suplencia: quien registra no es la encargada del programa elegido */
     const programaPropio = await programaDeUsuario(req.usuario!.id);
     const enSuplencia =
       programaPropio !== null && programaPropio !== parsed.data.programa_id;
@@ -313,7 +295,7 @@ export async function editarController(
   }
 }
 
-// ─────────────────────────────────────────────── aprobación
+// aprobación
 
 export async function aprobarController(
   req: Request,
@@ -339,10 +321,7 @@ export async function aprobarController(
       return res.status(200).json(solicitud); // idempotente
     }
 
-    // Formularios exigidos por la categoría de cada línea (equipo, típicamente):
-    // ninguno puede quedar incompleto antes de aprobar. Ver migración 15 y
-    // formulario.repository.ts. Las líneas de medicina/comida no tienen
-    // categoria_insumo_formulario asociada, así que no las afecta este chequeo.
+// Formularios exigidos por la categoría de cada línea (equipo, típicamente):ninguno puede quedar incompleto antes de aprobar
     const lineas = await listarLineasDeSolicitud(ruta.id, false);
     for (const linea of lineas) {
       if (await tieneFormulariosPendientes(linea.id)) {
@@ -397,7 +376,7 @@ export async function rechazarController(
   }
 }
 
-// ─────────────────────────────────────────────── líneas
+// líneas
 
 export async function listarLineasController(
   req: Request,
@@ -484,7 +463,7 @@ export async function editarLineaController(
       });
     }
 
-    // La receta debe pertenecer a la misma solicitud que la línea.
+// La receta debe pertenecer a la misma solicitud que la línea
     if (
       parsed.data.receta_medica_id != null &&
       !(await existeRecetaDeSolicitud(
@@ -527,8 +506,7 @@ export async function cancelarLineaController(
       });
     }
 
-    // Las reglas de qué se puede cancelar (no entregada, no ya cancelada) están
-    // en sp_cancelar_linea_solicitud; sus excepciones las traduce el errorHandler.
+// Las reglas de qué se puede cancelar (no entregada, no ya cancelada) estánen sp_cancelar_linea_solicitud; sus excepciones las traduce el errorHandler
     await cancelarLinea(req.usuario!.id, ruta.lineaId, parsed.data.motivo);
     const linea = await buscarLineaPorId(ruta.lineaId);
     return res.status(200).json(linea);
@@ -572,13 +550,7 @@ export async function cancelarSolicitudController(
   }
 }
 
-/**
- * El expediente completo en un PDF: la ficha de la persona, cada insumo con
- * sus formularios llenos, las entregas y los documentos adjuntos.
- *
- * Un solo archivo y no uno por formulario: separar obligaría a juntarlos a
- * mano para archivar, que es justo lo que el sistema debería evitar.
- */
+/** El expediente completo en un PDF: la ficha de la persona, cada insumo consus formularios llenos, las entregas y los documentos adjuntos */
 export async function expedientePdfController(
   req: Request,
   res: Response,
@@ -601,9 +573,7 @@ export async function expedientePdfController(
       entregasExpediente(ruta.id),
     ]);
 
-    // Una consulta por línea. Son pocas —lo habitual es una— y hacerlo en una
-    // sola con todos los formularios de todas las líneas complicaría el
-    // agrupado sin ganar nada perceptible.
+// Una consulta por línea
     const formulariosPorLinea = new Map(
       await Promise.all(
         lineas.map(
@@ -628,7 +598,7 @@ export async function expedientePdfController(
   }
 }
 
-// ─────────────────────────────────────────────── documentos del legajo
+// documentos del legajo
 
 export async function listarDocumentosController(
   req: Request,
@@ -715,7 +685,7 @@ export async function eliminarDocumentoController(
   }
 }
 
-// ─────────────────────────────────────────────── recetas médicas
+// recetas médicas
 
 export async function listarRecetasController(
   req: Request,

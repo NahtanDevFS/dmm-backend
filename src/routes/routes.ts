@@ -26,8 +26,7 @@ router.use("/", catalogosRoutes);
 router.use("/", geografiaRoutes);
 router.use("/", catalogosLecturaRoutes);
 router.use("/", archivosRoutes);
-// /categorias-insumo ya no se monta aquí: desde el esquema v3 es un catálogo
-// simple y lo sirve catalogosRoutes por su entrada en catalogo-simple.config.
+// /categorias-insumo ya no se monta aquí: desde el esquema es un catálogo simple y lo sirve catalogosRoutes por su entrada en catalogo-simple
 router.use("/comunidades", comunidadRoutes);
 router.use("/personas", personaRoutes);
 router.use("/insumos", insumoRoutes);

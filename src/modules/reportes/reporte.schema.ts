@@ -24,8 +24,7 @@ export const personasAtendidasQuerySchema = z.object({
   discapacidadId: z.coerce.number().int().positive().optional(),
   programaId: z.coerce.number().int().positive().optional(),
   genero,
-  // Rango sobre `edad_a_la_entrega`, que la vista calcula con fn_edad_en_fecha:
-  // es la edad que la persona tenía el día de la entrega, no la de hoy.
+// Rango sobre `edad_a_la_entrega`, que la vista calcula con fn_edad_en_fecha:es la edad que la persona tenía el día de la entrega, no la de hoy
   edadMin: z.coerce.number().int().min(0).max(120).optional(),
   edadMax: z.coerce.number().int().min(0).max(120).optional(),
   soloAdultoMayor: z

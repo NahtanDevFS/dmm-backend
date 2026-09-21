@@ -41,11 +41,7 @@ import {
 import { guardarArchivo } from "../../lib/storage/storage.service.js";
 import { paginar } from "../../lib/paginacion.js";
 
-/**
- * Traduce el error con el contexto del módulo (nombres de insumo y presentación
- * en vez de los ids crudos que interpolan los mensajes de los triggers). El
- * resto de los errores los resuelve el errorHandler global sin contexto.
- */
+/** Traduce el error con el contexto del módulo (nombres de insumo y presentaciónen vez de los ids crudos que interpolan los mensajes de los triggers) */
 function responderErrorConContexto(
   error: unknown,
   res: Response,
@@ -75,7 +71,7 @@ async function resolverRecepcion(
   return { ok: true, id };
 }
 
-// ---------------------------------------------------------------- cabecera
+// cabecera
 
 export async function listarController(
   req: Request,
@@ -211,8 +207,7 @@ export async function desactivarController(
       return res.status(200).json(existente); // idempotente
     }
 
-    // Desactivar la cabecera dejaría lotes con existencias colgando de una
-    // recepción inactiva: primero hay que dar de baja cada lote.
+// Desactivar la cabecera dejaría lotes con existencias colgando de unarecepción inactiva: primero hay que dar de baja cada lote
     const bloqueada = await withReadClient((client) =>
       tieneLotesActivos(ruta.id, client),
     );
@@ -255,7 +250,7 @@ export async function reactivarController(
   }
 }
 
-// ------------------------------------------------------- lotes de inventario
+// lotes de inventario
 
 export async function listarLotesController(
   req: Request,
@@ -277,13 +272,7 @@ export async function listarLotesController(
   }
 }
 
-/**
- * Ingresa varias unidades identificables de un insumo, una por serie.
- *
- * Existe aparte de crearLoteController porque el ingreso es distinto: no se
- * pregunta cuánto llegó sino cuáles llegaron. Cinco sillas son cinco
- * unidades, no un lote de cinco.
- */
+/** Ingresa varias unidades identificables de un insumo, una por serie */
 export async function crearUnidadesController(
   req: Request,
   res: Response,
@@ -317,8 +306,7 @@ export async function crearUnidadesController(
         .json({ message: "El insumo indicado no existe o no está activo" });
     }
 
-    // El trigger de la base también lo rechazaría, pero con un mensaje sobre
-    // cantidades que no explicaría por qué se usó el endpoint equivocado.
+// El trigger de la base también lo rechazaría, pero con un mensaje sobrecantidades que no explicaría por qué se usó el endpoint equivocado
     if (!insumo.serie_por_unidad) {
       return res.status(409).json({
         message:
@@ -363,10 +351,7 @@ export async function crearLoteController(
       });
     }
 
-    // Solo se valida lo que las FK no cubren: que los registros estén activos.
-    // La coherencia presentación↔insumo, la caducidad y el código de fabricante
-    // obligatorios los valida trg_calcular_recepcion_lote y no se reimplementan
-    // aquí; sus excepciones se traducen al responder.
+// Solo se valida lo que las FK no cubren: que los registros estén activos
     const insumo = await buscarInsumoActivo(parsed.data.insumo_id);
     if (!insumo) {
       return res
@@ -392,8 +377,7 @@ export async function crearLoteController(
         .json({ message: "La marca indicada no existe o no está activa" });
     }
 
-    // Nombres para que el traductor pueda reemplazar los ids crudos que los
-    // mensajes de los triggers interpolan.
+// Nombres para que el traductor pueda reemplazar los ids crudos que losmensajes de los triggers interpolan
     const contexto: ContextoError = {
       insumoNombre: insumo.nombre,
       presentacionNombre: presentacion.unidad_nombre,
@@ -476,7 +460,7 @@ export async function semaforoController(
   }
 }
 
-// --------------------------------------------------- documentos de recepción
+// documentos de recepción
 
 export async function listarDocumentosController(
   req: Request,

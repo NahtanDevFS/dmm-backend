@@ -3,11 +3,7 @@ import { pool } from "../../db/pool.js";
 
 type Fila = Record<string, unknown>;
 
-/**
- * Acumulador de condiciones WHERE con parámetros posicionales. Evita repetir el
- * conteo manual de $1, $2... en cada reporte y garantiza que todo valor de la
- * petición viaje parametrizado (RNF-SEG-04).
- */
+/** Acumulador de condiciones WHERE con parámetros posicionales */
 class Filtros {
   private condiciones: string[] = [];
   private valores: unknown[] = [];
@@ -34,13 +30,9 @@ class Filtros {
   }
 }
 
-// ─────────────────────────────────────────────── resolución de nombres
+// resolución de nombres
 
-/**
- * `v_reporte_poblacion_beneficiada` está agregada y solo expone nombres. La
- * comunidad es única por (nombre, municipio_id), así que para filtrar de forma
- * exacta por id hace falta la pareja comunidad+municipio.
- */
+/** `v_reporte_poblacion_beneficiada` está agregada y solo expone nombres */
 export async function buscarComunidadParaFiltro(
   id: number,
 ): Promise<{ nombre: string; municipio_nombre: string } | null> {
@@ -84,16 +76,9 @@ export async function existeCategoriaInsumo(id: number): Promise<boolean> {
   return c !== null;
 }
 
-// ─────────────────────────────────────────────── RF-REP-01/02/03/04
+// RF-REP-01/02/03/04
 
-/**
- * Detalle de personas atendidas (una fila por renglón entregado).
- *
- * La vista ya resuelve la edad a la fecha de la entrega, la jerarquía
- * geográfica y las discapacidades concatenadas. Los filtros por comunidad y por
- * discapacidad se aplican con subconsultas sobre `persona_id` en vez de por
- * nombre: el nombre de una comunidad solo es único dentro de su municipio.
- */
+/** Detalle de personas atendidas (una fila por renglón entregado) */
 export async function reportePersonasAtendidas(params: {
   desde?: string;
   hasta?: string;
@@ -117,7 +102,7 @@ export async function reportePersonasAtendidas(params: {
     f.agregar((n) => `edad_a_la_entrega >= ${n}`, params.edadMin);
   if (params.edadMax !== undefined)
     f.agregar((n) => `edad_a_la_entrega <= ${n}`, params.edadMax);
-  // 65 años es el umbral que usa fn_es_adulto_mayor en la base de datos.
+// 65 años es el umbral que usa fn_es_adulto_mayor en la base de datos
   if (params.soloAdultoMayor) f.agregarSinValor(`edad_a_la_entrega >= 65`);
   if (params.soloConDiscapacidad) f.agregarSinValor(`discapacidades IS NOT NULL`);
   if (params.comunidadId !== undefined)
@@ -146,7 +131,7 @@ export async function reportePersonasAtendidas(params: {
   return result.rows;
 }
 
-/** RF-REP-06: stock por categoría, con conteo de lotes urgentes o vencidos. */
+/** RF-REP-06: stock por categoría, con conteo de lotes urgentes o vencidos */
 export async function reporteStockPorCategoria(params: {
   categoriaId?: number;
   soloConUrgentes: boolean;
@@ -168,11 +153,7 @@ export async function reporteStockPorCategoria(params: {
   return result.rows;
 }
 
-/**
- * Población beneficiada, agregada por mes / geografía / programa / género /
- * grupo etario / discapacidad. El grupo etario lo clasifica la vista con
- * fn_es_adulto_mayor y fn_es_menor; aquí solo se filtra por el resultado.
- */
+/** Población beneficiada, agregada por mes / geografía / programa / género /grupo etario / discapacidad */
 export async function reportePoblacionBeneficiada(params: {
   desde?: string;
   hasta?: string;
@@ -184,8 +165,7 @@ export async function reportePoblacionBeneficiada(params: {
 }): Promise<Fila[]> {
   const f = new Filtros();
 
-  // `mes` es el primer día del mes: se compara con date_trunc para que un
-  // "desde" a mitad de mes incluya ese mes completo.
+// `mes` es el primer día del mes: se compara con date_trunc para que un"desde" a mitad de mes incluya ese mes completo
   if (params.desde)
     f.agregar(
       (n) => `mes >= date_trunc('month', ${n}::date)::date`,

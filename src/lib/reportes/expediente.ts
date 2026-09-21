@@ -8,21 +8,7 @@ import type {
   EntregaExpediente,
 } from "../../modules/solicitudes/expediente.repository.js";
 
-/**
- * Expediente de una solicitud, en un solo PDF.
- *
- * Es un documento interno: no imita las hojas de Orden de Malta, porque el
- * papel firmado ya se escanea y se adjunta. Este sirve para revisar y
- * archivar lo que el sistema tiene registrado, así que prioriza el orden y la
- * legibilidad sobre el parecido con el formulario impreso.
- *
- * Vertical y no apaisado como los reportes: esto son fichas y párrafos, no
- * tablas anchas.
- *
- * Los campos sin responder se imprimen con un guion en vez de omitirse. Un
- * expediente que oculta sus huecos disimula lo que falta, y ver los huecos es
- * justamente para lo que alguien lo revisa.
- */
+/** Expediente de una solicitud, en un solo PDF */
 
 const MARGEN = 45;
 const GRIS = "#555";
@@ -46,7 +32,7 @@ function texto(valor: string | null | undefined): string {
   return limpio === "" ? "—" : limpio;
 }
 
-/** Salta de página si lo que viene no entra en lo que queda. */
+/** Salta de página si lo que viene no entra en lo que queda */
 function asegurarEspacio(doc: Doc, alto: number): void {
   if (doc.y + alto > doc.page.height - doc.page.margins.bottom) {
     doc.addPage();
@@ -54,8 +40,7 @@ function asegurarEspacio(doc: Doc, alto: number): void {
 }
 
 function titulo(doc: Doc, texto: string): void {
-  // Un título solo al pie de página deja huérfano lo que anuncia, así que se
-  // exige espacio para él y para algo de contenido debajo.
+// Un título solo al pie de página deja huérfano lo que anuncia, así que seexige espacio para él y para algo de contenido debajo
   asegurarEspacio(doc, 60);
   doc.moveDown(0.8);
   doc.x = MARGEN;
@@ -96,19 +81,7 @@ function subtitulo(doc: Doc, valor: string): void {
   doc.x = MARGEN;
 }
 
-/**
- * Un dato con su etiqueta, en dos columnas. Es la unidad de la que se
- * componen casi todas las secciones.
- *
- * Las dos columnas se dibujan en la MISMA `y`, así que el avance vertical lo
- * marca la más alta de las dos. Medir solo el valor hacía que una etiqueta de
- * dos líneas quedara pisada por el dato siguiente.
- *
- * Y la altura se mide ANTES de reservar espacio, no después: si se reserva de
- * menos, pdfkit salta de página por su cuenta al escribir y el `doc.y` que se
- * fija a continuación apunta a una posición de la página anterior, con lo que
- * todo lo que sigue se dibuja encima de lo ya escrito.
- */
+/** Un dato con su etiqueta, en dos columnas */
 function dato(doc: Doc, etiqueta: string, valor: string): void {
   const anchoEtiqueta = 150;
   const anchoValor = doc.page.width - MARGEN * 2 - anchoEtiqueta - 10;
@@ -147,8 +120,7 @@ function dato(doc: Doc, etiqueta: string, valor: string): void {
 function parrafo(doc: Doc, valor: string): void {
   const ancho = doc.page.width - MARGEN * 2;
 
-  // Mismo motivo que en `dato`: se mide primero para reservar lo que de
-  // verdad ocupa, en vez de un alto fijo que se queda corto con dos líneas.
+// Mismo motivo que en `dato`: se mide primero para reservar lo que deverdad ocupa, en vez de un alto fijo que se queda corto con dos líneas
   const alto = doc
     .fontSize(9)
     .font("Helvetica")
@@ -164,18 +136,13 @@ function parrafo(doc: Doc, valor: string): void {
   doc.x = MARGEN;
 }
 
-/**
- * Un grupo repetible como tabla: una fila por integrante, una columna por
- * campo. Reproducirlo como pares etiqueta-valor lo volvería ilegible con seis
- * personas en el hogar.
- */
+/** Un grupo repetible como tabla: una fila por integrante, una columna porcampo */
 function tablaGrupo(doc: Doc, encabezados: string[], filas: string[][]): void {
   const disponible = doc.page.width - MARGEN * 2;
   const ancho = disponible / encabezados.length;
   const alturaFila = 16;
 
-  // El encabezado sí puede ocupar dos líneas: las etiquetas de los campos son
-  // frases, no palabras. Se mide la más alta y todas arrancan de la misma y.
+// El encabezado sí puede ocupar dos líneas: las etiquetas de los campos sonfrases, no palabras
   doc.fontSize(8).font("Helvetica-Bold");
   const alturaEncabezado = Math.max(
     ...encabezados.map((h) => doc.heightOfString(h, { width: ancho - 4 })),
@@ -201,8 +168,7 @@ function tablaGrupo(doc: Doc, encabezados: string[], filas: string[][]): void {
     if (y + alturaFila > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
       y = doc.y;
-      // Se repite el encabezado: una tabla que sigue en la página siguiente
-      // sin encabezado obliga a volver atrás para saber qué es cada columna.
+// Se repite el encabezado: una tabla que sigue en la página siguientesin encabezado obliga a volver atrás para saber qué es cada columna
       doc.fillColor(GRIS).fontSize(8).font("Helvetica-Bold");
       encabezados.forEach((h, i) => {
         doc.text(h, MARGEN + i * ancho, y, { width: ancho - 4 });
@@ -223,7 +189,7 @@ function tablaGrupo(doc: Doc, encabezados: string[], filas: string[][]): void {
   doc.x = MARGEN;
 }
 
-/** Reparte las respuestas de un formulario entre campos sueltos y grupos. */
+/** Reparte las respuestas de un formulario entre campos sueltos y grupos */
 function escribirFormulario(doc: Doc, formulario: FormularioExpediente): void {
   subtitulo(
     doc,
@@ -237,9 +203,7 @@ function escribirFormulario(doc: Doc, formulario: FormularioExpediente): void {
     dato(doc, respuesta.etiqueta, texto(respuesta.valor));
   }
 
-  // Cada grupo repetible se arma como tabla: campos en columnas, filas en
-  // filas. Las respuestas vienen planas, con numero_fila diciendo a qué fila
-  // pertenece cada una.
+// Cada grupo repetible se arma como tabla: campos en columnas, filas enfilas
   const grupos = new Map<string, RespuestasDelGrupo>();
   for (const respuesta of conGrupo) {
     const nombre = respuesta.grupo_repetible!;
@@ -443,8 +407,7 @@ export function responderExpedientePdf(
   if (documentos.length === 0) {
     parrafo(doc, "No hay documentos adjuntos a esta solicitud.");
   } else {
-    // Se listan, no se incrustan: los archivos viven detrás de la sesión y
-    // meterlos dentro convertiría el expediente en algo de varios megas.
+// Se listan, no se incrustan: los archivos viven detrás de la sesión ymeterlos dentro convertiría el expediente en algo de varios megas
     parrafo(
       doc,
       "Los archivos se consultan desde el sistema; aquí solo se deja constancia de cuáles existen.",

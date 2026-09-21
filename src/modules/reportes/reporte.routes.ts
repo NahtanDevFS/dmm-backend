@@ -8,14 +8,7 @@ import {
   poblacionBeneficiadaController,
 } from "./reporte.controller.js";
 
-/**
- * Único módulo donde ALCALDE tiene acceso: la entrevista con el cliente confirmó
- * que solo consulta reportes, y aquí no hay ningún endpoint de escritura, así que
- * su acceso es de lectura por construcción.
- *
- * EMPLEADO_DMM queda fuera a propósito: la matriz de roles reserva los reportes
- * para dirección, alcaldía y administración.
- */
+/** Único módulo donde ALCALDE tiene acceso: la entrevista con el cliente confirmóque solo consulta reportes, y aquí no hay ningún endpoint de escritura, así quesu acceso es de lectura por construcción */
 const router = Router();
 
 router.get(

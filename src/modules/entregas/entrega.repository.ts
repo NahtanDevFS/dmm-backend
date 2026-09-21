@@ -13,7 +13,7 @@ export interface EntregaRow {
   activo: boolean;
 }
 
-/** De qué lote salió una parte del renglón. */
+/** De qué lote salió una parte del renglón */
 export interface LoteDeRenglon {
   id: number;
   detalle_inventario_lote_id: number;
@@ -22,16 +22,12 @@ export interface LoteDeRenglon {
   cantidad_entregada: number;
   activo: boolean;
   codigo_lote: string | null;
-  /**
-   * Serie del fabricante, para el equipo donde cada unidad es una pieza
-   * identificable. Es lo que permite saber CUÁL silla salió, distinto de
-   * codigo_lote, que identifica el envío en que llegó.
-   */
+  /** Serie del fabricante, para el equipo donde cada unidad es una piezaidentificable */
   numero_serie: string | null;
   fecha_caducidad: string | null;
 }
 
-/** Un insumo entregado. El reparto por lotes viaja anidado en `lotes`. */
+/** Un insumo entregado */
 export interface DetalleEntregaRow {
   id: number;
   insumo_id: number;
@@ -43,13 +39,9 @@ export interface DetalleEntregaRow {
   motivo_anulacion: string | null;
   fecha_anulacion: Date | null;
   tiene_prestamo: boolean;
-  /** Si el insumo lleva serie por unidad: cambia cómo se rotula el lote. */
+  /** Si el insumo lleva serie por unidad: cambia cómo se rotula el lote */
   serie_por_unidad: boolean;
-  /**
-   * Si ese préstamo ya se devolvió. Importa porque la devolución devolvió el
-   * stock al lote: anular la entrega después lo sumaría una segunda vez y el
-   * inventario quedaría por encima de lo que se recibió.
-   */
+  /** Si ese préstamo ya se devolvió */
   prestamo_devuelto: boolean;
   lotes: LoteDeRenglon[];
 }
@@ -69,7 +61,7 @@ export interface LineaSolicitudParaEntrega {
 const COLUMNAS_ENTREGA = `id, persona_id, persona_receptor_id,
   tipo_parentesco_receptor_id, fecha_entrega, usuario_entrega_id, observaciones, activo`;
 
-// ─────────────────────────────────────────────── lecturas
+// lecturas
 
 export async function buscarEntregaPorId(
   id: number,
@@ -81,11 +73,7 @@ export async function buscarEntregaPorId(
   return result.rows[0] ?? null;
 }
 
-/**
- * Listado con los nombres ya resueltos. No hay vista para esto, así que se
- * arma la consulta aquí: el insumo de una entrega no está en `entrega`, se
- * alcanza por detalle_entrega -> detalle_inventario_lote -> insumo.
- */
+/** Listado con los nombres ya resueltos */
 export async function listarEntregas(params: {
   personaId?: number;
   insumoId?: number;
@@ -121,8 +109,7 @@ export async function listarEntregas(params: {
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
 
-  // Se cuentan entregas, no renglones: el listado agrupa por entrega, asi que
-  // contar sobre el join daria un total inflado.
+// Se cuentan entregas, no renglones: el listado agrupa por entrega, asi quecontar sobre el join daria un total inflado
   const totalResult = await pool.query<{ n: number }>(
     `SELECT count(*)::int AS n FROM public.entrega e ${where}`,
     valores,
@@ -163,11 +150,7 @@ export async function listarEntregas(params: {
   return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
-/**
- * Renglones de la entrega: un insumo por fila, con el reparto por lotes
- * anidado. Se arma en una sola consulta con json_agg en vez de una por
- * renglón: una entrega puede traer varios insumos y cada uno varios lotes.
- */
+/** Renglones de la entrega: un insumo por fila, con el reparto por lotesanidado */
 export async function listarDetallesDeEntrega(
   entregaId: number,
 ): Promise<DetalleEntregaRow[]> {
@@ -215,7 +198,7 @@ export async function listarDetallesDeEntrega(
   return result.rows;
 }
 
-/** Un renglón suelto, para validar antes de anularlo. */
+/** Un renglón suelto, para validar antes de anularlo */
 export async function buscarDetalleEntrega(
   id: number,
 ): Promise<{ id: number; entrega_id: number; activo: boolean } | null> {
@@ -230,11 +213,7 @@ export async function buscarDetalleEntrega(
   return result.rows[0] ?? null;
 }
 
-/**
- * Orden en que sp_registrar_entrega va a consumir los lotes. Se expone tal cual
- * la vista, sin reordenar: `orden_fifo` es caducidad, o fecha de recepción más
- * 100 años cuando el lote no caduca (FEFO con fallback a FIFO).
- */
+/** Orden en que sp_registrar_entrega va a consumir los lotes */
 export async function listarLotesFifo(
   insumoId: number,
 ): Promise<Record<string, unknown>[]> {
@@ -249,7 +228,7 @@ export async function listarLotesFifo(
   return result.rows;
 }
 
-// ─────────────────────────────────────────────── validaciones
+// validaciones
 
 export async function existePersonaActiva(id: number): Promise<boolean> {
   const persona = await prisma.persona.findUnique({
@@ -285,7 +264,7 @@ export async function existeTipoEvidenciaActivo(id: number): Promise<boolean> {
   return tipo?.activo === true;
 }
 
-/** Datos de la línea de solicitud necesarios para las reglas de despacho. */
+/** Datos de la línea de solicitud necesarios para las reglas de despacho */
 export async function buscarLineaParaEntrega(
   id: number,
 ): Promise<LineaSolicitudParaEntrega | null> {
@@ -302,22 +281,9 @@ export async function buscarLineaParaEntrega(
   return result.rows[0] ?? null;
 }
 
-// ─────────────────────────────────────────────── escrituras
+// escrituras
 
-/**
- * Registra la entrega completa: una cabecera y un renglón por insumo.
- *
- * `fn_crear_entrega` crea la cabecera y devuelve su id —ya no hace falta
- * leerlo con currval—, y `sp_agregar_insumo_entrega` se llama una vez por
- * insumo. Cada llamada reparte la cantidad entre lotes por FEFO/FIFO e
- * inserta las filas de detalle_entrega_lote; los triggers hacen el resto:
- * fn_calcular_cantidad_entregada convierte la presentación,
- * fn_descontar_inventario descuenta con FOR UPDATE y
- * fn_actualizar_linea_desde_entrega recalcula la línea de solicitud.
- *
- * Todo va en una transacción: si el tercer insumo no tiene stock, no queda
- * una entrega a medias con los dos primeros.
- */
+/** Registra la entrega completa: una cabecera y un renglón por insumo */
 export async function registrarEntrega(
   usuarioId: number,
   datos: {
@@ -361,11 +327,7 @@ export async function registrarEntrega(
   });
 }
 
-/**
- * Anulación de la entrega completa. El procedimiento apaga cada renglón y
- * es el trigger de cada uno el que devuelve su stock a los lotes de origen,
- * de modo que no hay dos caminos de restauración que puedan descuadrar.
- */
+/** Anulación de la entrega completa */
 export async function anularEntrega(
   usuarioId: number,
   entregaId: number,
@@ -380,11 +342,7 @@ export async function anularEntrega(
   });
 }
 
-/**
- * Anulación de un solo insumo, dejando el resto de la entrega en pie. Es el
- * caso de "se entregó el jarabe, el acetaminofén estaba vencido": rehacer
- * toda la entrega para corregir un renglón invita a no corregir nada.
- */
+/** Anulación de un solo insumo, dejando el resto de la entrega en pie */
 export async function anularDetalleEntrega(
   usuarioId: number,
   detalleId: number,

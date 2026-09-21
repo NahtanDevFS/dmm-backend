@@ -15,13 +15,10 @@ import {
 } from "./insumo.controller.js";
 import presentacionRoutes from "./presentacion-insumo.routes.js";
 
-// El insumo es dato maestro del catálogo de inventario (RF-CAT-05), no
-// operación diaria: la gestión queda con los mismos roles que el resto de
-// catálogos. Lo operativo (recepción de donaciones, entregas) sí incluirá a
-// EMPLEADO_DMM.
+// El insumo es dato maestro del catálogo de inventario (RF-CAT-05), nooperación diaria: la gestión queda con los mismos roles que el resto decatálogos
 const router = Router();
 
-// Antes de "/:id" para que "stock" no se lea como un id.
+// Antes de "/:id" para que "stock" no se lea como un id
 router.get(
   "/stock",
   requireAuth,

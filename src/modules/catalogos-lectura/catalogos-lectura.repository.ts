@@ -24,7 +24,7 @@ export interface TipoEvidenciaEntregaRow {
   activo: boolean;
 }
 
-/** `estado_solicitud_apoyo` no tiene columna `activo`: es un catálogo cerrado. */
+/** `estado_solicitud_apoyo` no tiene columna `activo`: es un catálogo cerrado */
 export interface EstadoSolicitudRow {
   id: number;
   nombre: string;
@@ -36,7 +36,7 @@ export interface EstadoContratoRow {
   activo: boolean;
 }
 
-/** El monto sugerido se devuelve como string: es NUMERIC en la base. */
+/** El monto sugerido se devuelve como string: es NUMERIC en la base */
 export interface TipoMultaRow {
   id: number;
   nombre: string;
@@ -44,14 +44,7 @@ export interface TipoMultaRow {
   activo: boolean;
 }
 
-/**
- * Modalidad bajo la que se entrega un insumo. Vive aquí y no en los catálogos
- * administrables porque el código se ramifica sobre estos nombres: un
- * préstamo se salta los formularios marcados como propios de donación. Si
- * alguien pudiera agregar "Comodato" desde una pantalla, nacería una
- * modalidad que ninguna validación conoce y que se comportaría como donación
- * sin que nadie lo haya decidido.
- */
+/** Modalidad bajo la que se entrega un insumo */
 export interface ModalidadSolicitudRow {
   id: number;
   nombre: string;
@@ -69,12 +62,7 @@ export async function listarModalidadesSolicitud(): Promise<
   });
 }
 
-/**
- * Estado civil. A diferencia de modalidad_solicitud, ningún código se
- * ramifica sobre estos valores: es una etiqueta descriptiva y podría
- * administrarse. Vive aquí por ahora porque los cinco valores vienen del
- * formulario de Orden de Malta y no se espera que cambien.
- */
+/** Estado civil */
 export interface EstadoCivilRow {
   id: number;
   nombre: string;
