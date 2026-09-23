@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
+import { fechaSchema } from "../../lib/fechas.js";
 import {
   entregasPorMes,
   stockPorCategoria,
@@ -44,9 +45,7 @@ export async function stockPorCategoriaController(
   }
 }
 
-const fecha = z
-  .string()
-  .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha inválida");
+const fecha = fechaSchema();
 
 const poblacionPorProgramaQuery = z.object({
   desde: fecha,

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { fechaSchema } from "../../lib/fechas.js";
 import { telefonoSchema, telefonoOpcionalSchema } from "../../lib/telefono.js";
 import { paginacionShape } from "../../lib/paginacion.js";
 
@@ -13,12 +14,9 @@ const apellidosSchema = z
   .min(1, "El apellido es requerido")
   .max(100);
 
-const fechaNacimientoSchema = z
-  .string()
-  .refine(
-    (val) => !Number.isNaN(Date.parse(val)),
-    "Fecha de nacimiento inválida",
-  )
+const fechaNacimientoSchema = fechaSchema(
+  "Fecha de nacimiento inválida: use el formato AAAA-MM-DD con un día que exista",
+)
   .refine((val) => {
     const fecha = new Date(val);
     const hoy = new Date();

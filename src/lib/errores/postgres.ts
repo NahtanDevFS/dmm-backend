@@ -196,6 +196,16 @@ export function traducirErrorPostgres(
     return { status: 400, message: "Falta un dato obligatorio." };
   }
 
+  // invalid_datetime_format / datetime_field_overflow: una fecha que no existe
+  // en el calendario. Los esquemas ya las rechazan; esto es la red de seguridad
+  // para que nunca terminen en un 500.
+  if (err.code === "22007" || err.code === "22008") {
+    return {
+      status: 400,
+      message: "Alguna de las fechas enviadas no es válida.",
+    };
+  }
+
 // Raise_exception: las excepciones de los triggers y stored procedures yaestán redactadas en español para el usuario final, así que se devuelven talcual (con los ids sustituidos por nombres si hay contexto)
   if (err.code === "P0001" && err.message) {
     const message = humanizarMensajeTrigger(err.message, contexto);

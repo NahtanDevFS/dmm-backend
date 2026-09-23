@@ -17,6 +17,7 @@ import {
 import {
   anularContratoPorError,
   cerrarContratoNoDevuelto,
+  listarContratosVencidos,
 } from "../../src/modules/prestamos/contrato.repository.js";
 
 /**
@@ -339,5 +340,37 @@ describe("cerrarContratoNoDevuelto", () => {
     await expect(
       cerrarContratoNoDevuelto(usuarioId, -999, "x"),
     ).rejects.toThrow();
+  });
+});
+
+describe("listarContratosVencidos (QA-17)", () => {
+  /** Contrato raíz que ya pasó su fecha pactada: inicio hace 30 días, plazo vencido hace 5 */
+  async function crearContratoVencido(detalleEntregaId: number): Promise<number> {
+    const { rows } = await poolOwner.query<{ id: number }>(
+      `INSERT INTO public.contrato_prestamo
+         (detalle_entrega_id, fecha_inicio, fecha_devolucion_pactada, estado_id, created_by)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [detalleEntregaId, enDias(-30), enDias(-5), estadoVigente, usuarioId],
+    );
+    return rows[0].id;
+  }
+
+  it("deja de listar un contrato vencido cuando se cierra como NO_DEVUELTO", async () => {
+    // NO_DEVUELTO no registra fecha_devolucion_real y deja el contrato
+    // activo: antes seguía cumpliendo el filtro y el personal lo reclamaba
+    // aunque ya estuviera cerrado.
+    const insumo = await crearInsumo(usuarioId, {
+      categoriaPermitePrestamo: true,
+    });
+    await crearLote(usuarioId, insumo, { cantidad: 2 });
+    const contrato = await crearContratoVencido(await entregarEquipo(insumo));
+
+    const antes = await listarContratosVencidos();
+    expect(antes.map((c) => c.id)).toContain(contrato);
+
+    await cerrarContratoNoDevuelto(usuarioId, contrato, "No se localizó");
+
+    const despues = await listarContratosVencidos();
+    expect(despues.map((c) => c.id)).not.toContain(contrato);
   });
 });

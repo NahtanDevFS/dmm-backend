@@ -15,7 +15,6 @@ import {
   existeUsername,
   existeRolActivo,
   listarRoles,
-  contarOtrosAdministradoresActivos,
   crearUsuario,
   editarUsuario,
   actualizarPassword,
@@ -158,10 +157,14 @@ export async function editarController(
       });
     }
 
-    if (
-      parsed.data.username === undefined &&
-      parsed.data.rol_id === undefined
-    ) {
+    // programa_id en null sí es un cambio: quita el programa asignado
+    const camposEditables = [
+      "username",
+      "rol_id",
+      "nombre_completo",
+      "programa_id",
+    ] as const;
+    if (camposEditables.every((campo) => parsed.data[campo] === undefined)) {
       return res.status(400).json({ message: "No hay nada que actualizar" });
     }
 
@@ -188,17 +191,7 @@ export async function editarController(
             "No puede cambiar su propio rol. Pida a otro administrador que lo haga.",
         });
       }
-
-// Y si es el último administrador, cambiarle el rol dejaría el sistema sinnadie que pueda gestionar usuarios
-      if (
-        req.usuario!.rol === "ADMINISTRADOR" &&
-        (await contarOtrosAdministradoresActivos(ruta.id)) === 0
-      ) {
-        return res.status(409).json({
-          message:
-            "No se puede cambiar el rol del único administrador activo del sistema.",
-        });
-      }
+// Que no sea el último administrador se comprueba en editarUsuario, dentro de la transacción
     }
 
     const actualizado = await editarUsuario(
@@ -234,13 +227,7 @@ export async function desactivarController(
       return res.status(200).json(usuario); // idempotente
     }
 
-    if ((await contarOtrosAdministradoresActivos(ruta.id)) === 0) {
-      return res.status(409).json({
-        message:
-          "No se puede desactivar al único administrador activo del sistema.",
-      });
-    }
-
+// cambiarEstadoUsuario rechaza con 409 si es el último administrador activo
     return res
       .status(200)
       .json(await cambiarEstadoUsuario(req.usuario!.id, ruta.id, false));

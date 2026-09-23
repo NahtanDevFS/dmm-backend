@@ -1,6 +1,7 @@
 import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
+import type { PoolClient } from "pg";
 
 /** `password_hash` no aparece en ninguna de estas consultas a propósito: nuncadebe salir del backend, ni siquiera hacia un ADMINISTRADOR */
 export interface UsuarioRow {
@@ -118,18 +119,28 @@ export async function listarRoles(): Promise<RolRow[]> {
   });
 }
 
-/** Cuántos ADMINISTRADOR activos quedan, sin contar al usuario indicado */
-export async function contarOtrosAdministradoresActivos(
-  excluirId: number,
-): Promise<number> {
-  const result = await pool.query<{ n: number }>(
-    `SELECT count(*)::int AS n
+/** Quitarle a alguien su condición de ADMINISTRADOR activo cuando es el último: el status lo traduce errorHandler a 409 */
+export class UltimoAdministradorError extends Error {
+  status = 409;
+}
+
+/** Lanza si el usuario `id` es el único ADMINISTRADOR activo. Mira el rol del usuario afectado, no el de quien hace el cambio, y bloquea las filas de los administradores activos: así dos cambios simultáneos no pueden retirar cada uno "al otro" y dejar el sistema sin ninguno */
+async function asegurarQueNoEsElUltimoAdministrador(
+  client: PoolClient,
+  id: number,
+  mensaje: string,
+): Promise<void> {
+  const result = await client.query<{ id: number }>(
+    `SELECT u.id
      FROM public.usuario u
      JOIN public.rol r ON r.id = u.rol_id
-     WHERE u.activo = true AND r.nombre = 'ADMINISTRADOR' AND u.id <> $1`,
-    [excluirId],
+     WHERE u.activo = true AND r.nombre = 'ADMINISTRADOR'
+     FOR UPDATE OF u`,
   );
-  return result.rows[0]?.n ?? 0;
+  const administradores = result.rows.map((r) => r.id);
+  if (administradores.length === 1 && administradores[0] === id) {
+    throw new UltimoAdministradorError(mensaje);
+  }
 }
 
 export async function crearUsuario(
@@ -173,6 +184,20 @@ export async function editarUsuario(
   },
 ): Promise<UsuarioRow> {
   return withUserTransaction(usuarioId, async (client) => {
+    if (datos.rol_id !== undefined) {
+      const nuevoRol = await client.query<{ nombre: string }>(
+        "SELECT nombre FROM public.rol WHERE id = $1",
+        [datos.rol_id],
+      );
+      if (nuevoRol.rows[0]?.nombre !== "ADMINISTRADOR") {
+        await asegurarQueNoEsElUltimoAdministrador(
+          client,
+          id,
+          "No se puede cambiar el rol del único administrador activo del sistema.",
+        );
+      }
+    }
+
     const sets: string[] = [];
     const valores: unknown[] = [];
     let i = 1;
@@ -240,6 +265,14 @@ export async function cambiarEstadoUsuario(
   nuevoEstado: boolean,
 ): Promise<UsuarioRow> {
   return withUserTransaction(usuarioId, async (client) => {
+    if (!nuevoEstado) {
+      await asegurarQueNoEsElUltimoAdministrador(
+        client,
+        id,
+        "No se puede desactivar al único administrador activo del sistema.",
+      );
+    }
+
     const result = await client.query<UsuarioRow>(
       `UPDATE public.usuario SET activo = $1, updated_by = $2
        WHERE id = $3

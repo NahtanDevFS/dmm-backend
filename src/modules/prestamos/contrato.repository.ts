@@ -229,8 +229,9 @@ export async function listarContratosVencidos(): Promise<
        AND cp.fecha_devolucion_real IS NULL
        AND cp.fecha_devolucion_pactada < CURRENT_DATE
        -- Una renovación deja el contrato anterior como EXTENDIDO: ese ya no se
-       -- reclama, el vigente es el último de la cadena.
-       AND ecp.nombre <> 'EXTENDIDO'
+       -- reclama, el vigente es el último de la cadena. NO_DEVUELTO es un
+       -- cierre definitivo, no un atraso: ya no hay nada que reclamar.
+       AND ecp.nombre NOT IN ('EXTENDIDO', 'NO_DEVUELTO')
      ORDER BY cp.fecha_devolucion_pactada`,
   );
   return result.rows;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { fechaSchema, rangoValido, MENSAJE_RANGO_INVERTIDO } from "../../lib/fechas.js";
 import { paginacionShape } from "../../lib/paginacion.js";
 
 export const listarAuditoriaQuerySchema = z.object({
@@ -10,14 +11,8 @@ export const listarAuditoriaQuerySchema = z.object({
       error: "La acción debe ser INSERT, UPDATE o DELETE",
     })
     .optional(),
-  desde: z
-    .string()
-    .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha 'desde' inválida")
-    .optional(),
-  hasta: z
-    .string()
-    .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha 'hasta' inválida")
-    .optional(),
+  desde: fechaSchema("Fecha 'desde' inválida: use el formato AAAA-MM-DD").optional(),
+  hasta: fechaSchema("Fecha 'hasta' inválida: use el formato AAAA-MM-DD").optional(),
 // Mismo sobre y mismos topes que el resto de los listados del sistema
   ...paginacionShape,
-});
+}).refine(rangoValido, MENSAJE_RANGO_INVERTIDO);
