@@ -29,11 +29,16 @@ const fechaNacimientoSchema = fechaSchema(
     return fecha > limite;
   }, "La fecha de nacimiento no es válida (más de 120 años)");
 
+/** Opcional, pero si viene debe ser un CUI/DPI completo: la misma regla que el formulario del frontend. El vacío se guarda como null: un "" pasaba el UNIQUE como un valor más (el segundo daba 409) y el trigger de menores, que busca IS NULL, no lo detectaba */
 const cuiDpiSchema = z
-  .string()
-  .trim()
-  .max(13, "El CUI/DPI no puede exceder 13 caracteres")
-  .nullable()
+  .union([
+    z
+      .string()
+      .trim()
+      .regex(/^(\d{13})?$/, "El CUI/DPI debe tener exactamente 13 dígitos"),
+    z.null(),
+  ])
+  .transform((v) => (v === "" ? null : v))
   .optional();
 
 const datosBasePersonaSchema = z.object({

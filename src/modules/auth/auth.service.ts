@@ -9,6 +9,10 @@ import {
   type SesionRow,
 } from "./session.repository.js";
 import { generarTokenSesion } from "./session.utils.js";
+import { BCRYPT_ROUNDS } from "../../config/seguridad.js";
+
+/** Hash de relleno para comparar cuando el usuario no existe. Se calcula una sola vez, al cargar el módulo: por petición costaría el doble, y calculado en el primer login ese intento tardaría más que los demás. Usa el mismo coste que los hashes reales */
+const hashFicticio = bcrypt.hash("dmm-usuario-inexistente", BCRYPT_ROUNDS);
 
 export class CredencialesInvalidasError extends Error {
   constructor() {
@@ -49,12 +53,13 @@ export async function login(params: {
 
   const usuario = await buscarUsuarioPorUsername(username);
 
-  if (!usuario) {
-    throw new CredencialesInvalidasError();
-  }
-
-  const passwordValida = await bcrypt.compare(password, usuario.password_hash);
-  if (!passwordValida) {
+  // Se compara siempre, exista o no el usuario: si el inexistente respondiera
+  // sin pasar por bcrypt, la diferencia de tiempo delataría qué cuentas existen
+  const passwordValida = await bcrypt.compare(
+    password,
+    usuario?.password_hash ?? (await hashFicticio),
+  );
+  if (!usuario || !passwordValida) {
     throw new CredencialesInvalidasError();
   }
 

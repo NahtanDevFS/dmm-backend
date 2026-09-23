@@ -20,9 +20,7 @@ import {
   actualizarPassword,
   cambiarEstadoUsuario,
 } from "./usuario.repository.js";
-
-/** Mismo coste que usa el resto del sistema para los hashes existentes */
-const BCRYPT_ROUNDS = 12;
+import { BCRYPT_ROUNDS } from "../../config/seguridad.js";
 
 async function resolverUsuario(
   req: Request,
@@ -276,9 +274,11 @@ export async function cambiarPasswordPropiaController(
       hashActual === null ||
       !(await bcrypt.compare(parsed.data.password_actual, hashActual))
     ) {
-      return res
-        .status(401)
-        .json({ message: "La contraseña actual no es correcta" });
+// 400 y no 401: la sesión sigue siendo válida, solo el dato del formulario está mal. El frontend trata todo 401 como sesión expirada y sacaba al usuario por un error de tecleo
+      return res.status(400).json({
+        code: "CURRENT_PASSWORD_INVALID",
+        message: "La contraseña actual no es correcta",
+      });
     }
 
     if (parsed.data.password_nueva === parsed.data.password_actual) {
