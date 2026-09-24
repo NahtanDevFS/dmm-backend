@@ -13,17 +13,24 @@ import {
   buscarUsuarioPorId,
   buscarHashDeUsuario,
   existeUsername,
-  existeRolActivo,
+  buscarRolActivo,
+  buscarRolDeUsuario,
   listarRoles,
-  contarOtrosAdministradoresActivos,
   crearUsuario,
   editarUsuario,
   actualizarPassword,
   cambiarEstadoUsuario,
 } from "./usuario.repository.js";
+import { BCRYPT_ROUNDS } from "../../config/seguridad.js";
+import { ROL } from "../../config/roles.js";
 
-/** Mismo coste que usa el resto del sistema para los hashes existentes */
-const BCRYPT_ROUNDS = 12;
+/** Las cuentas ADMINISTRADOR solo existen para otros administradores: a la Directora no se le listan, no puede abrirlas ni modificarlas, y tampoco asignar ese rol */
+function veAdministradores(req: Request): boolean {
+  return req.usuario!.rol === ROL.ADMINISTRADOR;
+}
+
+const NO_PUEDE_ASIGNAR_ADMIN =
+  "Solo un administrador puede asignar el rol ADMINISTRADOR.";
 
 async function resolverUsuario(
   req: Request,
@@ -34,8 +41,13 @@ async function resolverUsuario(
   if (!Number.isInteger(id)) {
     return { ok: false, status: 400, message: "Id inválido" };
   }
-  const usuario = await buscarUsuarioPorId(id);
-  if (!usuario) {
+  const rol = await buscarRolDeUsuario(id);
+  // Un administrador oculto responde igual que uno inexistente: un 403
+  // confirmaría que ese id es una cuenta de administración
+  if (
+    rol === null ||
+    (rol === ROL.ADMINISTRADOR && !veAdministradores(req))
+  ) {
     return { ok: false, status: 404, message: "Usuario no encontrado" };
   }
   return { ok: true, id };
@@ -44,12 +56,12 @@ async function resolverUsuario(
 // roles
 
 export async function listarRolesController(
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) {
   try {
-    return res.status(200).json(await listarRoles());
+    return res.status(200).json(await listarRoles(veAdministradores(req)));
   } catch (error) {
     return next(error);
   }
@@ -74,6 +86,7 @@ export async function listarController(
       rolId: parsed.data.rolId,
       busqueda: parsed.data.busqueda,
       incluirInactivos: parsed.data.incluirInactivos,
+      ocultarAdministradores: !veAdministradores(req),
       limite: parsed.data.limite,
       desplazamiento: parsed.data.desplazamiento,
     });
@@ -119,10 +132,14 @@ export async function crearController(
       });
     }
 
-    if (!(await existeRolActivo(parsed.data.rol_id))) {
+    const rol = await buscarRolActivo(parsed.data.rol_id);
+    if (rol === null) {
       return res
         .status(400)
         .json({ message: "El rol indicado no existe o no está activo" });
+    }
+    if (rol === ROL.ADMINISTRADOR && !veAdministradores(req)) {
+      return res.status(403).json({ message: NO_PUEDE_ASIGNAR_ADMIN });
     }
 
     const passwordHash = await bcrypt.hash(parsed.data.password, BCRYPT_ROUNDS);
@@ -158,10 +175,14 @@ export async function editarController(
       });
     }
 
-    if (
-      parsed.data.username === undefined &&
-      parsed.data.rol_id === undefined
-    ) {
+    // programa_id en null sí es un cambio: quita el programa asignado
+    const camposEditables = [
+      "username",
+      "rol_id",
+      "nombre_completo",
+      "programa_id",
+    ] as const;
+    if (camposEditables.every((campo) => parsed.data[campo] === undefined)) {
       return res.status(400).json({ message: "No hay nada que actualizar" });
     }
 
@@ -175,10 +196,14 @@ export async function editarController(
     }
 
     if (parsed.data.rol_id !== undefined) {
-      if (!(await existeRolActivo(parsed.data.rol_id))) {
+      const rol = await buscarRolActivo(parsed.data.rol_id);
+      if (rol === null) {
         return res
           .status(400)
           .json({ message: "El rol indicado no existe o no está activo" });
+      }
+      if (rol === ROL.ADMINISTRADOR && !veAdministradores(req)) {
+        return res.status(403).json({ message: NO_PUEDE_ASIGNAR_ADMIN });
       }
 
 // Cambiarse el rol a uno mismo es la forma más fácil de perder el accesode administración sin querer
@@ -188,17 +213,7 @@ export async function editarController(
             "No puede cambiar su propio rol. Pida a otro administrador que lo haga.",
         });
       }
-
-// Y si es el último administrador, cambiarle el rol dejaría el sistema sinnadie que pueda gestionar usuarios
-      if (
-        req.usuario!.rol === "ADMINISTRADOR" &&
-        (await contarOtrosAdministradoresActivos(ruta.id)) === 0
-      ) {
-        return res.status(409).json({
-          message:
-            "No se puede cambiar el rol del único administrador activo del sistema.",
-        });
-      }
+// Que no sea el último administrador se comprueba en editarUsuario, dentro de la transacción
     }
 
     const actualizado = await editarUsuario(
@@ -234,13 +249,7 @@ export async function desactivarController(
       return res.status(200).json(usuario); // idempotente
     }
 
-    if ((await contarOtrosAdministradoresActivos(ruta.id)) === 0) {
-      return res.status(409).json({
-        message:
-          "No se puede desactivar al único administrador activo del sistema.",
-      });
-    }
-
+// cambiarEstadoUsuario rechaza con 409 si es el último administrador activo
     return res
       .status(200)
       .json(await cambiarEstadoUsuario(req.usuario!.id, ruta.id, false));
@@ -289,9 +298,20 @@ export async function cambiarPasswordPropiaController(
       hashActual === null ||
       !(await bcrypt.compare(parsed.data.password_actual, hashActual))
     ) {
-      return res
-        .status(401)
-        .json({ message: "La contraseña actual no es correcta" });
+// 400 y no 401: la sesión sigue siendo válida, solo el dato del formulario está mal. El frontend trata todo 401 como sesión expirada y sacaba al usuario por un error de tecleo
+      // Solo este caso gasta un intento de limiteCambioPassword
+      res.locals.passwordActualIncorrecta = true;
+      const restantes = req.rateLimit?.remaining;
+      return res.status(400).json({
+        code: "CURRENT_PASSWORD_INVALID",
+        intentos_restantes: restantes,
+        message:
+          restantes === undefined
+            ? "La contraseña actual no es correcta"
+            : restantes === 0
+              ? "La contraseña actual no es correcta. Era su último intento: deberá esperar 15 minutos para volver a intentarlo."
+              : `La contraseña actual no es correcta. Le quedan ${restantes} intento${restantes === 1 ? "" : "s"}.`,
+      });
     }
 
     if (parsed.data.password_nueva === parsed.data.password_actual) {

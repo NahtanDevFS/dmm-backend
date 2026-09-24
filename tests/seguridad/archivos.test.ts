@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
+import { resolverDentroDe } from "../../src/lib/storage/ruta-segura.js";
 
 /**
  * Validacion de archivos subidos.
@@ -204,17 +205,15 @@ describe("nombres de archivo en disco", () => {
 
 describe("proteccion contra path traversal al servir", () => {
   /**
-   * Reproduce la comprobacion de archivos.routes.ts: resolver ambos lados a
-   * ruta absoluta y comparar el prefijo.
+   * Usa la misma funcion que archivos.routes.ts. Antes el test tenia su propia
+   * copia (con separador) mientras produccion usaba un startsWith sin el, y la
+   * carpeta hermana pasaba en produccion aunque el test estuviera en verde.
    *
-   * El bug real que documenta: comparar sin `path.resolve` en el lado de
-   * UPLOADS_DIR hacia fallar TODAS las descargas cuando la variable venia como
-   * "./uploads", porque path.join elimina el "./" y el startsWith daba false.
+   * Tambien cubre el bug de UPLOADS_DIR relativo ("./uploads"): la raiz se
+   * resuelve a absoluta antes de comparar.
    */
   function rutaPermitida(base: string, solicitada: string): boolean {
-    const raiz = path.resolve(base);
-    const destino = path.resolve(raiz, solicitada);
-    return destino === raiz || destino.startsWith(raiz + path.sep);
+    return resolverDentroDe(base, solicitada) !== null;
   }
 
   it("permite una ruta legitima dentro de la carpeta", () => {
@@ -243,5 +242,10 @@ describe("proteccion contra path traversal al servir", () => {
     expect(rutaPermitida("./uploads", "../uploads-privado/secreto.pdf")).toBe(
       false,
     );
+  });
+
+  it("rechaza la propia carpeta raiz, que no es un archivo", () => {
+    expect(rutaPermitida("./uploads", "")).toBe(false);
+    expect(rutaPermitida("./uploads", "documentos-persona/..")).toBe(false);
   });
 });

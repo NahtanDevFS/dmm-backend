@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { fechaSchema as fechaCalendario } from "../../lib/fechas.js";
+
+const fechaSchema = fechaCalendario();
 import { paginacionShape } from "../../lib/paginacion.js";
 
-const fechaSchema = z
-  .string()
-  .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha inválida");
 
 export const crearRecepcionSchema = z.object({
   institucion_id: z.number().int().positive("institucion_id es requerido"),

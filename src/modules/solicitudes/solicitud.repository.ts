@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
+import { patronContiene } from "../../lib/busqueda.js";
 
 export interface SolicitudRow {
   id: number;
@@ -188,7 +189,7 @@ export async function listarListaEspera(
   const result = await pool.query(
     `SELECT * FROM public.v_lista_espera
      ${insumoNombre ? "WHERE insumo_nombre ILIKE $1" : ""}`,
-    insumoNombre ? [`%${insumoNombre}%`] : [],
+    insumoNombre ? [patronContiene(insumoNombre)] : [],
   );
   return result.rows;
 }

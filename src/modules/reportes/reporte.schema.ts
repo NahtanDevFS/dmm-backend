@@ -1,8 +1,7 @@
 import { z } from "zod";
+import { fechaSchema, rangoValido, MENSAJE_RANGO_INVERTIDO } from "../../lib/fechas.js";
 
-const fecha = z
-  .string()
-  .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha inválida");
+const fecha = fechaSchema();
 
 const formato = z
   .enum(["json", "xlsx", "pdf"], {
@@ -36,7 +35,7 @@ export const personasAtendidasQuerySchema = z.object({
     .optional()
     .transform((v) => v === "true"),
   formato,
-});
+}).refine(rangoValido, MENSAJE_RANGO_INVERTIDO);
 
 export const stockPorCategoriaQuerySchema = z.object({
   categoriaId: z.coerce.number().int().positive().optional(),
@@ -63,4 +62,4 @@ export const poblacionBeneficiadaQuerySchema = z.object({
     .optional()
     .transform((v) => v === "true"),
   formato,
-});
+}).refine(rangoValido, MENSAJE_RANGO_INVERTIDO);

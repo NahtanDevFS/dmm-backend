@@ -17,6 +17,8 @@ import {
 import {
   anularContratoPorError,
   cerrarContratoNoDevuelto,
+  listarContratosVencidos,
+  marcarContratosVencidos,
 } from "../../src/modules/prestamos/contrato.repository.js";
 
 /**
@@ -107,7 +109,7 @@ async function crearMulta(
   contratoId: number,
   pagada: boolean,
 ): Promise<number> {
-  const tipoId = await idCatalogo("tipo_multa_prestamo", "RETRASO_DEVOLUCION");
+  const tipoId = await idCatalogo("tipo_multa_prestamo", "ATRASO");
   // multa_prestamo_pago_coherente_check exige fecha_pago cuando pagada es
   // verdadero, y NULL cuando es falso: una multa no puede estar "pagada"
   // sin decir cuándo, ni tener fecha de pago sin estar marcada como pagada.
@@ -339,5 +341,100 @@ describe("cerrarContratoNoDevuelto", () => {
     await expect(
       cerrarContratoNoDevuelto(usuarioId, -999, "x"),
     ).rejects.toThrow();
+  });
+});
+
+describe("listarContratosVencidos (QA-17)", () => {
+  /** Contrato raíz que ya pasó su fecha pactada: inicio hace 30 días, plazo vencido hace 5 */
+  async function crearContratoVencido(detalleEntregaId: number): Promise<number> {
+    const { rows } = await poolOwner.query<{ id: number }>(
+      `INSERT INTO public.contrato_prestamo
+         (detalle_entrega_id, fecha_inicio, fecha_devolucion_pactada, estado_id, created_by)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [detalleEntregaId, enDias(-30), enDias(-5), estadoVigente, usuarioId],
+    );
+    return rows[0].id;
+  }
+
+  it("deja de listar un contrato vencido cuando se cierra como NO_DEVUELTO", async () => {
+    // NO_DEVUELTO no registra fecha_devolucion_real y deja el contrato
+    // activo: antes seguía cumpliendo el filtro y el personal lo reclamaba
+    // aunque ya estuviera cerrado.
+    const insumo = await crearInsumo(usuarioId, {
+      categoriaPermitePrestamo: true,
+    });
+    await crearLote(usuarioId, insumo, { cantidad: 2 });
+    const contrato = await crearContratoVencido(await entregarEquipo(insumo));
+
+    const antes = await listarContratosVencidos();
+    expect(antes.map((c) => c.id)).toContain(contrato);
+
+    await cerrarContratoNoDevuelto(usuarioId, contrato, "No se localizó");
+
+    const despues = await listarContratosVencidos();
+    expect(despues.map((c) => c.id)).not.toContain(contrato);
+  });
+});
+
+describe("marcarContratosVencidos (multa automática)", () => {
+  // El código busca el tipo de multa ATRASO. El script v3 y las semillas de
+  // estos tests sembraban RETRASO_DEVOLUCION: en un entorno nuevo la multa
+  // automática nunca se aplicaba, y nada lo detectaba porque esta función no
+  // tenía pruebas (QA-15).
+  async function contratoVencido(): Promise<number> {
+    const insumo = await crearInsumo(usuarioId, {
+      categoriaPermitePrestamo: true,
+    });
+    await crearLote(usuarioId, insumo, { cantidad: 2 });
+    const { rows } = await poolOwner.query<{ id: number }>(
+      `INSERT INTO public.contrato_prestamo
+         (detalle_entrega_id, fecha_inicio, fecha_devolucion_pactada, estado_id, created_by)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [await entregarEquipo(insumo), enDias(-30), enDias(-5), estadoVigente, usuarioId],
+    );
+    return rows[0].id;
+  }
+
+  const multasDe = async (contratoId: number) =>
+    (
+      await poolOwner.query<{ tipo: string; monto: string }>(
+        `SELECT t.nombre AS tipo, m.monto FROM public.multa_prestamo m
+         JOIN public.tipo_multa_prestamo t ON t.id = m.tipo_multa_id
+         WHERE m.contrato_prestamo_id = $1 AND m.activo = true`,
+        [contratoId],
+      )
+    ).rows;
+
+  it("marca el contrato como VENCIDO y le aplica una multa ATRASO", async () => {
+    const contrato = await contratoVencido();
+
+    await marcarContratosVencidos(usuarioId);
+
+    const { rows } = await poolOwner.query<{ estado: string }>(
+      `SELECT e.nombre AS estado FROM public.contrato_prestamo c
+       JOIN public.estado_contrato_prestamo e ON e.id = c.estado_id
+       WHERE c.id = $1`,
+      [contrato],
+    );
+    expect(rows[0].estado).toBe("VENCIDO");
+    expect(await multasDe(contrato)).toEqual([{ tipo: "ATRASO", monto: "50.00" }]);
+  });
+
+  it("no duplica la multa si se vuelve a ejecutar", async () => {
+    const contrato = await contratoVencido();
+
+    await marcarContratosVencidos(usuarioId);
+    await marcarContratosVencidos(usuarioId);
+
+    expect(await multasDe(contrato)).toHaveLength(1);
+  });
+
+  it("no multa un contrato cerrado como NO_DEVUELTO", async () => {
+    const contrato = await contratoVencido();
+    await cerrarContratoNoDevuelto(usuarioId, contrato, "No se localizó");
+
+    await marcarContratosVencidos(usuarioId);
+
+    expect(await multasDe(contrato)).toEqual([]);
   });
 });

@@ -1,14 +1,14 @@
 import { z } from "zod";
+import { fechaSchema as fechaCalendario } from "../../lib/fechas.js";
+
+const fechaSchema = fechaCalendario();
 import { paginacionShape } from "../../lib/paginacion.js";
 
-const fechaSchema = z
-  .string()
-  .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha inválida");
 
 /** Igual que fechaSchema, pero con mensaje propio cuando el campo no viene */
-const fechaPactadaSchema = z
-  .string({ error: "Debe indicar la fecha de devolución pactada" })
-  .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha inválida");
+const fechaPactadaSchema = fechaCalendario(undefined, {
+  error: "Debe indicar la fecha de devolución pactada",
+});
 
 /** Un préstamo registrado de una vez: la entrega del equipo y su contrato */
 export const crearPrestamoDirectoSchema = z.object({

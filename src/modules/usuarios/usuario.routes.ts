@@ -5,6 +5,7 @@ import {
   permitirSinRol,
 } from "../../middlewares/role.middleware.js";
 import { ADMINISTRACION } from "../../config/roles.js";
+import { limiteCambioPassword } from "../../middlewares/rate-limit.middleware.js";
 import {
   listarController,
   obtenerController,
@@ -26,6 +27,7 @@ router.patch(
   permitirSinRol(
     "Cambiar la propia contraseña no es administrar usuarios: exige la contraseña actual y solo afecta a quien la pide.",
   ),
+  limiteCambioPassword,
   cambiarPasswordPropiaController,
 );
 

@@ -5,7 +5,13 @@ import { paginacionShape } from "../../lib/paginacion.js";
 const passwordSchema = z
   .string({ error: "La contraseña es requerida" })
   .min(8, "La contraseña debe tener al menos 8 caracteres")
-  .max(72, "La contraseña no puede exceder 72 caracteres") // límite de bcrypt
+  // bcrypt solo mira los primeros 72 BYTES: con tildes, ñ o emojis (2 a 4 bytes
+  // cada uno) una contraseña de menos de 72 caracteres puede pasarse y el
+  // resto se ignoraría en silencio
+  .refine(
+    (v) => Buffer.byteLength(v, "utf8") <= 72,
+    "La contraseña es demasiado larga: use menos caracteres (las tildes, la ñ y los emojis ocupan más de uno)",
+  )
   .refine((v) => /[a-zA-Z]/.test(v), "La contraseña debe incluir una letra")
   .refine((v) => /\d/.test(v), "La contraseña debe incluir un número");
 

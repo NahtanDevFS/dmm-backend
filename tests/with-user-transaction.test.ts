@@ -168,4 +168,23 @@ describe("withUserTransaction", () => {
     expect(pool.waitingCount).toBe(0);
     expect(pool.totalCount).toBeLessThanOrEqual(antes + 1);
   });
+  it("si el ROLLBACK falla, propaga el error original y descarta la conexión", async () => {
+    // Se corta la propia conexión a mitad de la transacción: el ROLLBACK ya no
+    // puede ejecutarse. Antes su excepción reemplazaba a la original y el
+    // cliente roto volvía al pool.
+    const fallo = withUserTransaction(usuarioId, async (c) => {
+      await c
+        .query(`SELECT pg_terminate_backend(pg_backend_pid())`)
+        .catch(() => undefined);
+      throw new Error("fallo original de la operación");
+    });
+
+    await expect(fallo).rejects.toThrow("fallo original de la operación");
+
+    // La siguiente transacción recibe una conexión sana
+    const resultado = await withUserTransaction(usuarioId, async (c) =>
+      c.query<{ ok: number }>(`SELECT 1 AS ok`),
+    );
+    expect(resultado.rows[0].ok).toBe(1);
+  });
 });

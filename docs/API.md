@@ -301,14 +301,24 @@ la entrega**, no la actual.
 No hay registro público, por diseño. `password_hash` no aparece en ninguna
 respuesta.
 
-Contraseña: mínimo 8 caracteres, con al menos una letra y un número.
+Contraseña: mínimo 8 caracteres, con al menos una letra y un número, y como
+máximo 72 bytes UTF-8 (el límite de bcrypt: las tildes, la ñ y los emojis
+ocupan más de un byte).
 
 `mi-password` exige `password_actual` y conserva la sesión desde la que se hace el
-cambio, revocando las demás. El reseteo por administrador no pide la actual y
+cambio, revocando las demás. Si `password_actual` no coincide responde **400**
+con `code: "CURRENT_PASSWORD_INVALID"`, no 401: la sesión sigue siendo válida.
+El reseteo por administrador no pide la actual y
 revoca **todas** las sesiones del usuario.
 
 Guardas: no se puede cambiar el propio rol, desactivarse a uno mismo, ni
-desactivar o cambiar el rol del único `ADMINISTRADOR` activo.
+desactivar o cambiar el rol del único `ADMINISTRADOR` activo (409). La regla
+mira el rol del usuario afectado, no el de quien hace el cambio.
+
+Las cuentas `ADMINISTRADOR` solo son visibles entre administradores. Para la
+`DIRECTORA` no se listan (ni en `/api/usuarios` ni el rol en `/api/roles`), su
+ficha y cualquier operación sobre ellas responden **404** como un id inexistente,
+y asignar el rol `ADMINISTRADOR` al crear o editar responde **403**.
 
 ## Auditoría
 

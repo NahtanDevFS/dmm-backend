@@ -4,6 +4,7 @@ import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.middleware.js";
 import { requireRole } from "../../middlewares/role.middleware.js";
 import { OPERACION } from "../../config/roles.js";
+import { resolverDentroDe } from "./ruta-segura.js";
 
 /** SIEMPRE resuelto a ruta absoluta con path */
 const UPLOADS_DIR = path.resolve(
@@ -21,9 +22,9 @@ async function servirArchivoController(
     const rutaRelativa = Array.isArray(segmentos)
       ? segmentos.join("/")
       : segmentos;
-    const rutaAbsoluta = path.resolve(UPLOADS_DIR, rutaRelativa);
+    const rutaAbsoluta = resolverDentroDe(UPLOADS_DIR, rutaRelativa);
 
-    if (!rutaAbsoluta.startsWith(UPLOADS_DIR)) {
+    if (rutaAbsoluta === null) {
       return res.status(400).json({ message: "Ruta de archivo inválida" });
     }
 

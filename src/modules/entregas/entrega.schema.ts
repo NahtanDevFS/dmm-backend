@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { fechaSchema, rangoValido, MENSAJE_RANGO_INVERTIDO } from "../../lib/fechas.js";
 import { paginacionShape } from "../../lib/paginacion.js";
 
 /** Un insumo dentro de una entrega */
@@ -69,20 +70,14 @@ export const anularEntregaSchema = z.object({
 export const listarEntregasQuerySchema = z.object({
   personaId: z.coerce.number().int().positive().optional(),
   insumoId: z.coerce.number().int().positive().optional(),
-  desde: z
-    .string()
-    .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha 'desde' inválida")
-    .optional(),
-  hasta: z
-    .string()
-    .refine((v) => !Number.isNaN(Date.parse(v)), "Fecha 'hasta' inválida")
-    .optional(),
+  desde: fechaSchema("Fecha 'desde' inválida: use el formato AAAA-MM-DD").optional(),
+  hasta: fechaSchema("Fecha 'hasta' inválida: use el formato AAAA-MM-DD").optional(),
   incluirAnuladas: z
     .string()
     .optional()
     .transform((v) => v === "true"),
   ...paginacionShape,
-});
+}).refine(rangoValido, MENSAJE_RANGO_INVERTIDO);
 
 export const crearEvidenciaSchema = z.object({
   tipo_evidencia_id: z.coerce

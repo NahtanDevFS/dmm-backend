@@ -11,6 +11,8 @@ declare global {
       sesion?: {
         id: string;
       };
+      /** Lo agrega express-rate-limit en las rutas con límite: intentos usados y restantes */
+      rateLimit?: import("express-rate-limit").RateLimitInfo;
     }
   }
 }

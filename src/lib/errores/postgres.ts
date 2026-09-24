@@ -52,6 +52,14 @@ const MENSAJES_POR_CONSTRAINT: Record<string, ErrorTraducido> = {
       "La cantidad disponible no puede superar la cantidad inicial del lote.",
   },
 
+  // ── personas
+  // Migración 28: la misma regla que persona.schema.ts, por si un dato llega
+  // a la base por otro camino que no sea la API
+  persona_cui_dpi_formato_check: {
+    status: 400,
+    message: "El CUI/DPI debe tener exactamente 13 dígitos.",
+  },
+
   // ── solicitudes de apoyo
   solicitud_apoyo_fecha_valida_check: {
     status: 400,
@@ -194,6 +202,16 @@ export function traducirErrorPostgres(
   // not_null_violation
   if (err.code === "23502") {
     return { status: 400, message: "Falta un dato obligatorio." };
+  }
+
+  // invalid_datetime_format / datetime_field_overflow: una fecha que no existe
+  // en el calendario. Los esquemas ya las rechazan; esto es la red de seguridad
+  // para que nunca terminen en un 500.
+  if (err.code === "22007" || err.code === "22008") {
+    return {
+      status: 400,
+      message: "Alguna de las fechas enviadas no es válida.",
+    };
   }
 
 // Raise_exception: las excepciones de los triggers y stored procedures yaestán redactadas en español para el usuario final, así que se devuelven talcual (con los ids sustituidos por nombres si hay contexto)
