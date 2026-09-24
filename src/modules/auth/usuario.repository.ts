@@ -1,4 +1,5 @@
 import prisma from "../../db/prisma.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
 
 export interface UsuarioConRol {
@@ -17,11 +18,33 @@ export interface UsuarioConRol {
 export async function buscarUsuarioPorUsername(
   username: string,
 ): Promise<UsuarioConRol | null> {
-  const usuario = await prisma.usuario.findUnique({
-    where: { username },
-    include: { rol_usuario_rol_idTorol: true },
-  });
+  return conRol(
+    await prisma.usuario.findUnique({
+      where: { username },
+      include: { rol_usuario_rol_idTorol: true },
+    }),
+  );
+}
 
+/** Para GET /auth/me: el mismo usuario que devuelve el login, ya autenticado por su sesión */
+export async function buscarUsuarioPorId(
+  id: number,
+): Promise<UsuarioConRol | null> {
+  return conRol(
+    await prisma.usuario.findUnique({
+      where: { id },
+      include: { rol_usuario_rol_idTorol: true },
+    }),
+  );
+}
+
+type UsuarioConRolPrisma = Prisma.usuarioGetPayload<{
+  include: { rol_usuario_rol_idTorol: true };
+}>;
+
+async function conRol(
+  usuario: UsuarioConRolPrisma | null,
+): Promise<UsuarioConRol | null> {
   if (!usuario) return null;
 
   return {

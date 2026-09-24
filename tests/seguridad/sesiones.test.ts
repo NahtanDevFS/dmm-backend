@@ -61,6 +61,28 @@ describe("sesion vigente", () => {
     expect(res.cuerpo.usuario.rol).toBe("ADMINISTRADOR");
   });
 
+  it("/me devuelve los mismos datos que el login, no solo id, usuario y rol", async () => {
+    // Al recargar la página el frontend recupera la sesión con /me. Antes se
+    // perdían el nombre completo (menú de cuenta) y el programa a cargo
+    // (preselección al crear una solicitud).
+    await poolOwner.query(
+      `UPDATE public.usuario SET nombre_completo = 'Ana Pérez' WHERE id = $1`,
+      [sesion.usuarioId],
+    );
+
+    const res = await pedir("GET", "/api/auth/me", sesion);
+
+    expect(res.status).toBe(200);
+    expect(res.cuerpo.usuario).toEqual({
+      id: sesion.usuarioId,
+      username: sesion.username,
+      nombre_completo: "Ana Pérez",
+      rol: "ADMINISTRADOR",
+      programa_id: null,
+      programa_nombre: null,
+    });
+  });
+
   it("rechaza una peticion sin cookie", async () => {
     const res = await pedir("GET", "/api/auth/me", null);
     expect(res.status).toBe(401);

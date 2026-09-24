@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import {
   login,
   logout,
+  usuarioDeSesion,
   CredencialesInvalidasError,
   UsuarioInactivoError,
 } from "./auth.service.js";
@@ -79,8 +80,17 @@ export async function logoutController(
 }
 
 /** Devuelve la sesión vigente */
-export async function meController(req: Request, res: Response) {
-  return res.status(200).json({ usuario: req.usuario });
+export async function meController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const usuario = await usuarioDeSesion(req.usuario!.id);
+    return res.status(200).json({ usuario: usuario ?? req.usuario });
+  } catch (error) {
+    return next(error);
+  }
 }
 
 export { COOKIE_NAME };
