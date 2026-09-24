@@ -1,7 +1,9 @@
 import bcrypt from "bcrypt";
 import {
   buscarUsuarioPorUsername,
+  buscarUsuarioPorId,
   actualizarUltimoLogin,
+  type UsuarioConRol,
 } from "./usuario.repository.js";
 import {
   crearSesion,
@@ -77,18 +79,27 @@ export async function login(params: {
 
   await actualizarUltimoLogin(usuario.id);
 
+  return { token, sesion, usuario: usuarioPublico(usuario) };
+}
+
+/** Lo que el frontend sabe del usuario con sesión. Lo comparten el login y GET /auth/me: antes /me devolvía solo id, username y rol, y al recargar la página se perdían el nombre completo y el programa a cargo */
+function usuarioPublico(usuario: UsuarioConRol): LoginResult["usuario"] {
   return {
-    token,
-    sesion,
-    usuario: {
-      id: usuario.id,
-      username: usuario.username,
-      nombre_completo: usuario.nombre_completo,
-      rol: usuario.rol_nombre,
-      programa_id: usuario.programa_id,
-      programa_nombre: usuario.programa_nombre,
-    },
+    id: usuario.id,
+    username: usuario.username,
+    nombre_completo: usuario.nombre_completo,
+    rol: usuario.rol_nombre,
+    programa_id: usuario.programa_id,
+    programa_nombre: usuario.programa_nombre,
   };
+}
+
+/** Datos del usuario de la sesión vigente, con la misma forma que el login */
+export async function usuarioDeSesion(
+  usuarioId: number,
+): Promise<LoginResult["usuario"] | null> {
+  const usuario = await buscarUsuarioPorId(usuarioId);
+  return usuario ? usuarioPublico(usuario) : null;
 }
 
 export async function logout(params: {
