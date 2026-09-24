@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { escaparLike } from "../../lib/busqueda.js";
 import prisma from "../../db/prisma.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
 
@@ -89,31 +90,34 @@ export async function listarPersonas(
     valores.push(comunidadId);
     i += 1;
   }
+  // Dos parámetros: el texto tal cual para similarity y la versión con los
+  // comodines de LIKE escapados para los ILIKE, que así buscan literal
   if (busqueda) {
     const idxBusqueda = i;
+    const idxLiteral = i + 1;
     condiciones.push(
-      `((nombres || ' ' || apellidos) ILIKE '%' || $${idxBusqueda} || '%'
+      `((nombres || ' ' || apellidos) ILIKE '%' || $${idxLiteral} || '%'
         OR similarity(nombres || ' ' || apellidos, $${idxBusqueda}) > 0.15
         OR regexp_replace(cui_dpi, '\\s', '', 'g')
-             ILIKE '%' || regexp_replace($${idxBusqueda}, '\\s', '', 'g') || '%')`,
+             ILIKE '%' || regexp_replace($${idxLiteral}, '\\s', '', 'g') || '%')`,
     );
-    valores.push(busqueda);
-    i += 1;
+    valores.push(busqueda, escaparLike(busqueda));
+    i += 2;
   }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
   const orderBy = busqueda
     ? `ORDER BY
          (regexp_replace(cui_dpi, '\\s', '', 'g')
-            ILIKE '%' || regexp_replace($${i}, '\\s', '', 'g') || '%') DESC,
+            ILIKE '%' || regexp_replace($${i + 1}, '\\s', '', 'g') || '%') DESC,
          similarity(nombres || ' ' || apellidos, $${i}) DESC`
     : `ORDER BY apellidos ASC, nombres ASC`;
-  if (busqueda) valores.push(busqueda);
+  if (busqueda) valores.push(busqueda, escaparLike(busqueda));
 
-// El conteo reutiliza las condiciones pero no el ORDER BY: cuando hay busqueda,el ultimo parametro es solo para la similitud del orden y aqui no aplica
+// El conteo reutiliza las condiciones pero no el ORDER BY: cuando hay busqueda,los dos últimos parámetros son solo del orden y aquí no aplican
   const totalResult = await client.query<{ n: number }>(
     `SELECT count(*)::int AS n FROM public.persona ${where}`,
-    busqueda ? valores.slice(0, -1) : valores,
+    busqueda ? valores.slice(0, -2) : valores,
   );
 
   const result = await client.query<PersonaRow>(

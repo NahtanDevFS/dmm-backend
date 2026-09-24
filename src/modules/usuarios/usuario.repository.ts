@@ -2,6 +2,7 @@ import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
 import type { PoolClient } from "pg";
+import { patronContiene } from "../../lib/busqueda.js";
 
 /** `password_hash` no aparece en ninguna de estas consultas a propósito: nuncadebe salir del backend, ni siquiera hacia un ADMINISTRADOR */
 export interface UsuarioRow {
@@ -30,6 +31,8 @@ export async function listarUsuarios(params: {
   rolId?: number;
   busqueda?: string;
   incluirInactivos: boolean;
+  /** Para quien no es ADMINISTRADOR: las cuentas de administración no existen para él */
+  ocultarAdministradores: boolean;
   limite: number;
   desplazamiento: number;
 }): Promise<{ total: number; filas: Record<string, unknown>[] }> {
@@ -37,12 +40,15 @@ export async function listarUsuarios(params: {
   const valores: unknown[] = [];
 
   if (!params.incluirInactivos) condiciones.push(`u.activo = true`);
+  if (params.ocultarAdministradores) {
+    condiciones.push(`r.nombre <> 'ADMINISTRADOR'`);
+  }
   if (params.rolId !== undefined) {
     valores.push(params.rolId);
     condiciones.push(`u.rol_id = $${valores.length}`);
   }
   if (params.busqueda !== undefined) {
-    valores.push(`%${params.busqueda}%`);
+    valores.push(patronContiene(params.busqueda));
     condiciones.push(`u.username ILIKE $${valores.length}`);
   }
 
@@ -80,6 +86,17 @@ export async function buscarUsuarioPorId(
   return result.rows[0] ?? null;
 }
 
+/** Nombre del rol del usuario, o null si el usuario no existe */
+export async function buscarRolDeUsuario(id: number): Promise<string | null> {
+  const result = await pool.query<{ nombre: string }>(
+    `SELECT r.nombre FROM public.usuario u
+     JOIN public.rol r ON r.id = u.rol_id
+     WHERE u.id = $1`,
+    [id],
+  );
+  return result.rows[0]?.nombre ?? null;
+}
+
 /** Solo para verificar la contraseña actual; el hash no sale de este módulo */
 export async function buscarHashDeUsuario(id: number): Promise<string | null> {
   const result = await pool.query<{ password_hash: string }>(
@@ -102,18 +119,24 @@ export async function existeUsername(
   return true;
 }
 
-export async function existeRolActivo(id: number): Promise<boolean> {
+/** Nombre del rol si existe y está activo; null en otro caso */
+export async function buscarRolActivo(id: number): Promise<string | null> {
   const rol = await prisma.rol.findUnique({
     where: { id },
-    select: { activo: true },
+    select: { activo: true, nombre: true },
   });
-  return rol?.activo === true;
+  return rol?.activo === true ? rol.nombre : null;
 }
 
 /** `rol` es de solo lectura por diseño: los permisos están codificados en elbackend (requireRole en cada ruta), así que un rol creado desde una pantallade catálogos no tendría ningún permiso real */
-export async function listarRoles(): Promise<RolRow[]> {
+export async function listarRoles(
+  incluirAdministrador: boolean,
+): Promise<RolRow[]> {
   return prisma.rol.findMany({
-    where: { activo: true },
+    where: {
+      activo: true,
+      ...(incluirAdministrador ? {} : { nombre: { not: "ADMINISTRADOR" } }),
+    },
     orderBy: { nombre: "asc" },
     select: { id: true, nombre: true, descripcion: true },
   });

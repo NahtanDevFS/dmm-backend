@@ -40,3 +40,30 @@ describe("matriz de autorizacion declarada", () => {
     expect(rutas.length).toBeGreaterThan(100);
   });
 });
+
+describe("si el verificador no puede ejecutarse (QA-09)", () => {
+  // Antes estos casos solo escribían en consola y el servidor arrancaba sin
+  // haber revisado ninguna ruta
+  it("detiene el arranque si no encuentra la lista de rutas", () => {
+    expect(() => verificarRutasProtegidas({} as any)).toThrow(
+      /No se pudo verificar la matriz de rutas/,
+    );
+  });
+
+  it("detiene el arranque si el recorrido falla", () => {
+    const capaRota = {
+      get route() {
+        throw new Error("estructura inesperada");
+      },
+    };
+    expect(() => verificarRutasProtegidas({ stack: [capaRota] })).toThrow(
+      /falló el recorrido/,
+    );
+  });
+
+  it("detiene el arranque si el recorrido no reconoce ninguna ruta", () => {
+    expect(() => verificarRutasProtegidas({ stack: [] })).toThrow(
+      /no encontró ninguna ruta/,
+    );
+  });
+});

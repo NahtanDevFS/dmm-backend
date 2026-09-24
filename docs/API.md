@@ -315,6 +315,11 @@ Guardas: no se puede cambiar el propio rol, desactivarse a uno mismo, ni
 desactivar o cambiar el rol del único `ADMINISTRADOR` activo (409). La regla
 mira el rol del usuario afectado, no el de quien hace el cambio.
 
+Las cuentas `ADMINISTRADOR` solo son visibles entre administradores. Para la
+`DIRECTORA` no se listan (ni en `/api/usuarios` ni el rol en `/api/roles`), su
+ficha y cualquier operación sobre ellas responden **404** como un id inexistente,
+y asignar el rol `ADMINISTRADOR` al crear o editar responde **403**.
+
 ## Auditoría
 
 | Método | Ruta | Acceso |

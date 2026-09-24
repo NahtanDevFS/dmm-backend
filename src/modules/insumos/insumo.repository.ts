@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
+import { patronContiene } from "../../lib/busqueda.js";
 
 export interface InsumoRow {
   id: number;
@@ -267,7 +268,7 @@ export async function listarStockInsumos(params: {
     condiciones.push(`i.categoria_id = $${valores.length}`);
   }
   if (params.busqueda) {
-    valores.push(`%${params.busqueda}%`);
+    valores.push(patronContiene(params.busqueda));
     condiciones.push(`v.insumo_nombre ILIKE $${valores.length}`);
   }
 

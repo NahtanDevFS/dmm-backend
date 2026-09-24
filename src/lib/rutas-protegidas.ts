@@ -66,21 +66,32 @@ function recorrer(
 export function verificarRutasProtegidas(routerApi: any): RutaEncontrada[] {
   const rutas: RutaEncontrada[] = [];
 
+  // Si la verificación no puede ejecutarse, el arranque se detiene igual que
+  // cuando encuentra una ruta desprotegida. Antes solo se registraba en consola
+  // y el servidor arrancaba: el verificador quedaba apagado sin que nadie lo
+  // notara. `router.stack` es una estructura interna de Express, no una API
+  // pública, así que esto es lo que avisaría tras una actualización.
+  const noSePudoVerificar = (detalle: string, causa?: unknown) =>
+    new Error(
+      `[rutas-protegidas] No se pudo verificar la matriz de rutas: ${detalle}\n` +
+        "Probablemente cambió la estructura interna del router de Express " +
+        "(router.stack): adapte recorrer() en src/lib/rutas-protegidas.ts.",
+      { cause: causa },
+    );
+
+  const raiz = routerApi?.stack ?? routerApi?.router?.stack;
+  if (!Array.isArray(raiz)) {
+    throw noSePudoVerificar("no se encontró la lista de rutas del router.");
+  }
   try {
-    const raiz = routerApi?.stack ?? routerApi?.router?.stack;
-    if (!Array.isArray(raiz)) {
-      console.error(
-        "[rutas-protegidas] No se pudo leer el árbol de rutas; la verificación de permisos NO se ejecutó.",
-      );
-      return [];
-    }
     recorrer(raiz, false, rutas);
   } catch (error) {
-    console.error(
-      "[rutas-protegidas] Falló la verificación (se permite el arranque):",
-      error,
-    );
-    return [];
+    throw noSePudoVerificar("falló el recorrido de las rutas.", error);
+  }
+  // Un recorrido que "funciona" pero no reconoce ninguna ruta es la otra forma
+  // de fallar en silencio: todo pasaría la revisión por no haber nada que revisar
+  if (rutas.length === 0) {
+    throw noSePudoVerificar("el recorrido no encontró ninguna ruta.");
   }
 
   const desprotegidas = rutas.filter((r) => r.estado === "desprotegida");
