@@ -52,6 +52,14 @@ const MENSAJES_POR_CONSTRAINT: Record<string, ErrorTraducido> = {
       "La cantidad disponible no puede superar la cantidad inicial del lote.",
   },
 
+  // ── personas
+  // Migración 28: la misma regla que persona.schema.ts, por si un dato llega
+  // a la base por otro camino que no sea la API
+  persona_cui_dpi_formato_check: {
+    status: 400,
+    message: "El CUI/DPI debe tener exactamente 13 dígitos.",
+  },
+
   // ── solicitudes de apoyo
   solicitud_apoyo_fecha_valida_check: {
     status: 400,

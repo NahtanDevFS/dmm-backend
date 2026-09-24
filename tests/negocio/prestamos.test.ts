@@ -345,7 +345,7 @@ describe("multas", () => {
     const raiz = await crearContratoRaiz(await entregarEquipo(insumo));
     const tipoId = await idCatalogo(
       "tipo_multa_prestamo",
-      "RETRASO_DEVOLUCION",
+      "ATRASO",
     );
 
     const { rows } = await poolOwner.query<{ id: number; monto: string }>(
@@ -365,7 +365,7 @@ describe("multas", () => {
     const raiz = await crearContratoRaiz(await entregarEquipo(insumo));
     const retraso = await idCatalogo(
       "tipo_multa_prestamo",
-      "RETRASO_DEVOLUCION",
+      "ATRASO",
     );
     const danado = await idCatalogo("tipo_multa_prestamo", "EQUIPO_DANADO");
 
@@ -390,7 +390,7 @@ describe("multas", () => {
     const raiz = await crearContratoRaiz(await entregarEquipo(insumo));
     const tipoId = await idCatalogo(
       "tipo_multa_prestamo",
-      "RETRASO_DEVOLUCION",
+      "ATRASO",
     );
 
     await poolOwner.query(

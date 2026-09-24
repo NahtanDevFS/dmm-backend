@@ -14,15 +14,20 @@ día.
 
 ## Cuándo usar esta carpeta y cuándo no
 
-Desde que existe `scripts_bd_arreglada_v3.sql` hay dos caminos, y conviene no
-mezclarlos:
+Hay dos caminos, y conviene no mezclarlos:
 
-| Situación                                                   | Qué correr                                                        |
-| ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| **Entorno nuevo** (base recién creada, incluida `dmm_test`) | **Solo el script v3.** Ya trae las cinco migraciones incorporadas |
-| **Base existente** a la que le falta algún cambio           | Solo la migración que le falte, de esta carpeta                   |
+| Situación                                                   | Qué correr                                                          |
+| ----------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Entorno nuevo** (base recién creada, incluida `dmm_test`) | **Solo `scripts_bd_v4.sql`.** Ya trae todas las migraciones hasta la 28 |
+| **Base existente** a la que le falta algún cambio           | Solo la migración que le falte, de esta carpeta                     |
 
-Aplicar una migración sobre una base creada con el v3 es redundante. Todas son
+El encabezado del v4 explica cómo crear la base, cambiar la clave de `dmm_app`
+y dar de alta el primer administrador (el script no trae ningún usuario).
+
+`scripts_bd_v3.sql` se conserva **solo como histórico**: ya no reproduce la base
+vigente (ver «Qué pasó entre la 13 y la 28»). No lo use para montar entornos.
+
+Aplicar una migración sobre una base creada con el v4 es redundante. Todas son
 idempotentes (`CREATE OR REPLACE`, `IF NOT EXISTS`), así que no rompen nada, pero
 es ruido innecesario.
 
@@ -36,8 +41,7 @@ reales e incluye la consulta para encontrarlos y repararlos.
 
 ## Historial
 
-Las cinco están **aplicadas** en `dmm_usumatlan_db` y `dmm_test`, e incorporadas
-al script v3.
+De la 09 a la 13 están incorporadas al v3 y al v4; la 28, solo al v4.
 
 | Script                                    | Qué corrige                                                                                                                                                                                                                      |
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -46,6 +50,26 @@ al script v3.
 | `11_indices_auditoria.sql`                | Faltaban los índices por los que filtra `GET /api/auditoria`                                                                                                                                                                     |
 | `12_rol_aplicacion_minimo_privilegio.sql` | El backend conectaba como superusuario. Crea `dmm_app` sin `DELETE` ni DDL, y deja `auditoria_log` inalterable desde la aplicación vía `SECURITY DEFINER`                                                                        |
 | `13_fix_recalculo_al_anular_entrega.sql`  | Al anular una entrega, la línea quedaba en `ENTREGADA` con 0 unidades: el beneficiario desaparecía de la lista de espera y el sistema lo daba por atendido                                                                       |
+
+| `28_formato_cui_dpi.sql`                  | `persona.cui_dpi` aceptaba cualquier texto de hasta 13 caracteres, incluido `""`, que chocaba en el UNIQUE y esquivaba el trigger de menores. Ahora: 13 dígitos o NULL (hallazgo QA-12)                                                     |
+
+### Qué pasó entre la 13 y la 28
+
+Las migraciones **14 a 27 se aplicaron a mano y nunca llegaron a esta carpeta**
+(los comentarios del código citan la 15, 17, 19, 22, 25, 26 y 27). Entre otras
+cosas agregaron 17 tablas (formularios configurables, catálogos, estado civil,
+ocupación, evidencias de contrato, `detalle_entrega_lote`), reestructuraron la
+entrega (`fn_crear_entrega`, `sp_agregar_insumo_entrega`), el estado
+`NO_DEVUELTO` y `motivo_cierre`, y afinaron los permisos de `dmm_app`.
+
+Consecuencia (hallazgo QA-15): una base creada desde el repositorio no podía
+registrar una entrega. `scripts_bd_v4.sql` se generó a partir de la base vigente
+(`dmm_test`, idéntica a la de desarrollo en esquema y permisos) y se verificó
+montando una base limpia solo con él y corriendo la suite completa del backend
+contra ella.
+
+Si alguien conserva los archivos originales de la 14 a la 27, agréguelos aquí:
+documentan el porqué de cada cambio, que el v4 generado no puede contar.
 
 ### Notas sobre datos ya grabados
 
@@ -79,23 +103,24 @@ Dos avisos:
   deliberado.
 
 Si una migración cambia la forma de las tablas, después hay que correr
-`pnpm prisma:pull && pnpm prisma:generate`. Ninguna de las cinco actuales lo
-hace.
+`pnpm prisma:pull && pnpm prisma:generate`. La 28 no lo requiere: un CHECK no
+cambia el modelo de Prisma.
 
 ---
 
 ## Para agregar una migración nueva
 
-La siguiente es la **14**.
+La siguiente es la **29**.
 
 1. Escribir el script con el problema medido, la solución y sus límites, como
-   los anteriores.
-2. Aplicarlo en `dmm_usumatlan_db` **y en `dmm_test`**.
-3. **Incorporarlo al final de `scripts_bd_arreglada_v3.sql`**, y actualizar la
-   lista de migraciones de su encabezado.
-4. Correr `corepack pnpm test`.
+   los anteriores. Idempotente (`IF NOT EXISTS`, `CREATE OR REPLACE`).
+2. **Guardarlo en esta carpeta antes de aplicarlo en ningún lado.**
+3. Aplicarlo en la base de desarrollo **y en `dmm_test`**.
+4. **Incorporarlo al final de `scripts_bd_v4.sql`**, y actualizar la lista de
+   migraciones de su encabezado.
+5. Correr `corepack pnpm test`.
 
-**El paso 3 es el que se olvida, y es el que más caro sale.** Si una migración
-no llega al script v3, los entornos nuevos nacen sin ella mientras los existentes
+**Los pasos 2 y 4 son los que se olvidan, y son los que más caro salen**: así se
+perdieron la 14 a la 27. Si una migración no llega al v4, los entornos nuevos nacen sin ella mientras los existentes
 sí la tienen, y las dos versiones divergen en silencio hasta que alguien monta
 una base limpia y descubre que el sistema se comporta distinto.

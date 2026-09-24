@@ -101,7 +101,7 @@ const TABLAS_A_VACIAR = [
  * asi se recupera sola si alguien la vacia, y no hay que ir a buscar el script
  * de 3800 lineas del esquema.
  *
- * Deben coincidir con las semillas del script v3. Si alli se agrega un valor,
+ * Deben coincidir con las semillas de scripts_bd_v4.sql. Si alli se agrega un valor,
  * agreguelo aqui tambien.
  *
  * EL ORDEN IMPORTA, y no es cosmetico: `tipo_accion_auditoria` va primero
@@ -178,7 +178,7 @@ const SEMILLAS: Array<{ tabla: string; columnas: string; filas: string }> = [
   {
     tabla: "tipo_multa_prestamo",
     columnas: "nombre, monto_sugerido",
-    filas: `('RETRASO_DEVOLUCION', 50.00), ('EQUIPO_DANADO', 100.00)`,
+    filas: `('ATRASO', 50.00), ('EQUIPO_DANADO', 100.00)`,
   },
 ];
 
@@ -256,7 +256,7 @@ export async function idCatalogo(
   if (!rows[0]) {
     throw new Error(
       `No existe ${tabla}.nombre = '${nombre}'. ` +
-        "¿Se creo dmm_test con el script del esquema v3 y sus semillas?",
+        "¿Se creo dmm_test con scripts_bd_v4.sql?",
     );
   }
   return rows[0].id;
