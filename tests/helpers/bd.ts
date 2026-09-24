@@ -167,18 +167,36 @@ const SEMILLAS: Array<{ tabla: string; columnas: string; filas: string }> = [
   {
     tabla: "tipo_documento_persona",
     columnas: "nombre",
-    filas: `('DPI'), ('PARTIDA_NACIMIENTO'), ('DPI_ENCARGADO'), ('OTRO')`,
+    // Nombres legibles de la migración 29; cada DPI con sus dos caras
+    filas: `('Partida de nacimiento'), ('DPI anverso'), ('DPI reverso'),
+            ('DPI del encargado anverso'), ('DPI del encargado reverso'),
+            ('Otro')`,
   },
   {
     tabla: "tipo_evidencia_entrega",
     columnas: "nombre",
     filas: `('FOTO_BENEFICIARIO_CON_INSUMO'), ('FOTO_RECEPTOR'),
-            ('FOTOCOPIA_DPI_RECEPTOR'), ('OTRO')`,
+            ('FOTOCOPIA_DPI_RECEPTOR'), ('OTRO'), ('RECETA_MEDICA'),
+            ('FORMULARIO_FIRMADO')`,
+  },
+  {
+    tabla: "tipo_evidencia_contrato",
+    columnas: "nombre",
+    filas: `('CONTRATO_FIRMADO'), ('DPI_FRONTAL'), ('DPI_REVERSO'),
+            ('FOTO_RECEPCION'), ('OTRO')`,
   },
   {
     tabla: "tipo_multa_prestamo",
     columnas: "nombre, monto_sugerido",
+    // ATRASO es el que busca marcarContratosVencidos para la multa automática
     filas: `('ATRASO', 50.00), ('EQUIPO_DANADO', 100.00)`,
+  },
+  {
+    tabla: "tipo_dato_campo_formulario",
+    columnas: "nombre",
+    filas: `('TEXTO_CORTO'), ('TEXTO_LARGO'), ('NUMERO'), ('FECHA'),
+            ('SI_NO'), ('SELECCION_UNICA'), ('SELECCION_MULTIPLE'),
+            ('FECHA_NACIMIENTO')`,
   },
 ];
 
