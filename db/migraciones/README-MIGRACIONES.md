@@ -18,7 +18,7 @@ Hay dos caminos, y conviene no mezclarlos:
 
 | Situación                                                   | Qué correr                                                          |
 | ----------------------------------------------------------- | ------------------------------------------------------------------- |
-| **Entorno nuevo** (base recién creada, incluida `dmm_test`) | **Solo `scripts_bd_v4.sql`.** Ya trae todas las migraciones hasta la 28 |
+| **Entorno nuevo** (base recién creada, incluida `dmm_test`) | **Solo `scripts_bd_v4.sql`.** Ya trae todas las migraciones hasta la 29 |
 | **Base existente** a la que le falta algún cambio           | Solo la migración que le falte, de esta carpeta                     |
 
 El encabezado del v4 explica cómo crear la base, cambiar la clave de `dmm_app`
@@ -41,7 +41,7 @@ reales e incluye la consulta para encontrarlos y repararlos.
 
 ## Historial
 
-De la 09 a la 13 están incorporadas al v3 y al v4; la 28, solo al v4.
+De la 09 a la 13 están incorporadas al v3 y al v4; la 28 y la 29, solo al v4.
 
 | Script                                    | Qué corrige                                                                                                                                                                                                                      |
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -50,8 +50,8 @@ De la 09 a la 13 están incorporadas al v3 y al v4; la 28, solo al v4.
 | `11_indices_auditoria.sql`                | Faltaban los índices por los que filtra `GET /api/auditoria`                                                                                                                                                                     |
 | `12_rol_aplicacion_minimo_privilegio.sql` | El backend conectaba como superusuario. Crea `dmm_app` sin `DELETE` ni DDL, y deja `auditoria_log` inalterable desde la aplicación vía `SECURITY DEFINER`                                                                        |
 | `13_fix_recalculo_al_anular_entrega.sql`  | Al anular una entrega, la línea quedaba en `ENTREGADA` con 0 unidades: el beneficiario desaparecía de la lista de espera y el sistema lo daba por atendido                                                                       |
-
 | `28_formato_cui_dpi.sql`                  | `persona.cui_dpi` aceptaba cualquier texto de hasta 13 caracteres, incluido `""`, que chocaba en el UNIQUE y esquivaba el trigger de menores. Ahora: 13 dígitos o NULL (hallazgo QA-12)                                                     |
+| `29_tipos_documento_legibles.sql`         | Los tipos de documento se mostraban como `PARTIDA_NACIMIENTO` o `DPI_ENCARGADO`. Quedan con nombres legibles, y el DPI del encargado se divide en anverso y reverso como el del beneficiario |
 
 ### Qué pasó entre la 13 y la 28
 
@@ -103,14 +103,14 @@ Dos avisos:
   deliberado.
 
 Si una migración cambia la forma de las tablas, después hay que correr
-`pnpm prisma:pull && pnpm prisma:generate`. La 28 no lo requiere: un CHECK no
-cambia el modelo de Prisma.
+`pnpm prisma:pull && pnpm prisma:generate`. La 28 y la 29 no lo requieren: un
+CHECK o un cambio de datos no cambia el modelo de Prisma.
 
 ---
 
 ## Para agregar una migración nueva
 
-La siguiente es la **29**.
+La siguiente es la **30**.
 
 1. Escribir el script con el problema medido, la solución y sus límites, como
    los anteriores. Idempotente (`IF NOT EXISTS`, `CREATE OR REPLACE`).
@@ -121,6 +121,6 @@ La siguiente es la **29**.
 5. Correr `corepack pnpm test`.
 
 **Los pasos 2 y 4 son los que se olvidan, y son los que más caro salen**: así se
-perdieron la 14 a la 27. Si una migración no llega al v4, los entornos nuevos nacen sin ella mientras los existentes
-sí la tienen, y las dos versiones divergen en silencio hasta que alguien monta
+perdieron la 14 a la 27. Si una migración no llega al v4, los entornos nuevos
+nacen sin ella mientras los existentes sí la tienen, y las dos versiones divergen en silencio hasta que alguien monta
 una base limpia y descubre que el sistema se comporta distinto.

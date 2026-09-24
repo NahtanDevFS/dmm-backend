@@ -308,6 +308,11 @@ ocupan más de un byte).
 `mi-password` exige `password_actual` y conserva la sesión desde la que se hace el
 cambio, revocando las demás. Si `password_actual` no coincide responde **400**
 con `code: "CURRENT_PASSWORD_INVALID"`, no 401: la sesión sigue siendo válida.
+Tiene su propio límite: **5 contraseñas actuales incorrectas por usuario cada
+15 minutos** (un error de formato en la nueva no cuenta). Cada 400 trae
+`intentos_restantes`, y al agotarlos responde **429** con
+`code: "CAMBIO_PASSWORD_BLOQUEADO"`, `intentos_restantes: 0` y los minutos que
+faltan en el mensaje.
 El reseteo por administrador no pide la actual y
 revoca **todas** las sesiones del usuario.
 
