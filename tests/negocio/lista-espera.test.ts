@@ -167,6 +167,36 @@ describe("reparto de la lista de espera", () => {
     expect(await estadoLinea(linea.lineaId)).toBe("PENDIENTE_ENTREGA_PARCIAL");
   });
 
+  it("actualiza tambien la cabecera de la solicitud (migracion 30)", async () => {
+    // Antes solo cambiaba la linea: la solicitud seguia diciendo
+    // PENDIENTE_ADQUISICION aunque su unica linea ya estuviera lista para
+    // entregar, hasta que alguna entrega la recalculara.
+    const insumo = await crearInsumo(usuarioId);
+    const pedido = await crearSolicitudConLinea(insumo, 3, "Espera cabecera");
+    expect(await estadoSolicitud(pedido.solicitudId)).toBe(
+      "PENDIENTE_ADQUISICION",
+    );
+
+    await crearLote(usuarioId, insumo, { cantidad: 5 });
+    await procesarDonacion(insumo);
+
+    expect(await estadoLinea(pedido.lineaId)).toBe("PENDIENTE_ENTREGA");
+    expect(await estadoSolicitud(pedido.solicitudId)).toBe("PENDIENTE_ENTREGA");
+  });
+
+  it("la cabecera acompaña a la linea cubierta solo en parte", async () => {
+    const insumo = await crearInsumo(usuarioId);
+    const pedido = await crearSolicitudConLinea(insumo, 10, "Cabecera parcial");
+
+    await crearLote(usuarioId, insumo, { cantidad: 4 });
+    await procesarDonacion(insumo);
+
+    expect(await estadoLinea(pedido.lineaId)).toBe("PENDIENTE_ENTREGA_PARCIAL");
+    expect(await estadoSolicitud(pedido.solicitudId)).toBe(
+      "PENDIENTE_ENTREGA_PARCIAL",
+    );
+  });
+
   it("registra la fecha de asignacion", async () => {
     const insumo = await crearInsumo(usuarioId);
     const linea = await crearSolicitudConLinea(insumo, 3, "Con fecha");

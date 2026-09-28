@@ -18,7 +18,7 @@ Hay dos caminos, y conviene no mezclarlos:
 
 | Situación                                                   | Qué correr                                                          |
 | ----------------------------------------------------------- | ------------------------------------------------------------------- |
-| **Entorno nuevo** (base recién creada, incluida `dmm_test`) | **Solo `scripts_bd_v4.sql`.** Ya trae todas las migraciones hasta la 29 |
+| **Entorno nuevo** (base recién creada, incluida `dmm_test`) | **Solo `scripts_bd_v4.sql`.** Ya trae todas las migraciones hasta la 30 |
 | **Base existente** a la que le falta algún cambio           | Solo la migración que le falte, de esta carpeta                     |
 
 El encabezado del v4 explica cómo crear la base, cambiar la clave de `dmm_app`
@@ -41,7 +41,7 @@ reales e incluye la consulta para encontrarlos y repararlos.
 
 ## Historial
 
-De la 09 a la 13 están incorporadas al v3 y al v4; la 28 y la 29, solo al v4.
+De la 09 a la 13 están incorporadas al v3 y al v4; de la 28 a la 30, solo al v4.
 
 | Script                                    | Qué corrige                                                                                                                                                                                                                      |
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -52,6 +52,7 @@ De la 09 a la 13 están incorporadas al v3 y al v4; la 28 y la 29, solo al v4.
 | `13_fix_recalculo_al_anular_entrega.sql`  | Al anular una entrega, la línea quedaba en `ENTREGADA` con 0 unidades: el beneficiario desaparecía de la lista de espera y el sistema lo daba por atendido                                                                       |
 | `28_formato_cui_dpi.sql`                  | `persona.cui_dpi` aceptaba cualquier texto de hasta 13 caracteres, incluido `""`, que chocaba en el UNIQUE y esquivaba el trigger de menores. Ahora: 13 dígitos o NULL (hallazgo QA-12)                                                     |
 | `29_tipos_documento_legibles.sql`         | Los tipos de documento se mostraban como `PARTIDA_NACIMIENTO` o `DPI_ENCARGADO`. Quedan con nombres legibles, y el DPI del encargado se divide en anverso y reverso como el del beneficiario |
+| `30_recalcular_cabecera_al_asignar_donacion.sql` | Al llegar una donación, `sp_procesar_donacion_pendientes` pasaba la línea a lista para entregar pero la solicitud seguía en `PENDIENTE_ADQUISICION`. Ahora recalcula también la cabecera |
 
 ### Qué pasó entre la 13 y la 28
 
@@ -103,14 +104,14 @@ Dos avisos:
   deliberado.
 
 Si una migración cambia la forma de las tablas, después hay que correr
-`pnpm prisma:pull && pnpm prisma:generate`. La 28 y la 29 no lo requieren: un
-CHECK o un cambio de datos no cambia el modelo de Prisma.
+`pnpm prisma:pull && pnpm prisma:generate`. De la 28 a la 30 no lo requieren: un
+CHECK, un cambio de datos o de un procedimiento no cambia el modelo de Prisma.
 
 ---
 
 ## Para agregar una migración nueva
 
-La siguiente es la **30**.
+La siguiente es la **31**.
 
 1. Escribir el script con el problema medido, la solución y sus límites, como
    los anteriores. Idempotente (`IF NOT EXISTS`, `CREATE OR REPLACE`).
