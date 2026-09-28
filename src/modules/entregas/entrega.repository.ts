@@ -32,6 +32,8 @@ export interface DetalleEntregaRow {
   id: number;
   insumo_id: number;
   insumo_nombre: string;
+  /** Unidad base del insumo: en ella se expresa cantidad_entregada */
+  unidad_nombre: string;
   detalle_solicitud_id: number | null;
   solicitud_id: number | null;
   cantidad_entregada: number;
@@ -126,7 +128,13 @@ export async function listarEntregas(params: {
             u.username                                   AS entregado_por,
             e.observaciones,
             e.activo,
-            COALESCE(SUM(de.cantidad_entregada) FILTER (WHERE de.activo), 0)::integer AS total_entregado,
+            -- Cantidad por insumo con su unidad base: sumar entre insumos
+            -- mezclaría unidades distintas (tabletas con sillas de ruedas).
+            COALESCE(json_agg(json_build_object(
+                       'insumo', i.nombre,
+                       'cantidad', de.cantidad_entregada,
+                       'unidad', um.nombre
+                     ) ORDER BY de.id) FILTER (WHERE de.activo), '[]'::json) AS renglones,
             COALESCE(string_agg(DISTINCT i.nombre, ', ') FILTER (WHERE de.activo), '') AS insumos,
             -- Origen de la entrega. La regla de origen único garantiza que
             -- todos los renglones comparten solicitud, así que un MIN alcanza.
@@ -139,6 +147,7 @@ export async function listarEntregas(params: {
      JOIN public.usuario u        ON u.id = e.usuario_entrega_id
      LEFT JOIN public.detalle_entrega de ON de.entrega_id = e.id
      LEFT JOIN public.insumo i    ON i.id = de.insumo_id
+     LEFT JOIN public.unidad_medida um ON um.id = i.unidad_medida_base_id
      LEFT JOIN public.detalle_solicitud_apoyo dsa ON dsa.id = de.detalle_solicitud_id
      ${where}
      GROUP BY e.id, p.nombres, p.apellidos, pr.nombres, pr.apellidos, tp.nombre, u.username
@@ -158,6 +167,7 @@ export async function listarDetallesDeEntrega(
     `SELECT de.id,
             de.insumo_id,
             i.nombre AS insumo_nombre,
+            um.nombre AS unidad_nombre,
             i.serie_por_unidad,
             de.detalle_solicitud_id,
             dsa.solicitud_id,
@@ -190,6 +200,7 @@ export async function listarDetallesDeEntrega(
             ), '[]'::json) AS lotes
      FROM public.detalle_entrega de
      JOIN public.insumo i ON i.id = de.insumo_id
+     JOIN public.unidad_medida um ON um.id = i.unidad_medida_base_id
      LEFT JOIN public.detalle_solicitud_apoyo dsa ON dsa.id = de.detalle_solicitud_id
      WHERE de.entrega_id = $1
      ORDER BY de.id`,
