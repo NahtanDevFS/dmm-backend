@@ -67,6 +67,21 @@ export async function aplicarMulta(
   },
 ): Promise<MultaRow> {
   return withUserTransaction(usuarioId, async (client) => {
+    // Se multa un préstamo vigente, vencido, devuelto o no devuelto: el atraso
+    // o el daño se descubren justamente al recibir el equipo. Uno anulado no,
+    // porque nunca existió. FOR UPDATE ordena la multa contra una anulación
+    // simultánea: la que llegue segunda ve el estado ya decidido.
+    const { rows: contrato } = await client.query<{ activo: boolean }>(
+      `SELECT activo FROM public.contrato_prestamo WHERE id = $1 FOR UPDATE`,
+      [contratoId],
+    );
+    if (contrato[0]?.activo !== true) {
+      throw Object.assign(
+        new Error("Este préstamo está anulado: no se le pueden aplicar multas."),
+        { status: 409 },
+      );
+    }
+
     const campos = ["contrato_prestamo_id", "tipo_multa_id", "monto", "motivo"];
     const valores: unknown[] = [
       contratoId,

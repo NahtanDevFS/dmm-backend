@@ -20,6 +20,7 @@ import {
   listarContratosVencidos,
   marcarContratosVencidos,
 } from "../../src/modules/prestamos/contrato.repository.js";
+import { aplicarMulta } from "../../src/modules/prestamos/multa.repository.js";
 
 // Cierre de un contrato de préstamo por una vía distinta a la devolución
 // normal (migración 26): anulación por error de captura, o cierre porque el
@@ -236,6 +237,57 @@ describe("anularContratoPorError", () => {
     await expect(anularContratoPorError(usuarioId, -999, "x")).rejects.toThrow(
       /no existe/i,
     );
+  });
+});
+
+describe("aplicarMulta", () => {
+  // El atraso o el daño se descubren al recibir el equipo, así que la multa
+  // tiene que poder aplicarse después de registrar la devolución. Antes la
+  // pantalla escondía el formulario en cuanto había devolución, y el backend
+  // no distinguía el único caso que sí debe rechazar: el préstamo anulado.
+  const tipoAtraso = () => idCatalogo("tipo_multa_prestamo", "ATRASO");
+
+  async function contratoConEquipo(): Promise<number> {
+    const insumo = await crearInsumo(usuarioId, { categoriaPermitePrestamo: true });
+    await crearLote(usuarioId, insumo, { cantidad: 3 });
+    return crearContratoRaiz(await entregarEquipo(insumo));
+  }
+
+  it("multa un préstamo ya devuelto", async () => {
+    const raiz = await contratoConEquipo();
+    await poolOwner.query(`CALL public.sp_registrar_devolucion_prestamo($1, $2)`, [raiz, usuarioId]);
+
+    const multa = await aplicarMulta(usuarioId, raiz, {
+      tipo_multa_id: await tipoAtraso(),
+      monto: 50,
+      motivo: "Devolvió el equipo tarde",
+    });
+
+    expect(multa.contrato_prestamo_id).toBe(raiz);
+    expect(multa.activo).toBe(true);
+  });
+
+  it("multa un préstamo cerrado como no devuelto", async () => {
+    const raiz = await contratoConEquipo();
+    await cerrarContratoNoDevuelto(usuarioId, raiz, "No respondió a las llamadas");
+
+    const multa = await aplicarMulta(usuarioId, raiz, { tipo_multa_id: await tipoAtraso(), monto: 50 });
+    expect(multa.activo).toBe(true);
+  });
+
+  it("rechaza con 409 multar un préstamo anulado", async () => {
+    const raiz = await contratoConEquipo();
+    await anularContratoPorError(usuarioId, raiz, "Registrado por error");
+
+    const intento = aplicarMulta(usuarioId, raiz, { tipo_multa_id: await tipoAtraso(), monto: 50 });
+    await expect(intento).rejects.toThrow(/anulado/i);
+    await expect(intento).rejects.toMatchObject({ status: 409 });
+
+    const { rows } = await poolOwner.query<{ n: string }>(
+      `SELECT count(*) AS n FROM public.multa_prestamo WHERE contrato_prestamo_id = $1`,
+      [raiz],
+    );
+    expect(Number(rows[0].n)).toBe(0);
   });
 });
 
