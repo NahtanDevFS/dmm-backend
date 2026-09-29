@@ -12,9 +12,12 @@ function claveLogin(req: Request): string {
   return `${ipKeyGenerator(req.ip ?? "")}:${usuario}`;
 }
 
+/** Intentos fallidos de inicio de sesión por IP+usuario en la ventana */
+export const INTENTOS_LOGIN = 5;
+
 export const limiteLogin = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: INTENTOS_LOGIN,
   keyGenerator: claveLogin,
 // Un login correcto no gasta cuota: quien sabe su contraseña no debe quedarbloqueado por haberse equivocado antes
   skipSuccessfulRequests: true,
