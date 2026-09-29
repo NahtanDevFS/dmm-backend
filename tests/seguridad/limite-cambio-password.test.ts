@@ -8,11 +8,9 @@ import {
 } from "../helpers/servidor.js";
 import { resetBaseDePruebas, cerrarPools } from "../helpers/bd.js";
 
-/**
- * QA-06: cambiar la propia contraseña permite adivinar la actual desde una
- * sesión abierta. Tiene su propio límite (5 intentos fallidos cada 15 minutos
- * por usuario) y cada respuesta le dice a la persona cuántos le quedan.
- */
+// QA-06: cambiar la propia contraseña permite adivinar la actual desde una
+// sesión abierta. Tiene su propio límite (5 intentos fallidos cada 15 minutos
+// por usuario) y cada respuesta le dice a la persona cuántos le quedan.
 
 let empleado: Sesion;
 let directora: Sesion;

@@ -5,25 +5,21 @@ import path from "node:path";
 import sharp from "sharp";
 import { resolverDentroDe } from "../../src/lib/storage/ruta-segura.js";
 
-/**
- * Validacion de archivos subidos.
- *
- * La regla que se protege: el tipo se decide por la FIRMA BINARIA del
- * contenido, no por la extension ni por el Content-Type que manda el cliente.
- * Ambos los controla quien sube el archivo, asi que confiar en ellos permitiria
- * guardar cualquier cosa con solo renombrarla a .jpg.
- *
- * UPLOADS_DIR se apunta a un directorio temporal ANTES de importar el modulo,
- * porque storage.service lo lee al cargarse. Por eso el import es dinamico.
- */
+// Validacion de archivos subidos.
+//
+// La regla que se protege: el tipo se decide por la FIRMA BINARIA del
+// contenido, no por la extension ni por el Content-Type que manda el cliente.
+// Ambos los controla quien sube el archivo, asi que confiar en ellos permitiria
+// guardar cualquier cosa con solo renombrarla a .jpg.
+//
+// UPLOADS_DIR se apunta a un directorio temporal ANTES de importar el modulo,
+// porque storage.service lo lee al cargarse. Por eso el import es dinamico.
 
 let carpetaTemporal: string;
 let storage: typeof import("../../src/lib/storage/storage.service.js");
-/**
- * El limite vive en file-validation, no en storage.service: se importa de su
- * modulo real para que la prueba use el mismo valor que el codigo y no una
- * copia que pueda quedar desfasada.
- */
+// El limite vive en file-validation, no en storage.service: se importa de su
+// modulo real para que la prueba use el mismo valor que el codigo y no una
+// copia que pueda quedar desfasada.
 let TAMANO_MAXIMO_BYTES: number;
 
 beforeAll(async () => {
@@ -38,7 +34,7 @@ afterAll(async () => {
   await rm(carpetaTemporal, { recursive: true, force: true });
 });
 
-/** Imagen JPEG real, generada en memoria. */
+// Imagen JPEG real, generada en memoria.
 async function jpegValido(ancho = 40, alto = 40): Promise<Buffer> {
   return sharp({
     create: {
@@ -204,14 +200,12 @@ describe("nombres de archivo en disco", () => {
 });
 
 describe("proteccion contra path traversal al servir", () => {
-  /**
-   * Usa la misma funcion que archivos.routes.ts. Antes el test tenia su propia
-   * copia (con separador) mientras produccion usaba un startsWith sin el, y la
-   * carpeta hermana pasaba en produccion aunque el test estuviera en verde.
-   *
-   * Tambien cubre el bug de UPLOADS_DIR relativo ("./uploads"): la raiz se
-   * resuelve a absoluta antes de comparar.
-   */
+  // Usa la misma funcion que archivos.routes.ts. Antes el test tenia su propia
+  // copia (con separador) mientras produccion usaba un startsWith sin el, y la
+  // carpeta hermana pasaba en produccion aunque el test estuviera en verde.
+  //
+  // Tambien cubre el bug de UPLOADS_DIR relativo ("./uploads"): la raiz se
+  // resuelve a absoluta antes de comparar.
   function rutaPermitida(base: string, solicitada: string): boolean {
     return resolverDentroDe(base, solicitada) !== null;
   }

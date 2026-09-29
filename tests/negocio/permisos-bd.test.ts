@@ -7,17 +7,15 @@ import {
 } from "../helpers/bd.js";
 import { crearUsuario } from "../helpers/fixtures.js";
 
-/**
- * Verifica que el rol de la aplicacion siga sin poder hacer lo que la
- * migracion 12 le quito.
- *
- * Estas restricciones son invisibles hasta que fallan, y un GRANT de mas
- * "para que deje de dar problemas" las revierte sin que nadie lo note. Aqui
- * ese aflojamiento aparece como prueba en rojo.
- *
- * Todo lo que se espera que FALLE se ejerce con `poolApp` (rol dmm_app), no
- * con `poolOwner`: probarlo con el dueno no demostraria nada.
- */
+// Verifica que el rol de la aplicacion siga sin poder hacer lo que la
+// migracion 12 le quito.
+//
+// Estas restricciones son invisibles hasta que fallan, y un GRANT de mas
+// "para que deje de dar problemas" las revierte sin que nadie lo note. Aqui
+// ese aflojamiento aparece como prueba en rojo.
+//
+// Todo lo que se espera que FALLE se ejerce con `poolApp` (rol dmm_app), no
+// con `poolOwner`: probarlo con el dueno no demostraria nada.
 
 let usuarioId: number;
 
@@ -83,14 +81,12 @@ describe("la bitacora de auditoria es inalterable desde la aplicacion", () => {
     expect(rows[0]).toBeDefined();
   });
 
-  /**
-   * La pieza que hace que todo lo anterior no rompa el sistema:
-   * `fn_auditoria` es SECURITY DEFINER, asi que el trigger escribe con los
-   * privilegios del propietario aunque quien dispare la escritura sea dmm_app.
-   *
-   * Sin esto, revocarle INSERT sobre auditoria_log dejaria al sistema sin
-   * poder escribir NADA.
-   */
+  // La pieza que hace que todo lo anterior no rompa el sistema:
+  // `fn_auditoria` es SECURITY DEFINER, asi que el trigger escribe con los
+  // privilegios del propietario aunque quien dispare la escritura sea dmm_app.
+  //
+  // Sin esto, revocarle INSERT sobre auditoria_log dejaria al sistema sin
+  // poder escribir NADA.
   it("el trigger si deja rastro, aunque escriba la aplicacion", async () => {
     const cliente = await poolApp.connect();
     let discapacidadId: number;
@@ -122,23 +118,21 @@ describe("la bitacora de auditoria es inalterable desde la aplicacion", () => {
   });
 });
 
-/**
- * Comprobaciones de DDL.
- *
- * Se consultan los catalogos de Postgres en vez de INTENTAR la operacion.
- * La primera version de este archivo hacia `DROP TABLE public.sesion`
- * esperando que fallara; cuando la proteccion NO estaba, el test no reporto
- * el problema: lo causo, y borro la tabla de la base de pruebas.
- *
- * Una prueba de seguridad no debe depender de que la proteccion funcione para
- * no hacer dano.
- *
- * Es importante mirar la PROPIEDAD y no solo los privilegios: el dueno de una
- * tabla puede hacer DROP, ALTER y DISABLE TRIGGER sin importar cuantos REVOKE
- * se le apliquen. `has_table_privilege` devuelve false para un dueno y aun asi
- * el dueno puede tirar la tabla, asi que verificar solo GRANTs da una falsa
- * sensacion de seguridad.
- */
+// Comprobaciones de DDL.
+//
+// Se consultan los catalogos de Postgres en vez de INTENTAR la operacion.
+// La primera version de este archivo hacia `DROP TABLE public.sesion`
+// esperando que fallara; cuando la proteccion NO estaba, el test no reporto
+// el problema: lo causo, y borro la tabla de la base de pruebas.
+//
+// Una prueba de seguridad no debe depender de que la proteccion funcione para
+// no hacer dano.
+//
+// Es importante mirar la PROPIEDAD y no solo los privilegios: el dueno de una
+// tabla puede hacer DROP, ALTER y DISABLE TRIGGER sin importar cuantos REVOKE
+// se le apliquen. `has_table_privilege` devuelve false para un dueno y aun asi
+// el dueno puede tirar la tabla, asi que verificar solo GRANTs da una falsa
+// sensacion de seguridad.
 describe("la aplicacion no puede alterar el esquema", () => {
   it("no es propietaria de ninguna tabla", async () => {
     const { rows } = await poolOwner.query<{ tablename: string }>(

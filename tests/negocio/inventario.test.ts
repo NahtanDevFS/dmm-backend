@@ -15,13 +15,11 @@ import {
   type InsumoCreado,
 } from "../helpers/fixtures.js";
 
-/**
- * Reglas de inventario que viven en triggers de PostgreSQL, no en TypeScript.
- *
- * Se prueban contra la base porque es donde estan: leer el repositorio no dice
- * nada sobre que hace `fn_calcular_recepcion_lote`, y una prueba con la base
- * simulada solo confirmaria que el mock devuelve lo que se le dijo.
- */
+// Reglas de inventario que viven en triggers de PostgreSQL, no en TypeScript.
+//
+// Se prueban contra la base porque es donde estan: leer el repositorio no dice
+// nada sobre que hace `fn_calcular_recepcion_lote`, y una prueba con la base
+// simulada solo confirmaria que el mock devuelve lo que se le dijo.
 
 let usuarioId: number;
 
@@ -271,17 +269,15 @@ describe("descuento de stock al entregar", () => {
     );
   });
 
-  /**
-   * Dos transacciones concurrentes sobre el mismo lote.
-   *
-   * Es la prueba que justifica el `FOR UPDATE` de `fn_descontar_inventario`.
-   * Sin el bloqueo, ambas leerian el mismo `cantidad_disponible`, las dos
-   * pasarian la validacion y el stock quedaria negativo: inventario que
-   * promete unidades que no existen.
-   *
-   * Se usan dos clientes distintos del pool a proposito; con uno solo las
-   * sentencias se serializarian y no habria concurrencia real.
-   */
+  // Dos transacciones concurrentes sobre el mismo lote.
+  //
+  // Es la prueba que justifica el `FOR UPDATE` de `fn_descontar_inventario`.
+  // Sin el bloqueo, ambas leerian el mismo `cantidad_disponible`, las dos
+  // pasarian la validacion y el stock quedaria negativo: inventario que
+  // promete unidades que no existen.
+  //
+  // Se usan dos clientes distintos del pool a proposito; con uno solo las
+  // sentencias se serializarian y no habria concurrencia real.
   it("no sobregira cuando dos entregas compiten por el mismo lote", async () => {
     const insumo = await crearInsumo(usuarioId);
     const lote = await crearLote(usuarioId, insumo, { cantidad: 10 });

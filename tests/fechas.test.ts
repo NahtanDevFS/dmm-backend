@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { esFechaCalendario, rangoValido } from "../src/lib/fechas.js";
 
-/** QA-11: Date.parse aceptaba días inexistentes y formatos no canónicos, que luego PostgreSQL rechazaba con un 500 */
+// QA-11: Date.parse aceptaba días inexistentes y formatos no canónicos, que luego PostgreSQL rechazaba con un 500
 describe("esFechaCalendario", () => {
   it("acepta fechas reales en YYYY-MM-DD, incluido el 29 de febrero bisiesto", () => {
     for (const v of ["2024-02-29", "2025-01-01", "2025-12-31"]) {

@@ -12,17 +12,15 @@ import {
   SESION_DURACION_MAXIMA_HORAS,
 } from "../../src/modules/auth/session.utils.js";
 
-/**
- * RNF-SEG-03: expiracion de sesion por inactividad, validada EN SERVIDOR.
- *
- * Es la razon por la que el sistema usa sesion con estado y no JWT puro: con un
- * token sin estado no hay forma de cortar por inactividad sin reintroducir
- * estado, y confiar en que el frontend cierre la sesion no es garantia.
- *
- * Para probar los cortes por tiempo se manipulan las marcas de tiempo en la
- * tabla `sesion` en lugar de esperar 30 minutos o 12 horas. Lo que se verifica
- * es la decision del middleware, no el paso del reloj.
- */
+// RNF-SEG-03: expiracion de sesion por inactividad, validada EN SERVIDOR.
+//
+// Es la razon por la que el sistema usa sesion con estado y no JWT puro: con un
+// token sin estado no hay forma de cortar por inactividad sin reintroducir
+// estado, y confiar en que el frontend cierre la sesion no es garantia.
+//
+// Para probar los cortes por tiempo se manipulan las marcas de tiempo en la
+// tabla `sesion` en lugar de esperar 30 minutos o 12 horas. Lo que se verifica
+// es la decision del middleware, no el paso del reloj.
 
 let sesion: Sesion;
 
@@ -43,7 +41,7 @@ afterAll(async () => {
   await cerrarPools();
 });
 
-/** Desplaza `ultima_actividad` hacia el pasado. */
+// Desplaza `ultima_actividad` hacia el pasado.
 async function envejecerActividad(minutos: number): Promise<void> {
   await poolOwner.query(
     `UPDATE public.sesion
@@ -245,15 +243,13 @@ describe("credenciales de login", () => {
     expect(res.status).toBe(401);
   });
 
-  /**
-   * Un usuario desactivado recibe 403, no 401, y con un mensaje distinto.
-   *
-   * Es deliberado: el 401 uniforme de arriba protege contra enumeracion de
-   * cuentas, pero aqui quien pregunta ya demostro conocer la contraseña
-   * correcta, asi que no se le revela nada nuevo. A cambio, el empleado sabe
-   * que su problema no es la contraseña y que debe hablar con el
-   * administrador, en vez de reintentar hasta agotar el rate limit.
-   */
+  // Un usuario desactivado recibe 403, no 401, y con un mensaje distinto.
+  //
+  // Es deliberado: el 401 uniforme de arriba protege contra enumeracion de
+  // cuentas, pero aqui quien pregunta ya demostro conocer la contraseña
+  // correcta, asi que no se le revela nada nuevo. A cambio, el empleado sabe
+  // que su problema no es la contraseña y que debe hablar con el
+  // administrador, en vez de reintentar hasta agotar el rate limit.
   it("rechaza a un usuario desactivado con 403 y mensaje propio", async () => {
     await poolOwner.query(
       `UPDATE public.usuario SET activo = false WHERE username = 'test_administrador'`,

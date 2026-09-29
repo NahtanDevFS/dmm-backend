@@ -1,6 +1,6 @@
 import { pool } from "../../db/pool.js";
 
-/** Todo lo que hay que saber de una solicitud para imprimirla como expediente */
+// Todo lo que hay que saber de una solicitud para imprimirla como expediente
 
 export interface CabeceraExpediente {
   solicitud_id: number;
@@ -43,7 +43,7 @@ export interface LineaExpediente {
   cantidad_presentacion: string | null;
 }
 
-/** Un campo del formulario con lo que se respondió, o sin nada */
+// Un campo del formulario con lo que se respondió, o sin nada
 export interface RespuestaExpediente {
   campo_id: number;
   etiqueta: string;
@@ -70,7 +70,7 @@ export interface DocumentoExpediente {
 export interface EntregaExpediente {
   fecha_entrega: Date;
   insumo: string;
-  /** Serie de la unidad entregada, en equipo identificable */
+  // Serie de la unidad entregada, en equipo identificable
   numero_serie: string | null;
   cantidad_entregada: number;
   entregado_por: string;
@@ -137,7 +137,7 @@ export async function lineasExpediente(
   return rows;
 }
 
-/** Formularios exigidos por una línea, con TODOS sus campos y las respuestasque haya */
+// Formularios exigidos por una línea, con TODOS sus campos y las respuestasque haya
 export async function formulariosExpediente(
   detalleSolicitudId: number,
 ): Promise<FormularioExpediente[]> {

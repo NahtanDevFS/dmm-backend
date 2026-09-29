@@ -70,7 +70,7 @@ export async function responderExcel(
     to: { row: 1, column: columnas.length },
   };
 
-// Los DATE de Postgres llegan como Date de JS y Excel los mostraría con hora yzona horaria
+// Los DATE de Postgres llegan como Date de JS y Excel los mostraría con hora y zona horaria
   columnas.forEach((c, indice) => {
     const primerValor = filas.find((f) => f[c.campo] != null)?.[c.campo];
     if (primerValor instanceof Date) {

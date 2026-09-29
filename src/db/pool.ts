@@ -12,7 +12,7 @@ pool.on("error", (err) => {
 // mientras está prestada (un reinicio de PostgreSQL a mitad de una
 // transacción), pg emite "error" en el propio cliente y, sin nadie que lo
 // escuche, Node termina el proceso. La consulta en curso ya falla por su
-// lado; esto solo evita que se caiga el servidor completo.
+// lado, esto solo evita que se caiga el servidor completo.
 pool.on("connect", (client) => {
   client.on("error", (err) => {
     console.error("Se perdió una conexión con la base de datos:", err);

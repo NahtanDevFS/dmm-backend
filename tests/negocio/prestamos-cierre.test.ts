@@ -21,32 +21,30 @@ import {
   marcarContratosVencidos,
 } from "../../src/modules/prestamos/contrato.repository.js";
 
-/**
- * Cierre de un contrato de préstamo por una vía distinta a la devolución
- * normal (migración 26): anulación por error de captura, o cierre porque el
- * equipo no volvió.
- *
- * A diferencia del resto de prestamos.test.ts, aquí se llama directo a las
- * funciones de contrato.repository.ts (no al SP vía poolOwner), porque esta
- * lógica vive en TypeScript, no en un procedimiento almacenado — así queda
- * ejercitado el código real de la aplicación. Internamente esas funciones
- * usan withUserTransaction, que toma el pool de la app (rol de mínimo
- * privilegio dmm_app) apuntando ya a la base de pruebas, igual que hace
- * with-user-transaction.test.ts.
- *
- * IMPORTANTE: para que estas pruebas encuentren el estado NO_DEVUELTO hace
- * falta que tests/helpers/bd.ts siembre ese valor en
- * estado_contrato_prestamo. Si esta suite falla con "No existe
- * estado_contrato_prestamo.nombre = 'NO_DEVUELTO'", revise que ese fix siga
- * aplicado ahí.
- *
- * No pude confirmar contra una base real que el rol dmm_app tenga UPDATE
- * sobre contrato_prestamo y multa_prestamo (el volcado no lo mostró de forma
- * legible). Si esta suite falla con un error de permisos en vez de uno de
- * negocio, ese es el primer sitio a revisar — sería el mismo tipo de
- * hallazgo que faltar NO_DEVUELTO en el seed: código correcto bloqueado por
- * un GRANT que no se actualizó junto con la migración 26.
- */
+// Cierre de un contrato de préstamo por una vía distinta a la devolución
+// normal (migración 26): anulación por error de captura, o cierre porque el
+// equipo no volvió.
+//
+// A diferencia del resto de prestamos.test.ts, aquí se llama directo a las
+// funciones de contrato.repository.ts (no al SP vía poolOwner), porque esta
+// lógica vive en TypeScript, no en un procedimiento almacenado — así queda
+// ejercitado el código real de la aplicación. Internamente esas funciones
+// usan withUserTransaction, que toma el pool de la app (rol de mínimo
+// privilegio dmm_app) apuntando ya a la base de pruebas, igual que hace
+// with-user-transaction.test.ts.
+//
+// IMPORTANTE: para que estas pruebas encuentren el estado NO_DEVUELTO hace
+// falta que tests/helpers/bd.ts siembre ese valor en
+// estado_contrato_prestamo. Si esta suite falla con "No existe
+// estado_contrato_prestamo.nombre = 'NO_DEVUELTO'", revise que ese fix siga
+// aplicado ahí.
+//
+// No pude confirmar contra una base real que el rol dmm_app tenga UPDATE
+// sobre contrato_prestamo y multa_prestamo (el volcado no lo mostró de forma
+// legible). Si esta suite falla con un error de permisos en vez de uno de
+// negocio, ese es el primer sitio a revisar — sería el mismo tipo de
+// hallazgo que faltar NO_DEVUELTO en el seed: código correcto bloqueado por
+// un GRANT que no se actualizó junto con la migración 26.
 
 let usuarioId: number;
 let personaId: number;
@@ -77,7 +75,7 @@ afterAll(async () => {
   await cerrarPools();
 });
 
-/** Entrega física del equipo, de la que colgará el contrato raíz. Mismo helper que prestamos.test.ts. */
+// Entrega física del equipo, de la que colgará el contrato raíz. Mismo helper que prestamos.test.ts.
 async function entregarEquipo(
   insumo: InsumoCreado,
   cantidad = 1,
@@ -345,7 +343,7 @@ describe("cerrarContratoNoDevuelto", () => {
 });
 
 describe("listarContratosVencidos (QA-17)", () => {
-  /** Contrato raíz que ya pasó su fecha pactada: inicio hace 30 días, plazo vencido hace 5 */
+  // Contrato raíz que ya pasó su fecha pactada: inicio hace 30 días, plazo vencido hace 5
   async function crearContratoVencido(detalleEntregaId: number): Promise<number> {
     const { rows } = await poolOwner.query<{ id: number }>(
       `INSERT INTO public.contrato_prestamo

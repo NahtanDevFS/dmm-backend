@@ -58,7 +58,7 @@ import {
 } from "../../lib/errores/postgres.js";
 import { tieneFormulariosPendientes } from "../formularios/formulario.repository.js";
 
-/** Traduce el error con el nombre del insumo, para que los mensajes de lostriggers no salgan con ids crudos */
+// Traduce el error con el nombre del insumo, para que los mensajes de lostriggers no salgan con ids crudos
 function responderErrorConContexto(
   error: unknown,
   res: Response,
@@ -88,7 +88,7 @@ async function resolverSolicitud(
   return { ok: true, id };
 }
 
-/** Verifica además que la línea pertenezca a la solicitud de la URL */
+// Verifica además que la línea pertenezca a la solicitud de la URL
 async function resolverLinea(
   req: Request,
 ): Promise<
@@ -237,7 +237,7 @@ export async function crearController(
       contexto = { insumoNombre: insumo.nombre };
     }
 
-    /** Suplencia: quien registra no es la encargada del programa elegido */
+    // Suplencia: quien registra no es la encargada del programa elegido
     const programaPropio = await programaDeUsuario(req.usuario!.id);
     const enSuplencia =
       programaPropio !== null && programaPropio !== parsed.data.programa_id;
@@ -321,7 +321,7 @@ export async function aprobarController(
       return res.status(200).json(solicitud); // idempotente
     }
 
-// Formularios exigidos por la categoría de cada línea (equipo, típicamente):ninguno puede quedar incompleto antes de aprobar
+// Formularios exigidos por la categoría de cada línea (equipo, típicamente): ninguno puede quedar incompleto antes de aprobar
     const lineas = await listarLineasDeSolicitud(ruta.id, false);
     for (const linea of lineas) {
       if (await tieneFormulariosPendientes(linea.id)) {
@@ -506,7 +506,7 @@ export async function cancelarLineaController(
       });
     }
 
-// Las reglas de qué se puede cancelar (no entregada, no ya cancelada) estánen sp_cancelar_linea_solicitud; sus excepciones las traduce el errorHandler
+// Las reglas de qué se puede cancelar (no entregada, no ya cancelada) estánen sp_cancelar_linea_solicitud, sus excepciones las traduce el errorHandler
     await cancelarLinea(req.usuario!.id, ruta.lineaId, parsed.data.motivo);
     const linea = await buscarLineaPorId(ruta.lineaId);
     return res.status(200).json(linea);
@@ -550,7 +550,7 @@ export async function cancelarSolicitudController(
   }
 }
 
-/** El expediente completo en un PDF: la ficha de la persona, cada insumo consus formularios llenos, las entregas y los documentos adjuntos */
+// El expediente completo en un PDF: la ficha de la persona, cada insumo consus formularios llenos, las entregas y los documentos adjuntos
 export async function expedientePdfController(
   req: Request,
   res: Response,

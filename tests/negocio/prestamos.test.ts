@@ -15,21 +15,19 @@ import {
   type InsumoCreado,
 } from "../helpers/fixtures.js";
 
-/**
- * Contratos de prestamo de equipo (sillas de ruedas, muletas, andadores).
- *
- * Dos reglas estructurales sostienen todo el modulo:
- *
- *  1. Un contrato nace de una entrega fisica O es la renovacion de otro, nunca
- *     ambas cosas ni ninguna (`contrato_origen_check`).
- *  2. La cadena de renovaciones es LINEAL: un contrato admite una sola
- *     renovacion (`contrato_prestamo_anterior_unico_key`).
- *
- * De ahi se sigue lo mas delicado: solo el contrato RAIZ tiene
- * `detalle_entrega_id`, asi que `sp_registrar_devolucion_prestamo` solo opera
- * sobre el, y el backend debe resolver la raiz antes de invocarlo. Si alguien
- * llamara al SP con el ultimo contrato de la cadena, fallaria.
- */
+// Contratos de prestamo de equipo (sillas de ruedas, muletas, andadores).
+//
+// Dos reglas estructurales sostienen todo el modulo:
+//
+//  1. Un contrato nace de una entrega fisica O es la renovacion de otro, nunca
+//     ambas cosas ni ninguna (`contrato_origen_check`).
+//  2. La cadena de renovaciones es LINEAL: un contrato admite una sola
+//     renovacion (`contrato_prestamo_anterior_unico_key`).
+//
+// De ahi se sigue lo mas delicado: solo el contrato RAIZ tiene
+// `detalle_entrega_id`, asi que `sp_registrar_devolucion_prestamo` solo opera
+// sobre el, y el backend debe resolver la raiz antes de invocarlo. Si alguien
+// llamara al SP con el ultimo contrato de la cadena, fallaria.
 
 let usuarioId: number;
 let personaId: number;
@@ -57,7 +55,7 @@ afterAll(async () => {
   await cerrarPools();
 });
 
-/** Entrega fisica del equipo, de la que colgara el contrato raiz. */
+// Entrega fisica del equipo, de la que colgara el contrato raiz.
 async function entregarEquipo(
   insumo: InsumoCreado,
   cantidad = 1,

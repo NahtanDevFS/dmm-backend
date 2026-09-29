@@ -13,24 +13,22 @@ import {
   type InsumoCreado,
 } from "../helpers/fixtures.js";
 
-/**
- * Lista de espera y recalculo de estados en cascada.
- *
- * Dos mecanismos que cierran el ciclo de una solicitud:
- *
- *  - `sp_procesar_donacion_pendientes`: cuando llega una donacion, reparte la
- *    disponibilidad entre las lineas que estaban esperando, en orden de
- *    llegada. Lo ve directamente el beneficiario: si reparte mal, quien lleva
- *    meses esperando se queda atras.
- *
- *  - `fn_recalcular_linea_solicitud` -> `fn_recalcular_cabecera_solicitud`:
- *    al entregar, la linea y la cabecera se mueven solas. El backend nunca
- *    escribe esos estados.
- *
- * Ojo con una sutileza: el SP de lista de espera NO descuenta inventario, solo
- * marca lineas como listas para entregar. El descuento fisico ocurre despues,
- * cuando el empleado despacha.
- */
+// Lista de espera y recalculo de estados en cascada.
+//
+// Dos mecanismos que cierran el ciclo de una solicitud:
+//
+//  - `sp_procesar_donacion_pendientes`: cuando llega una donacion, reparte la
+//    disponibilidad entre las lineas que estaban esperando, en orden de
+//    llegada. Lo ve directamente el beneficiario: si reparte mal, quien lleva
+//    meses esperando se queda atras.
+//
+//  - `fn_recalcular_linea_solicitud` -> `fn_recalcular_cabecera_solicitud`:
+//    al entregar, la linea y la cabecera se mueven solas. El backend nunca
+//    escribe esos estados.
+//
+// Ojo con una sutileza: el SP de lista de espera NO descuenta inventario, solo
+// marca lineas como listas para entregar. El descuento fisico ocurre despues,
+// cuando el empleado despacha.
 
 let usuarioId: number;
 let programaId: number;
@@ -332,17 +330,15 @@ describe("recalculo de la linea al entregar", () => {
     expect(await estadoLinea(linea.lineaId)).toBe("ENTREGADA");
   });
 
-  /**
-   * Regresion de estado al anular.
-   *
-   * Este test detecto un bug real: `fn_recalcular_linea_solicitud` conservaba
-   * el estado cuando el total entregado volvia a 0, asi que una linea anulada
-   * se quedaba en ENTREGADA con 0 unidades. Como `v_lista_espera` solo muestra
-   * PENDIENTE_ADQUISICION y PENDIENTE_ENTREGA_PARCIAL, la persona desaparecia
-   * de toda lista de pendientes y el sistema la daba por atendida.
-   *
-   * Corregido en db/migraciones/13_fix_recalculo_al_anular_entrega.sql.
-   */
+  // Regresion de estado al anular.
+  //
+  // Este test detecto un bug real: `fn_recalcular_linea_solicitud` conservaba
+  // el estado cuando el total entregado volvia a 0, asi que una linea anulada
+  // se quedaba en ENTREGADA con 0 unidades. Como `v_lista_espera` solo muestra
+  // PENDIENTE_ADQUISICION y PENDIENTE_ENTREGA_PARCIAL, la persona desaparecia
+  // de toda lista de pendientes y el sistema la daba por atendida.
+  //
+  // Corregido en db/migraciones/13_fix_recalculo_al_anular_entrega.sql.
   it("vuelve atras al anular la entrega", async () => {
     const insumo = await crearInsumo(usuarioId);
     await crearLote(usuarioId, insumo, { cantidad: 20 });

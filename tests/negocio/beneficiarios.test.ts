@@ -7,27 +7,25 @@ import {
 } from "../helpers/bd.js";
 import { crearUsuario, crearPersona, enDias } from "../helpers/fixtures.js";
 
-/**
- * RF-BEN-03 (histórica): el encargado de un menor sin CUI/DPI.
- *
- * La migración 22 quitó la exigencia: hoy no tener encargado NUNCA bloquea
- * el registro, ni siquiera en un menor sin CUI/DPI (ver TRASPASO.md §4). La
- * interfaz lo sugiere; la base ya no lo fuerza. No hay ningún
- * CONSTRAINT TRIGGER DEFERRABLE sobre persona/encargado_menor en el esquema
- * actual — se confirmó que no existe ninguno con ese nombre ni función.
- *
- * Este archivo antes probaba la regla vieja (rechazo al COMMIT). Se
- * reescribió para afirmar el comportamiento actual: un menor sin CUI/DPI y
- * sin encargado se registra sin problema, y desvincular al único encargado
- * de un menor tampoco falla. El resto de los tests de este archivo (crear
- * menor y encargado juntos, cambiar de encargado, etc.) seguían
- * describiendo casos válidos y no se tocaron.
- */
+// RF-BEN-03 (histórica): el encargado de un menor sin CUI/DPI.
+//
+// La migración 22 quitó la exigencia: hoy no tener encargado NUNCA bloquea
+// el registro, ni siquiera en un menor sin CUI/DPI (ver TRASPASO.md §4). La
+// interfaz lo sugiere; la base ya no lo fuerza. No hay ningún
+// CONSTRAINT TRIGGER DEFERRABLE sobre persona/encargado_menor en el esquema
+// actual — se confirmó que no existe ninguno con ese nombre ni función.
+//
+// Este archivo antes probaba la regla vieja (rechazo al COMMIT). Se
+// reescribió para afirmar el comportamiento actual: un menor sin CUI/DPI y
+// sin encargado se registra sin problema, y desvincular al único encargado
+// de un menor tampoco falla. El resto de los tests de este archivo (crear
+// menor y encargado juntos, cambiar de encargado, etc.) seguían
+// describiendo casos válidos y no se tocaron.
 
 let usuarioId: number;
 let parentescoId: number;
 
-/** Fecha de nacimiento de alguien que hoy tiene la edad pedida. */
+// Fecha de nacimiento de alguien que hoy tiene la edad pedida.
 function nacidoHace(anios: number): string {
   const f = new Date();
   f.setFullYear(f.getFullYear() - anios);
@@ -53,7 +51,7 @@ afterAll(async () => {
   await cerrarPools();
 });
 
-/** Ejecuta `fn` dentro de una transaccion y hace COMMIT al final. */
+// Ejecuta `fn` dentro de una transaccion y hace COMMIT al final.
 async function enTransaccion<T>(fn: (cliente: any) => Promise<T>): Promise<T> {
   const cliente = await poolOwner.connect();
   try {

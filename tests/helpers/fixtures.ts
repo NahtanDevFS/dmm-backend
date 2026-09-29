@@ -1,18 +1,16 @@
 import { poolOwner, idCatalogo } from "./bd.js";
 
-/**
- * Constructores de escenarios para las pruebas de reglas de negocio.
- *
- * Sin esto cada prueba necesitaria veinte lineas de INSERT (comunidad ->
- * persona -> unidad -> categoria -> insumo -> presentacion -> institucion ->
- * recepcion -> lote) antes de poder afirmar nada, y la regla que se esta
- * probando quedaria enterrada.
- *
- * Todo se inserta con `poolOwner` y `usuario_id` explicito. No se usa
- * `withUserTransaction` a proposito: aqui se esta MONTANDO el escenario, no
- * ejerciendo el codigo de la aplicacion. Lo que se ejerce se invoca en cada
- * prueba.
- */
+// Constructores de escenarios para las pruebas de reglas de negocio.
+//
+// Sin esto cada prueba necesitaria veinte lineas de INSERT (comunidad ->
+// persona -> unidad -> categoria -> insumo -> presentacion -> institucion ->
+// recepcion -> lote) antes de poder afirmar nada, y la regla que se esta
+// probando quedaria enterrada.
+//
+// Todo se inserta con `poolOwner` y `usuario_id` explicito. No se usa
+// `withUserTransaction` a proposito: aqui se esta MONTANDO el escenario, no
+// ejerciendo el codigo de la aplicacion. Lo que se ejerce se invoca en cada
+// prueba.
 
 export async function crearUsuario(sufijo = "fixture"): Promise<number> {
   const rolId = await idCatalogo("rol", "ADMINISTRADOR");
@@ -50,7 +48,7 @@ export async function crearComunidad(usuarioId: number): Promise<number> {
 export interface OpcionesPersona {
   nombres?: string;
   apellidos?: string;
-  /** Por defecto una fecha de persona adulta. */
+  // Por defecto una fecha de persona adulta.
   fechaNacimiento?: string;
   cuiDpi?: string | null;
   comunidadId?: number | null;
@@ -83,9 +81,9 @@ export interface OpcionesInsumo {
   requiereFechaCaducidad?: boolean;
   requiereCodigoFabricante?: boolean;
   bloqueaSolicitudSinStock?: boolean;
-  /** Migración 27: cada unidad se registra por separado, con su propio número de serie. */
+  // Migración 27: cada unidad se registra por separado, con su propio número de serie.
   seriePorUnidad?: boolean;
-  /** Migración 25: si la categoría admite préstamo de equipo, no solo entrega/donación. */
+  // Migración 25: si la categoría admite préstamo de equipo, no solo entrega/donación.
   categoriaPermitePrestamo?: boolean;
 }
 
@@ -93,7 +91,7 @@ export interface InsumoCreado {
   insumoId: number;
   categoriaId: number;
   unidadId: number;
-  /** Presentacion por defecto (es_default = true). */
+  // Presentacion por defecto (es_default = true).
   presentacionId: number;
 }
 
@@ -183,9 +181,9 @@ export async function crearRecepcion(usuarioId: number): Promise<number> {
 }
 
 export interface OpcionesLote {
-  /** Cantidad en la presentacion de recepcion, NO en unidades base. */
+  // Cantidad en la presentacion de recepcion, NO en unidades base.
   cantidad?: number;
-  /** Multiplicador: unidades base por cada unidad de la presentacion. */
+  // Multiplicador: unidades base por cada unidad de la presentacion.
   unidadesPorPresentacion?: number;
   fechaCaducidad?: string | null;
   codigoFabricante?: string | null;
@@ -198,12 +196,10 @@ export interface LoteCreado {
   cantidadDisponible: number;
 }
 
-/**
- * Crea un lote. `cantidad_inicial` y `cantidad_disponible` NO se envian: las
- * calcula el trigger `fn_calcular_recepcion_lote` como
- * FLOOR(cantidad * unidades_por_presentacion). Se devuelven tal como quedaron
- * en la base, para que las pruebas afirmen sobre el valor real y no el esperado.
- */
+// Crea un lote. `cantidad_inicial` y `cantidad_disponible` NO se envian: las
+// calcula el trigger `fn_calcular_recepcion_lote` como
+// FLOOR(cantidad * unidades_por_presentacion). Se devuelven tal como quedaron
+// en la base, para que las pruebas afirmen sobre el valor real y no el esperado.
 export async function crearLote(
   usuarioId: number,
   insumo: InsumoCreado,
@@ -257,7 +253,7 @@ export async function stockDisponible(loteId: number): Promise<number> {
   return rows[0]?.cantidad_disponible ?? -1;
 }
 
-/** Fecha ISO desplazada respecto a hoy, para caducidades. */
+// Fecha ISO desplazada respecto a hoy, para caducidades.
 export function enDias(dias: number): string {
   const f = new Date();
   f.setDate(f.getDate() + dias);

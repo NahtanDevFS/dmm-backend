@@ -65,7 +65,7 @@ export async function crearRecetaMedica(
   });
 }
 
-/** Borrado lógico: el archivo permanece en disco, igual que documento_persona ydocumento_recepcion */
+// Borrado lógico: el archivo permanece en disco, igual que documento_persona y documento_recepcion
 export async function eliminarRecetaMedica(
   usuarioId: number,
   id: number,

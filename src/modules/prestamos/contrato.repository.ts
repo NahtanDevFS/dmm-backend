@@ -185,7 +185,7 @@ export async function listarContratos(params: {
   return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
-/** Contratos con la devolución atrasada: la fecha pactada ya pasó y no haydevolución real registrada */
+/** Contratos con la devolución atrasada: la fecha pactada ya pasó y no hay devolución real registrada */
 export async function listarContratosVencidos(): Promise<
   Record<string, unknown>[]
 > {
@@ -237,7 +237,7 @@ export async function listarContratosVencidos(): Promise<
   return result.rows;
 }
 
-/** Cadena completa de renovaciones a la que pertenece un contrato */
+/* Cadena completa de renovaciones a la que pertenece un contrato */
 export async function listarCadenaDeRenovaciones(
   id: number,
 ): Promise<ContratoRow[]> {
@@ -271,7 +271,7 @@ export async function listarCadenaDeRenovaciones(
   return result.rows;
 }
 
-/** Contrato raíz de la cadena: el único que tiene `detalle_entrega_id` y portanto el que sp_registrar_devolucion_prestamo puede procesar, porque el SPhace JOIN con detalle_entrega para devolver las unidades al lote */
+/* Contrato raíz de la cadena: el único que tiene `detalle_entrega_id` y portanto el que sp_registrar_devolucion_prestamo puede procesar, porque el SPhace JOIN con detalle_entrega para devolver las unidades al lote */
 export async function buscarContratoRaiz(
   id: number,
 ): Promise<ContratoRow | null> {
@@ -291,7 +291,7 @@ export async function buscarContratoRaiz(
   return result.rows[0] ?? null;
 }
 
-/** El UNIQUE de detalle_entrega_id permite un solo contrato por renglón entregado */
+/* El UNIQUE de detalle_entrega_id permite un solo contrato por renglón entregado */
 export async function existeContratoDeDetalleEntrega(
   detalleEntregaId: number,
 ): Promise<boolean> {
@@ -333,7 +333,7 @@ export async function nombreEstado(id: number): Promise<string | null> {
 
 // escrituras
 
-/** Registra un préstamo completo en un solo acto: la entrega del equipo y sucontrato */
+/* Registra un préstamo completo en un solo acto: la entrega del equipo y sucontrato */
 export async function crearPrestamoDirecto(
   usuarioId: number,
   datos: {
@@ -341,7 +341,7 @@ export async function crearPrestamoDirecto(
     insumo_id: number;
     fecha_devolucion_pactada: string;
     observaciones?: string | null;
-    /** Qué unidad concreta se lleva la persona, cuando el equipo tiene númerode serie */
+    /* Qué unidad concreta se lleva la persona, cuando el equipo tiene númerode serie */
     detalle_inventario_lote_id?: number | null;
   },
 ): Promise<{ contrato: ContratoRow; entrega_id: number }> {
@@ -423,7 +423,7 @@ export async function crearContrato(
   });
 }
 
-/** Renovación: contrato nuevo encadenado al anterior */
+/* Renovación: contrato nuevo encadenado al anterior */
 export async function renovarContrato(
   usuarioId: number,
   contratoAnteriorId: number,
@@ -469,7 +469,7 @@ export async function editarContrato(
   });
 }
 
-/** Devolución */
+/* Devolución */
 export async function registrarDevolucion(
   usuarioId: number,
   contratoId: number,
@@ -493,8 +493,8 @@ export async function registrarDevolucion(
   });
 }
 
-/** Pone en VENCIDO los contratos cuya fecha pactada ya pasó y siguen sindevolución */
-/** Anula un préstamo registrado por error: deshace el contrato Y la entrega,devolviendo el equipo al inventario */
+/* Pone en VENCIDO los contratos cuya fecha pactada ya pasó y siguen sindevolución */
+/* Anula un préstamo registrado por error: deshace el contrato Y la entrega,devolviendo el equipo al inventario */
 export async function anularContratoPorError(
   usuarioId: number,
   contratoId: number,
@@ -565,7 +565,7 @@ export async function anularContratoPorError(
   });
 }
 
-/** Cierra un préstamo cuyo equipo no volvió */
+/* Cierra un préstamo cuyo equipo no volvió */
 export async function cerrarContratoNoDevuelto(
   usuarioId: number,
   contratoId: number,
@@ -593,7 +593,7 @@ export async function cerrarContratoNoDevuelto(
   });
 }
 
-/** Nombre del tipo de multa que se aplica sola al vencer el plazo */
+/* Nombre del tipo de multa que se aplica sola al vencer el plazo */
 const MULTA_POR_ATRASO = "ATRASO";
 
 export async function marcarContratosVencidos(
@@ -618,7 +618,7 @@ export async function marcarContratosVencidos(
       [estadoVencido, usuarioId],
     );
 
-    /** La multa por atraso se aplica sola: es una consecuencia del calendario, no una decisión de nadie */
+    // La multa por atraso se aplica sola: es una consecuencia del calendario, no una decisión de nadie
     // Inserta una multa automática para cada contrato recién vencido
     const multas = await client.query(
       `INSERT INTO public.multa_prestamo

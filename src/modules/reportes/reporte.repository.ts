@@ -3,7 +3,7 @@ import { pool } from "../../db/pool.js";
 
 type Fila = Record<string, unknown>;
 
-/** Acumulador de condiciones WHERE con parámetros posicionales */
+// Acumulador de condiciones WHERE con parámetros posicionales
 class Filtros {
   private condiciones: string[] = [];
   private valores: unknown[] = [];
@@ -32,7 +32,7 @@ class Filtros {
 
 // resolución de nombres
 
-/** `v_reporte_poblacion_beneficiada` está agregada y solo expone nombres */
+// `v_reporte_poblacion_beneficiada` está agregada y solo expone nombres
 export async function buscarComunidadParaFiltro(
   id: number,
 ): Promise<{ nombre: string; municipio_nombre: string } | null> {
@@ -78,7 +78,7 @@ export async function existeCategoriaInsumo(id: number): Promise<boolean> {
 
 // RF-REP-01/02/03/04
 
-/** Detalle de personas atendidas (una fila por renglón entregado) */
+// Detalle de personas atendidas (una fila por renglón entregado)
 export async function reportePersonasAtendidas(params: {
   desde?: string;
   hasta?: string;
@@ -131,7 +131,7 @@ export async function reportePersonasAtendidas(params: {
   return result.rows;
 }
 
-/** RF-REP-06: stock por categoría, con conteo de lotes urgentes o vencidos */
+// RF-REP-06: stock por categoría, con conteo de lotes urgentes o vencidos
 export async function reporteStockPorCategoria(params: {
   categoriaId?: number;
   soloConUrgentes: boolean;
@@ -153,7 +153,7 @@ export async function reporteStockPorCategoria(params: {
   return result.rows;
 }
 
-/** Población beneficiada, agregada por mes / geografía / programa / género /grupo etario / discapacidad */
+// Población beneficiada, agregada por mes / geografía / programa / género /grupo etario / discapacidad
 export async function reportePoblacionBeneficiada(params: {
   desde?: string;
   hasta?: string;

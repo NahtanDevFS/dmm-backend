@@ -1,19 +1,17 @@
 import { Pool } from "pg";
 
-/**
- * Dos conexiones a la base de PRUEBAS, a proposito:
- *
- *  - `poolApp` usa el mismo rol de minimo privilegio que la aplicacion en
- *    produccion (dmm_app). Todo lo que ejerce el codigo bajo prueba pasa por
- *    aqui, de modo que cualquier GRANT que falte aparece como test roto y no
- *    como error en produccion.
- *
- *  - `poolOwner` usa el dueno del esquema y existe SOLO para preparar y limpiar.
- *    Es necesario porque desde la migracion 12 la aplicacion no puede borrar
- *    nada: no hay DELETE en ninguna tabla y auditoria_log es de solo lectura.
- *    Sin un rol privilegiado no habria forma de dejar la base en un estado
- *    conocido entre pruebas.
- */
+// Dos conexiones a la base de PRUEBAS, a proposito:
+//
+//  - `poolApp` usa el mismo rol de minimo privilegio que la aplicacion en
+//    produccion (dmm_app). Todo lo que ejerce el codigo bajo prueba pasa por
+//    aqui, de modo que cualquier GRANT que falte aparece como test roto y no
+//    como error en produccion.
+//
+//  - `poolOwner` usa el dueno del esquema y existe SOLO para preparar y limpiar.
+//    Es necesario porque desde la migracion 12 la aplicacion no puede borrar
+//    nada: no hay DELETE en ninguna tabla y auditoria_log es de solo lectura.
+//    Sin un rol privilegiado no habria forma de dejar la base en un estado
+//    conocido entre pruebas.
 
 const urlApp = process.env.DATABASE_URL_TEST;
 const urlOwner = process.env.DATABASE_URL_TEST_OWNER;
@@ -25,14 +23,12 @@ if (!urlApp || !urlOwner) {
   );
 }
 
-/**
- * Salvaguarda contra el peor accidente posible de este archivo: que alguien
- * apunte DATABASE_URL_TEST a la base real y `resetBaseDePruebas()` la vacie.
- *
- * El nombre de la base debe contener "test". Es una convencion, pero es la
- * unica senal disponible antes de conectar, y el costo de equivocarse es
- * perder los datos de la DMM.
- */
+// Salvaguarda contra el peor accidente posible de este archivo: que alguien
+// apunte DATABASE_URL_TEST a la base real y `resetBaseDePruebas()` la vacie.
+//
+// El nombre de la base debe contener "test". Es una convencion, pero es la
+// unica senal disponible antes de conectar, y el costo de equivocarse es
+// perder los datos de la DMM.
 function exigirBaseDePruebas(url: string, variable: string): void {
   const nombre = new URL(url).pathname.replace(/^\//, "");
   if (!/test/i.test(nombre)) {
@@ -49,20 +45,18 @@ exigirBaseDePruebas(urlOwner, "DATABASE_URL_TEST_OWNER");
 export const poolApp = new Pool({ connectionString: urlApp });
 export const poolOwner = new Pool({ connectionString: urlOwner });
 
-/**
- * Tablas que se vacian entre suites.
- *
- * `usuario` NO esta en la lista, y es la parte importante de este archivo.
- *
- * Las 76 claves foraneas `created_by`/`updated_by` de todo el esquema apuntan a
- * `usuario`. Como TRUNCATE ... CASCADE se propaga hacia las tablas que
- * REFERENCIAN a la truncada, incluir `usuario` aqui vaciaba la base entera —
- * incluidos `rol`, `tipo_genero` y el resto de catalogos de sistema que las
- * pruebas necesitan y que el script del esquema siembra una sola vez.
- *
- * Los usuarios de prueba se limpian aparte, por nombre, despues de vaciar todo
- * lo que pudiera referenciarlos.
- */
+// Tablas que se vacian entre suites.
+//
+// `usuario` NO esta en la lista, y es la parte importante de este archivo.
+//
+// Las 76 claves foraneas `created_by`/`updated_by` de todo el esquema apuntan a
+// `usuario`. Como TRUNCATE ... CASCADE se propaga hacia las tablas que
+// REFERENCIAN a la truncada, incluir `usuario` aqui vaciaba la base entera —
+// incluidos `rol`, `tipo_genero` y el resto de catalogos de sistema que las
+// pruebas necesitan y que el script del esquema siembra una sola vez.
+//
+// Los usuarios de prueba se limpian aparte, por nombre, despues de vaciar todo
+// lo que pudiera referenciarlos.
 const TABLAS_A_VACIAR = [
   "auditoria_log",
   "sesion",
@@ -95,23 +89,21 @@ const TABLAS_A_VACIAR = [
   "departamento",
 ];
 
-/**
- * Catalogos de sistema con valores fijos. Se resiembran de forma idempotente
- * para que la base de pruebas quede completamente definida por este archivo:
- * asi se recupera sola si alguien la vacia, y no hay que ir a buscar el script
- * de 3800 lineas del esquema.
- *
- * Deben coincidir con las semillas de scripts_bd_v4.sql. Si alli se agrega un valor,
- * agreguelo aqui tambien.
- *
- * EL ORDEN IMPORTA, y no es cosmetico: `tipo_accion_auditoria` va primero
- * porque cada tabla auditada tiene un trigger AFTER INSERT que llama a
- * `fn_auditoria`, y esa funcion resuelve `tipo_accion_id` buscando TG_OP
- * ('INSERT'/'UPDATE'/'DELETE') en ese catalogo. Si esta vacio, el SELECT
- * devuelve NULL y la insercion falla con una violacion de NOT NULL sobre
- * `auditoria_log.tipo_accion_id`. Es decir: sin ese catalogo, NINGUNA
- * escritura del sistema funciona.
- */
+// Catalogos de sistema con valores fijos. Se resiembran de forma idempotente
+// para que la base de pruebas quede completamente definida por este archivo:
+// asi se recupera sola si alguien la vacia, y no hay que ir a buscar el script
+// de 3800 lineas del esquema.
+//
+// Deben coincidir con las semillas de scripts_bd_v4.sql. Si alli se agrega un valor,
+// agreguelo aqui tambien.
+//
+// EL ORDEN IMPORTA, y no es cosmetico: `tipo_accion_auditoria` va primero
+// porque cada tabla auditada tiene un trigger AFTER INSERT que llama a
+// `fn_auditoria`, y esa funcion resuelve `tipo_accion_id` buscando TG_OP
+// ('INSERT'/'UPDATE'/'DELETE') en ese catalogo. Si esta vacio, el SELECT
+// devuelve NULL y la insercion falla con una violacion de NOT NULL sobre
+// `auditoria_log.tipo_accion_id`. Es decir: sin ese catalogo, NINGUNA
+// escritura del sistema funciona.
 const SEMILLAS: Array<{ tabla: string; columnas: string; filas: string }> = [
   {
     tabla: "tipo_accion_auditoria",
@@ -200,7 +192,7 @@ const SEMILLAS: Array<{ tabla: string; columnas: string; filas: string }> = [
   },
 ];
 
-/** Repone los catalogos de sistema que falten. Idempotente. */
+// Repone los catalogos de sistema que falten. Idempotente.
 export async function sembrarCatalogosDeSistema(): Promise<void> {
   for (const { tabla, columnas, filas } of SEMILLAS) {
     // Ver la nota sobre el orden en SEMILLAS: si este catalogo se quedo vacio,
@@ -262,7 +254,7 @@ export async function cerrarPools(): Promise<void> {
   await Promise.all([poolApp.end(), poolOwner.end()]);
 }
 
-/** Ids de los catalogos de sistema, resueltos por nombre. */
+// Ids de los catalogos de sistema, resueltos por nombre.
 export async function idCatalogo(
   tabla: string,
   nombre: string,

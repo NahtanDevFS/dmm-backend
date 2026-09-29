@@ -11,16 +11,14 @@ import {
   UltimoAdministradorError,
 } from "../../src/modules/usuarios/usuario.repository.js";
 
-/**
- * Regla del último administrador (QA-03): nunca puede quedar el sistema sin un
- * ADMINISTRADOR activo, ni por cambio de rol ni por desactivación.
- *
- * Antes la guarda miraba el rol de QUIEN hacía el cambio: un Administrador ya
- * contaba como "otro administrador" (la condición nunca se cumplía) y una
- * Directora ni siquiera entraba en ella, así que podía degradar al único
- * Administrador. Aquí se llama directo al repositorio, que es donde vive ahora
- * la comprobación, dentro de la misma transacción que el UPDATE.
- */
+// Regla del último administrador (QA-03): nunca puede quedar el sistema sin un
+// ADMINISTRADOR activo, ni por cambio de rol ni por desactivación.
+//
+// Antes la guarda miraba el rol de QUIEN hacía el cambio: un Administrador ya
+// contaba como "otro administrador" (la condición nunca se cumplía) y una
+// Directora ni siquiera entraba en ella, así que podía degradar al único
+// Administrador. Aquí se llama directo al repositorio, que es donde vive ahora
+// la comprobación, dentro de la misma transacción que el UPDATE.
 
 let rolAdmin: number;
 let rolDirectora: number;

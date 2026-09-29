@@ -4,15 +4,15 @@ import { withUserTransaction } from "../../db/withUserTransaction.js";
 import type { PoolClient } from "pg";
 import { patronContiene } from "../../lib/busqueda.js";
 
-/** `password_hash` no aparece en ninguna de estas consultas a propósito: nuncadebe salir del backend, ni siquiera hacia un ADMINISTRADOR */
+// `password_hash` no aparece en ninguna de estas consultas a propósito: nuncadebe salir del backend, ni siquiera hacia un ADMINISTRADOR */
 export interface UsuarioRow {
   id: number;
-  /** Identificador de acceso: ASCII, sin tildes ni espacios */
+  // Identificador de acceso: ASCII, sin tildes ni espacios */
   username: string;
-  /** El nombre de la persona, como se escribe */
+  // El nombre de la persona, como se escribe
   nombre_completo: string | null;
   rol_id: number;
-  /** Programa del que esta usuaria es encargada */
+  // Programa del que esta usuaria es encargada
   programa_id: number | null;
   ultimo_login: Date | null;
   activo: boolean;
@@ -31,7 +31,7 @@ export async function listarUsuarios(params: {
   rolId?: number;
   busqueda?: string;
   incluirInactivos: boolean;
-  /** Para quien no es ADMINISTRADOR: las cuentas de administración no existen para él */
+  // Para quien no es ADMINISTRADOR: las cuentas de administración no existen para él
   ocultarAdministradores: boolean;
   limite: number;
   desplazamiento: number;
@@ -86,7 +86,7 @@ export async function buscarUsuarioPorId(
   return result.rows[0] ?? null;
 }
 
-/** Nombre del rol del usuario, o null si el usuario no existe */
+// Nombre del rol del usuario, o null si el usuario no existe
 export async function buscarRolDeUsuario(id: number): Promise<string | null> {
   const result = await pool.query<{ nombre: string }>(
     `SELECT r.nombre FROM public.usuario u
@@ -97,7 +97,7 @@ export async function buscarRolDeUsuario(id: number): Promise<string | null> {
   return result.rows[0]?.nombre ?? null;
 }
 
-/** Solo para verificar la contraseña actual; el hash no sale de este módulo */
+// Solo para verificar la contraseña actual; el hash no sale de este módulo
 export async function buscarHashDeUsuario(id: number): Promise<string | null> {
   const result = await pool.query<{ password_hash: string }>(
     `SELECT password_hash FROM public.usuario WHERE id = $1`,
@@ -119,7 +119,7 @@ export async function existeUsername(
   return true;
 }
 
-/** Nombre del rol si existe y está activo; null en otro caso */
+// Nombre del rol si existe y está activo; null en otro caso
 export async function buscarRolActivo(id: number): Promise<string | null> {
   const rol = await prisma.rol.findUnique({
     where: { id },
@@ -128,7 +128,7 @@ export async function buscarRolActivo(id: number): Promise<string | null> {
   return rol?.activo === true ? rol.nombre : null;
 }
 
-/** `rol` es de solo lectura por diseño: los permisos están codificados en elbackend (requireRole en cada ruta), así que un rol creado desde una pantallade catálogos no tendría ningún permiso real */
+// `rol` es de solo lectura por diseño: los permisos están codificados en elbackend (requireRole en cada ruta), así que un rol creado desde una pantallade catálogos no tendría ningún permiso real */
 export async function listarRoles(
   incluirAdministrador: boolean,
 ): Promise<RolRow[]> {
@@ -142,12 +142,12 @@ export async function listarRoles(
   });
 }
 
-/** Quitarle a alguien su condición de ADMINISTRADOR activo cuando es el último: el status lo traduce errorHandler a 409 */
+// Quitarle a alguien su condición de ADMINISTRADOR activo cuando es el último: el status lo traduce errorHandler a 409 */
 export class UltimoAdministradorError extends Error {
   status = 409;
 }
 
-/** Lanza si el usuario `id` es el único ADMINISTRADOR activo. Mira el rol del usuario afectado, no el de quien hace el cambio, y bloquea las filas de los administradores activos: así dos cambios simultáneos no pueden retirar cada uno "al otro" y dejar el sistema sin ninguno */
+// Lanza si el usuario `id` es el único ADMINISTRADOR activo. Mira el rol del usuario afectado, no el de quien hace el cambio, y bloquea las filas de los administradores activos: así dos cambios simultáneos no pueden retirar cada uno "al otro" y dejar el sistema sin ninguno */
 async function asegurarQueNoEsElUltimoAdministrador(
   client: PoolClient,
   id: number,
@@ -253,7 +253,7 @@ export async function editarUsuario(
   });
 }
 
-/** Cambiar la contraseña revoca las demás sesiones del usuario: si la contraseñase cambió porque estaba comprometida, dejar sesiones abiertas con la anterioranularía el propósito */
+// Cambiar la contraseña revoca las demás sesiones del usuario: si la contraseñase cambió porque estaba comprometida, dejar sesiones abiertas con la anterioranularía el propósito 
 export async function actualizarPassword(
   usuarioId: number,
   idAfectado: number,
@@ -281,7 +281,7 @@ export async function actualizarPassword(
   });
 }
 
-/** Desactivar revoca todas las sesiones del usuario */
+// Desactivar revoca todas las sesiones del usuario 
 export async function cambiarEstadoUsuario(
   usuarioId: number,
   id: number,

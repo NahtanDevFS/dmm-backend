@@ -8,22 +8,20 @@ import {
 } from "./helpers/servidor.js";
 import { resetBaseDePruebas, cerrarPools } from "./helpers/bd.js";
 
-/**
- * Verifica por HTTP real que cada rol llega solo a donde debe.
- *
- * Es la prueba que blinda el hallazgo que origino todo este trabajo: ALCALDE
- * tenia acceso de lectura a solicitudes, entregas, contratos, inventario y a
- * los documentos de identificacion de beneficiarios, cuando la regla acordada
- * con el cliente es que solo entra al modulo de reportes.
- *
- * Se comprueba el CODIGO DE ESTADO, no el contenido: lo que importa aqui es si
- * la peticion se detiene o no. Que los datos sean correctos es asunto de las
- * pruebas de negocio.
- *
- * 200 significa "no lo bloqueo el control de acceso": se acepta cualquier
- * respuesta que no sea 401/403, porque un 404 por id inexistente tambien
- * prueba que paso el filtro.
- */
+// Verifica por HTTP real que cada rol llega solo a donde debe.
+//
+// Es la prueba que blinda el hallazgo que origino todo este trabajo: ALCALDE
+// tenia acceso de lectura a solicitudes, entregas, contratos, inventario y a
+// los documentos de identificacion de beneficiarios, cuando la regla acordada
+// con el cliente es que solo entra al modulo de reportes.
+//
+// Se comprueba el CODIGO DE ESTADO, no el contenido: lo que importa aqui es si
+// la peticion se detiene o no. Que los datos sean correctos es asunto de las
+// pruebas de negocio.
+//
+// 200 significa "no lo bloqueo el control de acceso": se acepta cualquier
+// respuesta que no sea 401/403, porque un 404 por id inexistente tambien
+// prueba que paso el filtro.
 
 type Rol = "EMPLEADO_DMM" | "DIRECTORA" | "ALCALDE" | "ADMINISTRADOR";
 
@@ -32,7 +30,7 @@ const sesiones = {} as Record<Rol, Sesion>;
 interface Caso {
   metodo: string;
   ruta: string;
-  /** Roles que SI deben pasar. El resto debe recibir 403. */
+  // Roles que SI deben pasar. El resto debe recibir 403.
   permitidos: Rol[];
   nota?: string;
 }
@@ -50,7 +48,7 @@ const REPORTES: Rol[] = ["DIRECTORA", "ALCALDE", "ADMINISTRADOR"];
 const ADMINISTRACION: Rol[] = ["DIRECTORA", "ADMINISTRADOR"];
 
 const CASOS: Caso[] = [
-  // --- Lo que motivo el cambio: ALCALDE fuera de todo el negocio -----------
+  // Lo que motivo el cambio: ALCALDE fuera de todo el negocio
   { metodo: "GET", ruta: "/api/personas", permitidos: OPERACION },
   {
     metodo: "GET",
@@ -73,7 +71,7 @@ const CASOS: Caso[] = [
   { metodo: "GET", ruta: "/api/recepciones", permitidos: OPERACION },
   { metodo: "GET", ruta: "/api/archivos/x.jpg", permitidos: OPERACION },
 
-  // --- Reportes: unico modulo de ALCALDE, y EMPLEADO_DMM queda fuera -------
+  // Reportes: unico modulo de ALCALDE, y EMPLEADO_DMM queda fuera
   {
     metodo: "GET",
     ruta: "/api/reportes/personas-atendidas",
@@ -90,7 +88,7 @@ const CASOS: Caso[] = [
     permitidos: REPORTES,
   },
 
-  // --- Catalogos que alimentan los filtros de reportes ---------------------
+  // Catalogos que alimentan los filtros de reportes
   // ALCALDE SI los lee: sin ellos su unico modulo queda inservible porque no
   // puede poblar ningun <select> de filtro.
   { metodo: "GET", ruta: "/api/comunidades", permitidos: TODOS },
@@ -100,18 +98,18 @@ const CASOS: Caso[] = [
   { metodo: "GET", ruta: "/api/programas", permitidos: TODOS },
   { metodo: "GET", ruta: "/api/categorias-insumo", permitidos: TODOS },
 
-  // --- Catalogos que NO alimentan reportes: ALCALDE fuera ------------------
+  // Catalogos que NO alimentan reportes: ALCALDE fuera
   { metodo: "GET", ruta: "/api/marcas-insumo", permitidos: OPERACION },
   { metodo: "GET", ruta: "/api/unidades-medida", permitidos: OPERACION },
   { metodo: "GET", ruta: "/api/instituciones-donantes", permitidos: OPERACION },
   { metodo: "GET", ruta: "/api/tipos-parentesco", permitidos: OPERACION },
 
-  // --- Gestion de catalogos: solo direccion --------------------------------
+  // Gestion de catalogos: solo direccion
   { metodo: "POST", ruta: "/api/discapacidades", permitidos: DIRECCION },
   { metodo: "POST", ruta: "/api/programas", permitidos: DIRECCION },
   { metodo: "POST", ruta: "/api/insumos", permitidos: DIRECCION },
 
-  // --- Decisiones de direccion --------------------------------------------
+  // Decisiones de direccion
   // Ojo: aprobar/rechazar/anular son POST, no PATCH. Con el metodo equivocado
   // Express no encuentra ruta y responde 404 ANTES de evaluar el rol, asi que
   // el caso pasaria sin haber probado nada.
@@ -129,13 +127,13 @@ const CASOS: Caso[] = [
     permitidos: OPERACION,
   },
 
-  // --- Operacion diaria ----------------------------------------------------
+  // Operacion diaria
   { metodo: "POST", ruta: "/api/personas", permitidos: OPERACION },
   { metodo: "POST", ruta: "/api/solicitudes", permitidos: OPERACION },
   { metodo: "POST", ruta: "/api/entregas", permitidos: OPERACION },
   { metodo: "POST", ruta: "/api/recepciones", permitidos: OPERACION },
 
-  // --- Exclusivo de administrador -----------------------------------------
+  // Exclusivo de administrador
   { metodo: "GET", ruta: "/api/usuarios", permitidos: ADMINISTRACION },
   { metodo: "POST", ruta: "/api/usuarios", permitidos: ADMINISTRACION },
   { metodo: "GET", ruta: "/api/auditoria", permitidos: ADMINISTRACION },

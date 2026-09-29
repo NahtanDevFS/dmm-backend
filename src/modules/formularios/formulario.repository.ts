@@ -1,7 +1,7 @@
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
 
-/** Formularios configurables (migración 15): qué formulario exige unacategoría de insumo, de qué campos se compone cada uno, y las respuestascapturadas para una línea de solicitud concreta */
+/** Formularios configurables (migración 15): qué formulario exige una categoría de insumo, de qué campos se compone cada uno, y las respuestascapturadas para una línea de solicitud concreta */
 
 /* Tipos */
 
@@ -136,7 +136,7 @@ export async function buscarFormularioPorId(
   return rows[0] ?? null;
 }
 
-/** Un formulario con sus campos, listo para el frontend: cada campo ya traeel nombre de su tipo de dato resuelto (no solo el id), para que elcliente sepa qué control renderizar sin una consulta aparte */
+/** Un formulario con sus campos, listo para el frontend: cada campo ya trae el nombre de su tipo de dato resuelto (no solo el id), para que elcliente sepa qué control renderizar sin una consulta aparte */
 export async function buscarFormularioConCampos(
   id: number,
   incluirInactivos = false,

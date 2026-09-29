@@ -8,7 +8,7 @@ import {
   poblacionBeneficiadaController,
 } from "./reporte.controller.js";
 
-/** Único módulo donde ALCALDE tiene acceso: la entrevista con el cliente confirmóque solo consulta reportes, y aquí no hay ningún endpoint de escritura, así quesu acceso es de lectura por construcción */
+// Único módulo donde ALCALDE tiene acceso: la entrevista con el cliente confirmóque solo consulta reportes, y aquí no hay ningún endpoint de escritura, así quesu acceso es de lectura por construcción
 const router = Router();
 
 router.get(
