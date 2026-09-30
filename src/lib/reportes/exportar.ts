@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
+import { etiquetaDe, esColumnaDeCatalogo } from "../etiquetas.js";
 
 /** Exportación de reportes a Excel y PDF (RF-REP-05) */
 
@@ -17,10 +18,34 @@ export interface ColumnaReporte {
 
 type Fila = Record<string, unknown>;
 
-function formatearValor(valor: unknown): string {
+/** Columnas que agrupan por mes: su DATE es el primer día del mes */
+function esColumnaDeMes(campo: string): boolean {
+  return campo === "mes";
+}
+
+const dosDigitos = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * Fecha como se escribe en Guatemala: 29/09/2026, o 09/2026 si es un mes.
+ *
+ * Las columnas son DATE y node-postgres las entrega como medianoche LOCAL de
+ * ese día. Por eso se leen con los getters locales: toISOString pasaba a UTC y,
+ * con el servidor en un huso al este de Greenwich, mostraba el día anterior.
+ */
+function formatearFecha(fecha: Date, campo: string): string {
+  const mes = dosDigitos(fecha.getMonth() + 1);
+  if (esColumnaDeMes(campo)) return `${mes}/${fecha.getFullYear()}`;
+  return `${dosDigitos(fecha.getDate())}/${mes}/${fecha.getFullYear()}`;
+}
+
+/** Texto de una celda del PDF. Exportada para probarla: el texto del PDF va comprimido */
+export function formatearValor(campo: string, valor: unknown): string {
   if (valor === null || valor === undefined) return "";
-  if (valor instanceof Date) return valor.toISOString().slice(0, 10);
+  if (valor instanceof Date) return formatearFecha(valor, campo);
   if (typeof valor === "boolean") return valor ? "Sí" : "No";
+  if (typeof valor === "string" && esColumnaDeCatalogo(campo)) {
+    return etiquetaDe(valor);
+  }
   return String(valor);
 }
 
@@ -60,7 +85,7 @@ export async function responderExcel(
   for (const fila of filas) {
     hoja.addRow(
       Object.fromEntries(
-        columnas.map((c) => [c.campo, normalizarParaExcel(fila[c.campo])]),
+        columnas.map((c) => [c.campo, normalizarParaExcel(c.campo, fila[c.campo])]),
       ),
     );
   }
@@ -70,11 +95,13 @@ export async function responderExcel(
     to: { row: 1, column: columnas.length },
   };
 
-// Los DATE de Postgres llegan como Date de JS y Excel los mostraría con hora yzona horaria
+// Los DATE de Postgres llegan como Date de JS y Excel los mostraría con hora y zona horaria
   columnas.forEach((c, indice) => {
     const primerValor = filas.find((f) => f[c.campo] != null)?.[c.campo];
     if (primerValor instanceof Date) {
-      hoja.getColumn(indice + 1).numFmt = "yyyy-mm-dd";
+      hoja.getColumn(indice + 1).numFmt = esColumnaDeMes(c.campo)
+        ? "mm/yyyy"
+        : "dd/mm/yyyy";
     }
   });
 
@@ -92,12 +119,21 @@ export async function responderExcel(
 }
 
 /** Los NUMERIC de Postgres llegan como string para no perder precisión */
-function normalizarParaExcel(valor: unknown): unknown {
+function normalizarParaExcel(campo: string, valor: unknown): unknown {
   if (valor === null || valor === undefined) return "";
+  if (valor instanceof Date) {
+    // exceljs convierte el Date a la fecha de Excel en UTC: se fija el mismo
+    // día del calendario a medianoche UTC para que no cambie según el huso
+    // horario del servidor (ver formatearFecha)
+    return new Date(Date.UTC(valor.getFullYear(), valor.getMonth(), valor.getDate()));
+  }
   if (typeof valor === "string" && valor !== "" && !Number.isNaN(Number(valor))) {
     return Number(valor);
   }
   if (typeof valor === "boolean") return valor ? "Sí" : "No";
+  if (typeof valor === "string" && esColumnaDeCatalogo(campo)) {
+    return etiquetaDe(valor);
+  }
   return valor;
 }
 
@@ -206,7 +242,7 @@ function escribirTablaPdf(
 
     let x = izquierda;
     columnas.forEach((c, i) => {
-      doc.text(formatearValor(fila[c.campo]), x + 2, y + 4, {
+      doc.text(formatearValor(c.campo, fila[c.campo]), x + 2, y + 4, {
         width: anchos[i] - 4,
         ellipsis: true,
         lineBreak: false,

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { crearPersonaSchema } from "../src/modules/personas/persona.schema.js";
 import { resetearPasswordSchema } from "../src/modules/usuarios/usuario.schema.js";
 
-/** QA-12: el backend solo recortaba y limitaba a 13 caracteres; la API aceptaba "abc" o "" que la interfaz rechaza */
+// QA-12: el backend solo recortaba y limitaba a 13 caracteres; la API aceptaba "abc" o "" que la interfaz rechaza
 describe("CUI/DPI", () => {
   const base = {
     nombres: "Ana",
@@ -33,7 +33,7 @@ describe("CUI/DPI", () => {
   });
 });
 
-/** QA-14: bcrypt solo usa los primeros 72 bytes; el límite se contaba en caracteres */
+// QA-14: bcrypt solo usa los primeros 72 bytes; el límite se contaba en caracteres
 describe("contraseña y límite de bcrypt", () => {
   const valida = (password_nueva: string) =>
     resetearPasswordSchema.safeParse({ password_nueva }).success;

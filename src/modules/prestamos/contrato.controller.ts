@@ -185,7 +185,7 @@ export async function crearController(
       });
     }
 
-// El UNIQUE de detalle_entrega_id ya lo impediría, pero el mensaje explícitoes más útil que el genérico del constraint
+// El UNIQUE de detalle_entrega_id ya lo impediría, pero el mensaje explícito es más útil que el genérico del constraint
     if (await existeContratoDeDetalleEntrega(parsed.data.detalle_entrega_id)) {
       return res.status(409).json({
         message: "Ese renglón de entrega ya tiene un contrato de préstamo",
@@ -632,7 +632,7 @@ export async function anularMultaController(
 
 // evidencias
 
-/** Evidencias del contrato: el documento firmado (tipo CONTRATO_FIRMADO), elDPI de quien firma (frontal y reverso), y la foto de recepción delequipo -- todo vive aquí, ya no hay una columna dedicada solo para eldocumento firmado */
+/** Evidencias del contrato: el documento firmado (tipo CONTRATO_FIRMADO), elDPI de quien firma (frontal y reverso), y la foto de recepción del equipo - todo vive aquí, ya no hay una columna dedicada solo para el documento firmado */
 export async function listarEvidenciasContratoController(
   req: Request,
   res: Response,

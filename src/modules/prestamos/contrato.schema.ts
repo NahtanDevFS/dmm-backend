@@ -5,18 +5,18 @@ const fechaSchema = fechaCalendario();
 import { paginacionShape } from "../../lib/paginacion.js";
 
 
-/** Igual que fechaSchema, pero con mensaje propio cuando el campo no viene */
+/* Igual que fechaSchema, pero con mensaje propio cuando el campo no viene */
 const fechaPactadaSchema = fechaCalendario(undefined, {
   error: "Debe indicar la fecha de devolución pactada",
 });
 
-/** Un préstamo registrado de una vez: la entrega del equipo y su contrato */
+/* Un préstamo registrado de una vez: la entrega del equipo y su contrato */
 export const crearPrestamoDirectoSchema = z.object({
   persona_id: z.number().int().positive("Debe indicar la persona"),
   insumo_id: z.number().int().positive("Debe indicar el equipo"),
   fecha_devolucion_pactada: fechaSchema,
   observaciones: z.string().trim().max(2000).nullable().optional(),
-  /** La unidad concreta que se lleva, cuando el equipo tiene número de serie */
+  /* La unidad concreta que se lleva, cuando el equipo tiene número de serie */
   detalle_inventario_lote_id: z.number().int().positive().nullable().optional(),
 });
 
@@ -38,7 +38,7 @@ export const editarContratoSchema = z.object({
   fecha_devolucion_pactada: fechaSchema.optional(),
 });
 
-/** Cerrar un préstamo que no terminó bien */
+/* Cerrar un préstamo que no terminó bien */
 export const cerrarContratoSchema = z.object({
   motivo: z.string().trim().min(5, "Explique brevemente el motivo").max(2000),
 });

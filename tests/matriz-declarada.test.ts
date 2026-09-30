@@ -2,14 +2,12 @@ import { describe, it, expect } from "vitest";
 import routes from "./../src/routes/routes.js";
 import { verificarRutasProtegidas } from "./../src/lib/rutas-protegidas.js";
 
-/**
- * Prueba barata y sin base de datos: verifica lo que las rutas DECLARAN.
- *
- * No sustituye a `acceso-por-rol.test.ts`, que comprueba el comportamiento
- * real por HTTP. Esta ataca otro riesgo: que alguien agregue una ruta y se le
- * olvide declarar roles, o que afloje un conjunto sin darse cuenta. Corre en
- * milisegundos, asi que puede vivir en cualquier hook de pre-commit.
- */
+// Prueba barata y sin base de datos: verifica lo que las rutas DECLARAN.
+//
+// No sustituye a `acceso-por-rol.test.ts`, que comprueba el comportamiento
+// real por HTTP. Esta ataca otro riesgo: que alguien agregue una ruta y se le
+// olvide declarar roles, o que afloje un conjunto sin darse cuenta. Corre en
+// milisegundos, asi que puede vivir en cualquier hook de pre-commit.
 describe("matriz de autorizacion declarada", () => {
   const rutas = verificarRutasProtegidas(routes as any);
 

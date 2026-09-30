@@ -223,7 +223,7 @@ export async function agregarCampoController(
       ayuda: parsed.data.ayuda ?? null,
     });
 
-// Opciones propias del campo, si el formulario no usa un catálogoreutilizable
+// Opciones propias del campo, si el formulario no usa un catálogo reutilizable
     if (
       parsed.data.catalogo_id == null &&
       parsed.data.opciones_propias?.length
@@ -296,7 +296,7 @@ export async function editarCampoController(
   }
 }
 
-/** Las asignaciones categoría → formulario, con su modalidad */
+/** Las asignaciones categoría -> formulario, con su modalidad */
 export async function listarAsignacionesController(
   req: Request,
   res: Response,
@@ -424,7 +424,7 @@ export async function obtenerRespuestasController(
       formularioId,
     );
     if (!detalleFormulario) {
-// Formulario exigido pero todavía sin empezar a llenar: no es unerror, es el estado inicial válido
+// Formulario exigido pero todavía sin empezar a llenar: no es un error, es el estado inicial válido
       return res.status(200).json({ detalle: null, respuestas: [] });
     }
 

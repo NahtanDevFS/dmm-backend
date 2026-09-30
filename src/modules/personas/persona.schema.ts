@@ -50,7 +50,7 @@ const datosBasePersonaSchema = z.object({
   comunidad_id: z.number().int().positive().nullable().optional(),
   telefono: telefonoOpcionalSchema,
 
-  /** Los datos que pide la sección I del estudio socioeconómico y que hastaahora no se guardaban en ningún lado (o se guardaban en columnas quenadie leía) */
+  /** Los datos que pide la sección I del estudio socioeconómico y que hasta ahora no se guardaban en ningún lado (o se guardaban en columnas quenadie leía) */
   direccion: z.string().trim().max(255).nullable().optional(),
   estado_civil_id: z.number().int().positive().nullable().optional(),
   grado_academico_id: z.number().int().positive().nullable().optional(),
@@ -66,7 +66,7 @@ const encargadoSchema = z.discriminatedUnion("tipo", [
   }),
   z.object({
     tipo: z.literal("nuevo"),
-// Datos de la persona del encargado que se va a crear en la mismatransaccion
+// Datos de la persona del encargado que se va a crear en la misma transaccion
     datos: datosBasePersonaSchema,
     tipoParentescoId: z.number().int().positive(),
   }),

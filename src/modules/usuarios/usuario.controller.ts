@@ -24,7 +24,7 @@ import {
 import { BCRYPT_ROUNDS } from "../../config/seguridad.js";
 import { ROL } from "../../config/roles.js";
 
-/** Las cuentas ADMINISTRADOR solo existen para otros administradores: a la Directora no se le listan, no puede abrirlas ni modificarlas, y tampoco asignar ese rol */
+// Las cuentas ADMINISTRADOR solo existen para otros administradores: a la Directora no se le listan, no puede abrirlas ni modificarlas, y tampoco asignar ese rol
 function veAdministradores(req: Request): boolean {
   return req.usuario!.rol === ROL.ADMINISTRADOR;
 }
@@ -341,7 +341,7 @@ export async function cambiarPasswordPropiaController(
   }
 }
 
-/** Reseteo por administrador: no requiere la contraseña actual */
+// Reseteo por administrador: no requiere la contraseña actual
 export async function resetearPasswordController(
   req: Request,
   res: Response,

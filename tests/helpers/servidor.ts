@@ -3,18 +3,16 @@ import bcrypt from "bcrypt";
 import app from "../../src/app.js";
 import { poolOwner, idCatalogo } from "./bd.js";
 
-/**
- * Levanta la app real en un puerto efimero y devuelve un cliente HTTP minimo.
- *
- * Se usa fetch de Node en vez de supertest para no agregar una dependencia:
- * lo unico que hace falta es conservar la cookie de sesion entre peticiones,
- * y eso son diez lineas.
- *
- * Importante: se ejerce la app COMPLETA (helmet, cors, rate limit, requireAuth,
- * requireRole, controladores). Probar los middlewares por separado no serviria:
- * lo que se quiere verificar es que una peticion real con el rol equivocado se
- * detiene antes de llegar al controlador.
- */
+// Levanta la app real en un puerto efimero y devuelve un cliente HTTP minimo.
+//
+// Se usa fetch de Node en vez de supertest para no agregar una dependencia:
+// lo unico que hace falta es conservar la cookie de sesion entre peticiones,
+// y eso son diez lineas.
+//
+// Importante: se ejerce la app COMPLETA (helmet, cors, rate limit, requireAuth,
+// requireRole, controladores). Probar los middlewares por separado no serviria:
+// lo que se quiere verificar es que una peticion real con el rol equivocado se
+// detiene antes de llegar al controlador.
 
 let servidor: Server | null = null;
 let base = "";
@@ -55,7 +53,7 @@ export interface Respuesta {
   cuerpo: any;
 }
 
-/** Petición autenticada. Pase `sesion = null` para probar sin sesión. */
+// Petición autenticada. Pase `sesion = null` para probar sin sesión.
 export async function pedir(
   metodo: string,
   ruta: string,
@@ -90,13 +88,11 @@ export async function pedir(
 
 const CLAVE_PRUEBA = "Prueba1234";
 
-/**
- * Crea un usuario con el rol pedido e inicia sesion por HTTP real, para que la
- * cookie salga del mismo flujo que usa el frontend.
- *
- * El usuario se inserta con el pool del dueno porque en este punto todavia no
- * hay sesion con la que auditarlo, y `withUserTransaction` exige un usuario_id.
- */
+// Crea un usuario con el rol pedido e inicia sesion por HTTP real, para que la
+// cookie salga del mismo flujo que usa el frontend.
+//
+// El usuario se inserta con el pool del dueno porque en este punto todavia no
+// hay sesion con la que auditarlo, y `withUserTransaction` exige un usuario_id.
 export async function sesionComo(rol: string): Promise<Sesion> {
   const username = `test_${rol.toLowerCase()}`;
   const hash = await bcrypt.hash(CLAVE_PRUEBA, 12);

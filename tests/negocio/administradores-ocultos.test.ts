@@ -13,12 +13,10 @@ import {
   idCatalogo,
 } from "../helpers/bd.js";
 
-/**
- * Las cuentas ADMINISTRADOR solo son visibles entre administradores (decisión
- * funcional de QA-03). Para la Directora no existen: no se listan, su ficha
- * responde 404 como un id inexistente, no puede modificarlas y tampoco puede
- * asignar el rol ADMINISTRADOR a nadie.
- */
+// Las cuentas ADMINISTRADOR solo son visibles entre administradores (decisión
+// funcional de QA-03). Para la Directora no existen: no se listan, su ficha
+// responde 404 como un id inexistente, no puede modificarlas y tampoco puede
+// asignar el rol ADMINISTRADOR a nadie.
 
 let admin: Sesion;
 let directora: Sesion;

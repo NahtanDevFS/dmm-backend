@@ -1,6 +1,7 @@
 import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
+import { ErrorDeNegocio } from "../../lib/errores/negocio.js";
 
 export interface MultaRow {
   id: number;
@@ -67,6 +68,20 @@ export async function aplicarMulta(
   },
 ): Promise<MultaRow> {
   return withUserTransaction(usuarioId, async (client) => {
+    // Se multa un préstamo vigente, vencido, devuelto o no devuelto: el atraso
+    // o el daño se descubren justamente al recibir el equipo. Uno anulado no,
+    // porque nunca existió. FOR UPDATE ordena la multa contra una anulación
+    // simultánea: la que llegue segunda ve el estado ya decidido.
+    const { rows: contrato } = await client.query<{ activo: boolean }>(
+      `SELECT activo FROM public.contrato_prestamo WHERE id = $1 FOR UPDATE`,
+      [contratoId],
+    );
+    if (contrato[0]?.activo !== true) {
+      throw new ErrorDeNegocio(
+        "Este préstamo está anulado: no se le pueden aplicar multas.",
+      );
+    }
+
     const campos = ["contrato_prestamo_id", "tipo_multa_id", "monto", "motivo"];
     const valores: unknown[] = [
       contratoId,
@@ -127,7 +142,7 @@ export async function editarMulta(
   });
 }
 
-/** El CHECK multa_prestamo_pago_coherente exige que `pagada` y `fecha_pago` semuevan juntas, así que se actualizan en la misma sentencia */
+/* El CHECK multa_prestamo_pago_coherente exige que `pagada` y `fecha_pago` semuevan juntas, así que se actualizan en la misma sentencia */
 export async function marcarMultaPagada(
   usuarioId: number,
   id: number,
@@ -147,7 +162,7 @@ export async function marcarMultaPagada(
   });
 }
 
-/** Borrado lógico: una multa mal aplicada se anula, no se borra */
+/* Borrado lógico: una multa mal aplicada se anula, no se borra */
 export async function anularMulta(
   usuarioId: number,
   id: number,

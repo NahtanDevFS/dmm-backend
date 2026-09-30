@@ -8,10 +8,8 @@ import {
 import { escaparLike } from "../../src/lib/busqueda.js";
 import { listarUsuarios } from "../../src/modules/usuarios/usuario.repository.js";
 
-/**
- * QA-13: en ILIKE, "%" y "_" son comodines. Sin escaparlos, buscar "_"
- * devolvía todos los usuarios (el "_" equivale a cualquier carácter).
- */
+// QA-13: en ILIKE, "%" y "_" son comodines. Sin escaparlos, buscar "_"
+// devolvía todos los usuarios (el "_" equivale a cualquier carácter).
 
 describe("escaparLike", () => {
   it("escapa los comodines y la propia barra de escape", () => {

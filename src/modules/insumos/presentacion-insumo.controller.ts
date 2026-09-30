@@ -125,6 +125,9 @@ export async function crearController(
     const nueva = await crearPresentacion(req.usuario!.id, ruta.insumoId, {
       unidad_medida_id: parsed.data.unidad_medida_id,
       es_default,
+      // Sin esto el factor se perdía y toda presentación nueva valía 1: una
+      // "Caja de 100" convertía 2 cajas pedidas en 2 unidades
+      unidades_por_presentacion: parsed.data.unidades_por_presentacion,
     });
     return res.status(201).json(nueva);
   } catch (error) {

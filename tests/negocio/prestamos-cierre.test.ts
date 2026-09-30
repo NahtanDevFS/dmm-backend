@@ -20,33 +20,32 @@ import {
   listarContratosVencidos,
   marcarContratosVencidos,
 } from "../../src/modules/prestamos/contrato.repository.js";
+import { aplicarMulta } from "../../src/modules/prestamos/multa.repository.js";
 
-/**
- * Cierre de un contrato de préstamo por una vía distinta a la devolución
- * normal (migración 26): anulación por error de captura, o cierre porque el
- * equipo no volvió.
- *
- * A diferencia del resto de prestamos.test.ts, aquí se llama directo a las
- * funciones de contrato.repository.ts (no al SP vía poolOwner), porque esta
- * lógica vive en TypeScript, no en un procedimiento almacenado — así queda
- * ejercitado el código real de la aplicación. Internamente esas funciones
- * usan withUserTransaction, que toma el pool de la app (rol de mínimo
- * privilegio dmm_app) apuntando ya a la base de pruebas, igual que hace
- * with-user-transaction.test.ts.
- *
- * IMPORTANTE: para que estas pruebas encuentren el estado NO_DEVUELTO hace
- * falta que tests/helpers/bd.ts siembre ese valor en
- * estado_contrato_prestamo. Si esta suite falla con "No existe
- * estado_contrato_prestamo.nombre = 'NO_DEVUELTO'", revise que ese fix siga
- * aplicado ahí.
- *
- * No pude confirmar contra una base real que el rol dmm_app tenga UPDATE
- * sobre contrato_prestamo y multa_prestamo (el volcado no lo mostró de forma
- * legible). Si esta suite falla con un error de permisos en vez de uno de
- * negocio, ese es el primer sitio a revisar — sería el mismo tipo de
- * hallazgo que faltar NO_DEVUELTO en el seed: código correcto bloqueado por
- * un GRANT que no se actualizó junto con la migración 26.
- */
+// Cierre de un contrato de préstamo por una vía distinta a la devolución
+// normal (migración 26): anulación por error de captura, o cierre porque el
+// equipo no volvió.
+//
+// A diferencia del resto de prestamos.test.ts, aquí se llama directo a las
+// funciones de contrato.repository.ts (no al SP vía poolOwner), porque esta
+// lógica vive en TypeScript, no en un procedimiento almacenado — así queda
+// ejercitado el código real de la aplicación. Internamente esas funciones
+// usan withUserTransaction, que toma el pool de la app (rol de mínimo
+// privilegio dmm_app) apuntando ya a la base de pruebas, igual que hace
+// with-user-transaction.test.ts.
+//
+// IMPORTANTE: para que estas pruebas encuentren el estado NO_DEVUELTO hace
+// falta que tests/helpers/bd.ts siembre ese valor en
+// estado_contrato_prestamo. Si esta suite falla con "No existe
+// estado_contrato_prestamo.nombre = 'NO_DEVUELTO'", revise que ese fix siga
+// aplicado ahí.
+//
+// No pude confirmar contra una base real que el rol dmm_app tenga UPDATE
+// sobre contrato_prestamo y multa_prestamo (el volcado no lo mostró de forma
+// legible). Si esta suite falla con un error de permisos en vez de uno de
+// negocio, ese es el primer sitio a revisar — sería el mismo tipo de
+// hallazgo que faltar NO_DEVUELTO en el seed: código correcto bloqueado por
+// un GRANT que no se actualizó junto con la migración 26.
 
 let usuarioId: number;
 let personaId: number;
@@ -77,7 +76,7 @@ afterAll(async () => {
   await cerrarPools();
 });
 
-/** Entrega física del equipo, de la que colgará el contrato raíz. Mismo helper que prestamos.test.ts. */
+// Entrega física del equipo, de la que colgará el contrato raíz. Mismo helper que prestamos.test.ts.
 async function entregarEquipo(
   insumo: InsumoCreado,
   cantidad = 1,
@@ -241,6 +240,57 @@ describe("anularContratoPorError", () => {
   });
 });
 
+describe("aplicarMulta", () => {
+  // El atraso o el daño se descubren al recibir el equipo, así que la multa
+  // tiene que poder aplicarse después de registrar la devolución. Antes la
+  // pantalla escondía el formulario en cuanto había devolución, y el backend
+  // no distinguía el único caso que sí debe rechazar: el préstamo anulado.
+  const tipoAtraso = () => idCatalogo("tipo_multa_prestamo", "ATRASO");
+
+  async function contratoConEquipo(): Promise<number> {
+    const insumo = await crearInsumo(usuarioId, { categoriaPermitePrestamo: true });
+    await crearLote(usuarioId, insumo, { cantidad: 3 });
+    return crearContratoRaiz(await entregarEquipo(insumo));
+  }
+
+  it("multa un préstamo ya devuelto", async () => {
+    const raiz = await contratoConEquipo();
+    await poolOwner.query(`CALL public.sp_registrar_devolucion_prestamo($1, $2)`, [raiz, usuarioId]);
+
+    const multa = await aplicarMulta(usuarioId, raiz, {
+      tipo_multa_id: await tipoAtraso(),
+      monto: 50,
+      motivo: "Devolvió el equipo tarde",
+    });
+
+    expect(multa.contrato_prestamo_id).toBe(raiz);
+    expect(multa.activo).toBe(true);
+  });
+
+  it("multa un préstamo cerrado como no devuelto", async () => {
+    const raiz = await contratoConEquipo();
+    await cerrarContratoNoDevuelto(usuarioId, raiz, "No respondió a las llamadas");
+
+    const multa = await aplicarMulta(usuarioId, raiz, { tipo_multa_id: await tipoAtraso(), monto: 50 });
+    expect(multa.activo).toBe(true);
+  });
+
+  it("rechaza con 409 multar un préstamo anulado", async () => {
+    const raiz = await contratoConEquipo();
+    await anularContratoPorError(usuarioId, raiz, "Registrado por error");
+
+    const intento = aplicarMulta(usuarioId, raiz, { tipo_multa_id: await tipoAtraso(), monto: 50 });
+    await expect(intento).rejects.toThrow(/anulado/i);
+    await expect(intento).rejects.toMatchObject({ status: 409 });
+
+    const { rows } = await poolOwner.query<{ n: string }>(
+      `SELECT count(*) AS n FROM public.multa_prestamo WHERE contrato_prestamo_id = $1`,
+      [raiz],
+    );
+    expect(Number(rows[0].n)).toBe(0);
+  });
+});
+
 describe("cerrarContratoNoDevuelto", () => {
   it("cierra el contrato como NO_DEVUELTO sin tocar el stock", async () => {
     // La regla central de la migración 26: a diferencia de anular, aquí el
@@ -345,7 +395,7 @@ describe("cerrarContratoNoDevuelto", () => {
 });
 
 describe("listarContratosVencidos (QA-17)", () => {
-  /** Contrato raíz que ya pasó su fecha pactada: inicio hace 30 días, plazo vencido hace 5 */
+  // Contrato raíz que ya pasó su fecha pactada: inicio hace 30 días, plazo vencido hace 5
   async function crearContratoVencido(detalleEntregaId: number): Promise<number> {
     const { rows } = await poolOwner.query<{ id: number }>(
       `INSERT INTO public.contrato_prestamo

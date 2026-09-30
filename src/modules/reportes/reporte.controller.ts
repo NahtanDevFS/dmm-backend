@@ -20,7 +20,7 @@ import {
   type FormatoReporte,
 } from "../../lib/reportes/exportar.js";
 
-/** Entrega el reporte en el formato pedido */
+// Entrega el reporte en el formato pedido
 async function responder(
   res: Response,
   formato: FormatoReporte,

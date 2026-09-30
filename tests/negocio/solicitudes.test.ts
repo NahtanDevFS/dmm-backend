@@ -13,14 +13,12 @@ import {
   type InsumoCreado,
 } from "../helpers/fixtures.js";
 
-/**
- * Reglas de solicitudes que decide la base de datos.
- *
- * Lo importante aqui: el backend NO elige el estado de una linea. Lo fija
- * `fn_estado_inicial_linea_solicitud` segun el stock real del insumo en ese
- * momento. Estas pruebas verifican esa decision y el bloqueo condicional de
- * insumos criticos.
- */
+// Reglas de solicitudes que decide la base de datos.
+//
+// Lo importante aqui: el backend NO elige el estado de una linea. Lo fija
+// `fn_estado_inicial_linea_solicitud` segun el stock real del insumo en ese
+// momento. Estas pruebas verifican esa decision y el bloqueo condicional de
+// insumos criticos.
 
 let usuarioId: number;
 let personaId: number;

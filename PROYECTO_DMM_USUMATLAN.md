@@ -455,7 +455,7 @@ Detalle técnico: la guarda **no reconstruye la ruta HTTP completa** porque Expr
 - [x] Queries parametrizadas.
 - [x] Validación Zod en cada endpoint.
 - [x] Ninguna escritura auditable pasa por Prisma.
-- [x] Rate limiting — login: 10 intentos fallidos por IP+usuario cada 15 min (`skipSuccessfulRequests`, con `ipKeyGenerator` para que IPv6 no lo evada; combinar IP y usuario evita que una salida NAT bloquee a toda la municipalidad). Cambio de la propia contraseña: 5 intentos fallidos por usuario cada 15 min, con los restantes visibles. General: 300/min.
+- [x] Rate limiting — login: 5 intentos fallidos por IP+usuario cada 15 min (`skipSuccessfulRequests`, con `ipKeyGenerator` para que IPv6 no lo evada; combinar IP y usuario evita que una salida NAT bloquee a toda la municipalidad). Cambio de la propia contraseña: 5 intentos fallidos por usuario cada 15 min, con los restantes visibles. General: 300/min.
 - [x] `helmet` (con `crossOriginResourcePolicy: cross-origin`; CSP desactivada por ser API sin HTML).
 - [x] `trust proxy = 1`.
 - [x] Límite de cuerpo de 1 MB.

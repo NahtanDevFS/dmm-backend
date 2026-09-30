@@ -47,7 +47,7 @@ PostgreSQL. Sus excepciones se traducen a mensajes en español; ver
 
 | Ruta | Límite |
 |---|---|
-| `POST /api/auth/login` | 10 intentos fallidos por IP+usuario cada 15 min. Un login correcto no gasta cuota |
+| `POST /api/auth/login` | 5 intentos fallidos por IP+usuario cada 15 min. Un login correcto no gasta cuota |
 | Todo `/api` | 300 peticiones por minuto y por IP |
 
 ## Paginación

@@ -7,22 +7,20 @@ import {
 } from "./helpers/bd.js";
 import { withUserTransaction } from "../src/db/withUserTransaction.js";
 
-/**
- * Prueba de humo de `withUserTransaction`, la pieza de la que depende toda la
- * auditoría del sistema (sección 7.1 del documento maestro).
- *
- * Es una prueba de integración a propósito: lo que se verifica no es lógica de
- * TypeScript, es que el `SET LOCAL app.usuario_id` llegue a la base de datos y
- * que `fn_auditoria` lo lea. Con la base simulada no se comprobaría nada útil.
- *
- * Trabaja sobre un registro propio de la tabla `discapacidad` — un catálogo
- * simple sin dependencias.
- *
- * La limpieza usa `poolOwner`, no el pool de la aplicación: desde la migración
- * 12 el rol `dmm_app` no tiene DELETE en ninguna tabla y `auditoria_log` es de
- * solo lectura para él. Que este borrado FALLE con el pool de la aplicación es
- * justamente la protección funcionando, no un defecto.
- */
+// Prueba de humo de `withUserTransaction`, la pieza de la que depende toda la
+// auditoría del sistema (sección 7.1 del documento maestro).
+//
+// Es una prueba de integración a propósito: lo que se verifica no es lógica de
+// TypeScript, es que el `SET LOCAL app.usuario_id` llegue a la base de datos y
+// que `fn_auditoria` lo lea. Con la base simulada no se comprobaría nada útil.
+//
+// Trabaja sobre un registro propio de la tabla `discapacidad` — un catálogo
+// simple sin dependencias.
+//
+// La limpieza usa `poolOwner`, no el pool de la aplicación: desde la migración
+// 12 el rol `dmm_app` no tiene DELETE en ninguna tabla y `auditoria_log` es de
+// solo lectura para él. Que este borrado FALLE con el pool de la aplicación es
+// justamente la protección funcionando, no un defecto.
 
 const NOMBRE_PRUEBA = "ZZ Prueba withUserTransaction";
 let usuarioId: number;

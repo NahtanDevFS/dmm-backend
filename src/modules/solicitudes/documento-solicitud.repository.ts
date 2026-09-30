@@ -1,7 +1,7 @@
 import prisma from "../../db/prisma.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
 
-/** El legajo escaneado de una solicitud: los formularios firmados en papel,recetas, constancias, cualquier respaldo */
+// El legajo escaneado de una solicitud: los formularios firmados en papel,recetas, constancias, cualquier respaldo
 export interface DocumentoSolicitudRow {
   id: number;
   solicitud_id: number;
@@ -72,7 +72,7 @@ export async function crearDocumentoSolicitud(
   });
 }
 
-/** Borrado lógico, igual que documento_persona y documento_recepcion: elarchivo permanece en disco */
+// Borrado lógico, igual que documento_persona y documento_recepcion: elarchivo permanece en disco
 export async function eliminarDocumentoSolicitud(
   usuarioId: number,
   id: number,

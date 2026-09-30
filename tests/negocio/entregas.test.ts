@@ -16,18 +16,16 @@ import {
   type InsumoCreado,
 } from "../helpers/fixtures.js";
 
-/**
- * `sp_registrar_entrega` y `sp_desactivar_entrega`: el nucleo del sistema.
- *
- * El backend NO elige lotes ni calcula cantidades; solo invoca. Toda la
- * decision de que lote se descuenta primero, cuanto se toma de cada uno y como
- * se restituye al anular vive en PL/pgSQL. Leer el repositorio de entregas no
- * dice nada sobre si el orden FEFO es correcto.
- *
- * Notese que en ningun INSERT de estas pruebas se envia `cantidad_entregada`:
- * la calcula `fn_calcular_cantidad_entregada` a partir de la presentacion y del
- * factor de conversion del lote. Enviarla seria probar otra cosa.
- */
+// `sp_registrar_entrega` y `sp_desactivar_entrega`: el nucleo del sistema.
+//
+// El backend NO elige lotes ni calcula cantidades; solo invoca. Toda la
+// decision de que lote se descuenta primero, cuanto se toma de cada uno y como
+// se restituye al anular vive en PL/pgSQL. Leer el repositorio de entregas no
+// dice nada sobre si el orden FEFO es correcto.
+//
+// Notese que en ningun INSERT de estas pruebas se envia `cantidad_entregada`:
+// la calcula `fn_calcular_cantidad_entregada` a partir de la presentacion y del
+// factor de conversion del lote. Enviarla seria probar otra cosa.
 
 let usuarioId: number;
 let personaId: number;
@@ -89,7 +87,7 @@ async function registrarEntrega(
   );
 }
 
-/** Lo que se tomó de cada lote, en el orden en que la base los eligió. */
+// Lo que se tomó de cada lote, en el orden en que la base los eligió.
 async function despachosPorLote(): Promise<
   Array<{ lote: number; cantidad: number }>
 > {
@@ -431,12 +429,10 @@ describe("anulacion de entregas", () => {
     ).rejects.toThrow(/usuario .* no existe/i);
   });
 
-  /**
-   * Si el lote de origen se dio de baja (vencido o dañado) despues de la
-   * entrega, restituir ahi seria devolver stock a un lote que ya no debe
-   * usarse. El sistema prefiere NO restaurar y avisar, en vez de inflar el
-   * inventario con unidades inservibles.
-   */
+  // Si el lote de origen se dio de baja (vencido o dañado) despues de la
+  // entrega, restituir ahi seria devolver stock a un lote que ya no debe
+  // usarse. El sistema prefiere NO restaurar y avisar, en vez de inflar el
+  // inventario con unidades inservibles.
   it("no restaura hacia un lote que fue dado de baja", async () => {
     const insumo = await crearInsumo(usuarioId);
     const lote = await crearLote(usuarioId, insumo, { cantidad: 10 });

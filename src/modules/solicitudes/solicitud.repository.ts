@@ -3,12 +3,13 @@ import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
 import { patronContiene } from "../../lib/busqueda.js";
+import { ErrorDeNegocio } from "../../lib/errores/negocio.js";
 
 export interface SolicitudRow {
   id: number;
   persona_id: number;
   programa_id: number;
-  /** Quien registró no era la encargada de ese programa */
+  // Quien registró no era la encargada de ese programa
   registrada_en_suplencia: boolean;
   fecha_solicitud: Date;
   requiere_aprobacion: boolean;
@@ -29,9 +30,9 @@ export interface LineaSolicitudRow {
   estado_id: number;
   fecha_asignacion: Date | null;
   receta_medica_id: number | null;
-  /** Donación o préstamo */
+  // Donación o préstamo
   modalidad_solicitud_id: number;
-  /** Cómo se expresó el pedido, si se expresó por presentación */
+  // Cómo se expresó el pedido, si se expresó por presentación
   presentacion_solicitud_id: number | null;
   cantidad_presentacion: string | null;
   activo: boolean;
@@ -46,7 +47,7 @@ const COLUMNAS_LINEA = `id, solicitud_id, insumo_id, cantidad_requerida,
   modalidad_solicitud_id, presentacion_solicitud_id, cantidad_presentacion,
   activo`;
 
-/** Convierte lo pedido a unidad base cuando vino expresado en una presentación("2 cajas" → 200 tabletas) */
+// Convierte lo pedido a unidad base cuando vino expresado en una presentación("2 cajas" -> 200 tabletas)
 async function resolverCantidadBase(
   client: PoolClient,
   linea: {
@@ -67,22 +68,23 @@ async function resolverCantidadBase(
   );
 
   if (rows.length === 0) {
-    throw new Error("La presentación indicada no existe o está inactiva.");
+    throw new ErrorDeNegocio("La presentación indicada no existe o está inactiva.", 400);
   }
 
   const total = Number(rows[0].factor) * linea.cantidad_presentacion!;
   const redondeado = Math.round(total);
 
   if (redondeado < 1) {
-    throw new Error(
+    throw new ErrorDeNegocio(
       "La cantidad pedida equivale a menos de una unidad. Ajuste la cantidad o la presentación.",
+      400,
     );
   }
 
   return redondeado;
 }
 
-/** Programa del que una usuaria es encargada, o null si no lleva ninguno */
+// Programa del que una usuaria es encargada, o null si no lleva ninguno
 export async function programaDeUsuario(
   usuarioId: number,
 ): Promise<number | null> {
@@ -129,7 +131,7 @@ export async function buscarLineaPorId(
   return result.rows[0] ?? null;
 }
 
-/** Listado de líneas de solicitud, con los nombres ya resueltos */
+// Listado de líneas de solicitud, con los nombres ya resueltos
 export async function listarSolicitudesActivas(params: {
   personaId?: number;
   programaId?: number;
@@ -182,7 +184,7 @@ export async function listarSolicitudesActivas(params: {
   return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
 }
 
-/** Lista de espera: líneas en PENDIENTE_ADQUISICION o PENDIENTE_ENTREGA_PARCIAL */
+// Lista de espera: líneas en PENDIENTE_ADQUISICION o PENDIENTE_ENTREGA_PARCIAL
 export async function listarListaEspera(
   insumoNombre?: string,
 ): Promise<Record<string, unknown>[]> {
@@ -244,7 +246,7 @@ async function idEstado(client: PoolClient, nombre: string): Promise<number> {
   return result.rows[0].id;
 }
 
-/** Deriva el estado de la cabecera a partir del estado que los triggersasignaron a sus líneas */
+// Deriva el estado de la cabecera a partir del estado que los triggersasignaron a sus líneas
 async function sincronizarEstadoCabecera(
   client: PoolClient,
   solicitudId: number,
@@ -274,13 +276,13 @@ async function sincronizarEstadoCabecera(
   );
 }
 
-/** Cabecera + líneas en una sola transacción */
+// Cabecera + líneas en una sola transacción
 export async function crearSolicitudConLineas(
   usuarioId: number,
   datos: {
     persona_id: number;
     programa_id: number;
-    /** Lo calcula el controlador comparando con el programa de quien crea */
+    // Lo calcula el controlador comparando con el programa de quien crea
     registrada_en_suplencia?: boolean;
     fecha_solicitud?: string;
     requiere_aprobacion?: boolean;
@@ -475,7 +477,7 @@ export async function editarLinea(
   });
 }
 
-/** Aprobación */
+// Aprobación
 export async function aprobarSolicitud(
   usuarioId: number,
   id: number,
@@ -495,7 +497,7 @@ export async function aprobarSolicitud(
   });
 }
 
-/** Rechazo */
+// Rechazo
 export async function rechazarSolicitud(
   usuarioId: number,
   id: number,
