@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
+import { ErrorDeNegocio } from "../../lib/errores/negocio.js";
 
 export interface ContratoRow {
   id: number;
@@ -512,14 +513,14 @@ export async function anularContratoPorError(
       [contratoId],
     );
 
-    if (rows.length === 0) throw new Error("El contrato no existe.");
+    if (rows.length === 0) throw new ErrorDeNegocio("El contrato no existe.", 404);
     const contrato = rows[0];
 
     if (!contrato.activo) {
-      throw new Error("El contrato ya está anulado.");
+      throw new ErrorDeNegocio("El contrato ya está anulado.");
     }
     if (contrato.fecha_devolucion_real !== null) {
-      throw new Error(
+      throw new ErrorDeNegocio(
         "Este préstamo ya tiene una devolución registrada, así que no fue un error de captura. Si el equipo no volvió, ciérrelo como no devuelto.",
       );
     }
@@ -530,7 +531,7 @@ export async function anularContratoPorError(
       [contratoId],
     );
     if (Number(pagadas[0].n) > 0) {
-      throw new Error(
+      throw new ErrorDeNegocio(
         "Este préstamo tiene multas ya pagadas: no se puede anular como si nunca hubiera existido.",
       );
     }
@@ -585,7 +586,7 @@ export async function cerrarContratoNoDevuelto(
     );
 
     if (rows.length === 0) {
-      throw new Error(
+      throw new ErrorDeNegocio(
         "El contrato no existe, está anulado, o ya tiene una devolución registrada.",
       );
     }

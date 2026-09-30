@@ -3,6 +3,7 @@ import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
 import { patronContiene } from "../../lib/busqueda.js";
+import { ErrorDeNegocio } from "../../lib/errores/negocio.js";
 
 export interface SolicitudRow {
   id: number;
@@ -67,15 +68,16 @@ async function resolverCantidadBase(
   );
 
   if (rows.length === 0) {
-    throw new Error("La presentación indicada no existe o está inactiva.");
+    throw new ErrorDeNegocio("La presentación indicada no existe o está inactiva.", 400);
   }
 
   const total = Number(rows[0].factor) * linea.cantidad_presentacion!;
   const redondeado = Math.round(total);
 
   if (redondeado < 1) {
-    throw new Error(
+    throw new ErrorDeNegocio(
       "La cantidad pedida equivale a menos de una unidad. Ajuste la cantidad o la presentación.",
+      400,
     );
   }
 

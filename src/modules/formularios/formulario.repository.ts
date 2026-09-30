@@ -1,5 +1,6 @@
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
+import { ErrorDeNegocio } from "../../lib/errores/negocio.js";
 
 /** Formularios configurables (migración 15): qué formulario exige una categoría de insumo, de qué campos se compone cada uno, y las respuestascapturadas para una línea de solicitud concreta */
 
@@ -349,13 +350,13 @@ export async function moverCampoFormulario(
     );
 
     if (actuales.length === 0) {
-      throw new Error("El campo no existe.");
+      throw new ErrorDeNegocio("El campo no existe.", 404);
     }
     const actual = actuales[0];
 
 // Un campo desactivado no se muestra al llenar el formulario, así que suposición no significa nada
     if (!actual.activo) {
-      throw new Error(
+      throw new ErrorDeNegocio(
         "Un campo desactivado no se puede reordenar: no aparece al llenar el formulario. Reactívelo primero.",
       );
     }

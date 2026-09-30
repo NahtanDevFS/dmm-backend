@@ -1,6 +1,7 @@
 import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
+import { ErrorDeNegocio } from "../../lib/errores/negocio.js";
 
 export interface MultaRow {
   id: number;
@@ -76,9 +77,8 @@ export async function aplicarMulta(
       [contratoId],
     );
     if (contrato[0]?.activo !== true) {
-      throw Object.assign(
-        new Error("Este préstamo está anulado: no se le pueden aplicar multas."),
-        { status: 409 },
+      throw new ErrorDeNegocio(
+        "Este préstamo está anulado: no se le pueden aplicar multas.",
       );
     }
 
