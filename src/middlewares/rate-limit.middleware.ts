@@ -19,7 +19,7 @@ export const limiteLogin = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: INTENTOS_LOGIN,
   keyGenerator: claveLogin,
-// Un login correcto no gasta cuota: quien sabe su contraseña no debe quedarbloqueado por haberse equivocado antes
+  // Un login correcto no gasta cuota: quien sabe su contraseña no debe quedar bloqueado por haberse equivocado antes
   skipSuccessfulRequests: true,
   standardHeaders: "draft-8",
   legacyHeaders: false,
@@ -38,7 +38,8 @@ export const limiteCambioPassword = rateLimit({
   limit: INTENTOS_CAMBIO_PASSWORD,
   keyGenerator: (req) => `usuario:${req.usuario!.id}`,
   skipSuccessfulRequests: true,
-  requestWasSuccessful: (_req, res) => res.locals.passwordActualIncorrecta !== true,
+  requestWasSuccessful: (_req, res) =>
+    res.locals.passwordActualIncorrecta !== true,
   standardHeaders: "draft-8",
   legacyHeaders: false,
   handler: (req, res) => {
