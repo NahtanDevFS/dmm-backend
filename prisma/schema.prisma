@@ -1026,6 +1026,7 @@ model formulario_campo {
   updated_at                                   DateTime?                                @db.Timestamp(6)
   created_by                                   Int?
   updated_by                                   Int?
+  seccion                                      String?                                  @db.VarChar(200)
   detalle_solicitud_formulario_respuesta       detalle_solicitud_formulario_respuesta[]
   catalogo                                     catalogo?                                @relation(fields: [catalogo_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_fc_catalogo")
   usuario_formulario_campo_created_byTousuario usuario?                                 @relation("formulario_campo_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fc_created_by")

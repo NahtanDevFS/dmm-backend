@@ -221,6 +221,7 @@ export async function agregarCampoController(
       orden: parsed.data.orden,
       grupoRepetible: parsed.data.grupo_repetible ?? null,
       ayuda: parsed.data.ayuda ?? null,
+      seccion: parsed.data.seccion || null,
     });
 
 // Opciones propias del campo, si el formulario no usa un catálogo reutilizable

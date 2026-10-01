@@ -38,6 +38,8 @@ export const agregarCampoFormularioSchema = z
     orden: z.number().int().nonnegative(),
     grupo_repetible: z.string().trim().max(100).nullable().optional(),
     ayuda: z.string().trim().max(2000).nullable().optional(),
+    // Título de la sección del papel a la que pertenece («Hoja 2 · …», «III. Vivienda»)
+    seccion: z.string().trim().max(200).nullable().optional(),
   })
   .refine(
     (d) =>
@@ -58,6 +60,7 @@ export const editarCampoFormularioSchema = z.object({
   obligatorio: z.boolean().optional(),
   orden: z.number().int().nonnegative().optional(),
   ayuda: z.string().trim().max(2000).nullable().optional(),
+  seccion: z.string().trim().max(200).nullable().optional(),
   activo: z.boolean().optional(),
 });
 
