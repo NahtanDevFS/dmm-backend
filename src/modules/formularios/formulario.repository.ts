@@ -43,6 +43,8 @@ export interface FormularioCampoRow {
   orden: number;
   grupo_repetible: string | null;
   ayuda: string | null;
+  /** Título de sección: el formulario lo muestra cuando cambia respecto del campo anterior */
+  seccion: string | null;
   activo: boolean;
 }
 
@@ -149,7 +151,7 @@ export async function buscarFormularioConCampos(
   const { rows: campos } = await pool.query<FormularioCampoRow>(
     `SELECT fc.id, fc.formulario_id, fc.etiqueta, fc.tipo_dato_id,
             tdc.nombre AS tipo_dato_nombre, fc.catalogo_id, fc.obligatorio,
-            fc.orden, fc.grupo_repetible, fc.ayuda, fc.activo
+            fc.orden, fc.grupo_repetible, fc.ayuda, fc.seccion, fc.activo
      FROM public.formulario_campo fc
      JOIN public.tipo_dato_campo_formulario tdc ON tdc.id = fc.tipo_dato_id
      WHERE fc.formulario_id = $1
@@ -297,14 +299,15 @@ export async function agregarCampoFormulario(
     orden: number;
     grupoRepetible?: string | null;
     ayuda?: string | null;
+    seccion?: string | null;
   },
 ): Promise<FormularioCampoRow> {
   return withUserTransaction(usuarioId, async (client) => {
     const { rows } = await client.query<{ id: number }>(
       `INSERT INTO public.formulario_campo
          (formulario_id, etiqueta, tipo_dato_id, catalogo_id, obligatorio,
-          orden, grupo_repetible, ayuda, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          orden, grupo_repetible, ayuda, seccion, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id`,
       [
         datos.formularioId,
@@ -315,6 +318,7 @@ export async function agregarCampoFormulario(
         datos.orden,
         datos.grupoRepetible ?? null,
         datos.ayuda ?? null,
+        datos.seccion ?? null,
         usuarioId,
       ],
     );
@@ -322,7 +326,7 @@ export async function agregarCampoFormulario(
     const { rows: campo } = await client.query<FormularioCampoRow>(
       `SELECT fc.id, fc.formulario_id, fc.etiqueta, fc.tipo_dato_id,
               tdc.nombre AS tipo_dato_nombre, fc.catalogo_id, fc.obligatorio,
-              fc.orden, fc.grupo_repetible, fc.ayuda, fc.activo
+              fc.orden, fc.grupo_repetible, fc.ayuda, fc.seccion, fc.activo
        FROM public.formulario_campo fc
        JOIN public.tipo_dato_campo_formulario tdc ON tdc.id = fc.tipo_dato_id
        WHERE fc.id = $1`,
@@ -399,6 +403,7 @@ export async function editarCampoFormulario(
     obligatorio?: boolean;
     orden?: number;
     ayuda?: string | null;
+    seccion?: string | null;
     activo?: boolean;
   },
 ): Promise<void> {
@@ -410,6 +415,9 @@ export async function editarCampoFormulario(
          orden = COALESCE($3, orden),
          ayuda = COALESCE($4, ayuda),
          activo = COALESCE($5, activo),
+         -- La sección sí se puede quitar: null (o vacía) la borra; solo se
+         -- conserva si no vino en la petición
+         seccion = CASE WHEN $8::boolean THEN NULLIF($9, '') ELSE seccion END,
          updated_by = $6
        WHERE id = $7`,
       [
@@ -420,6 +428,8 @@ export async function editarCampoFormulario(
         datos.activo ?? null,
         usuarioId,
         id,
+        datos.seccion !== undefined,
+        datos.seccion ?? null,
       ],
     );
   });

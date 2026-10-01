@@ -48,6 +48,7 @@ export interface RespuestaExpediente {
   campo_id: number;
   etiqueta: string;
   grupo_repetible: string | null;
+  seccion: string | null;
   orden: number;
   numero_fila: number | null;
   valor: string | null;
@@ -149,13 +150,14 @@ export async function formulariosExpediente(
     campo_id: number;
     etiqueta: string;
     grupo_repetible: string | null;
+    seccion: string | null;
     orden: number;
     numero_fila: number | null;
     valor: string | null;
   }>(
     `SELECT ve.formulario_id, ve.formulario_nombre AS nombre,
             ve.formulario_descripcion AS descripcion, ve.completado,
-            fc.id AS campo_id, fc.etiqueta, fc.grupo_repetible, fc.orden,
+            fc.id AS campo_id, fc.etiqueta, fc.grupo_repetible, fc.seccion, fc.orden,
             r.numero_fila, r.valor_texto AS valor
      FROM public.v_formularios_exigidos_linea ve
      JOIN public.formulario_campo fc
@@ -186,6 +188,7 @@ export async function formulariosExpediente(
       campo_id: fila.campo_id,
       etiqueta: fila.etiqueta,
       grupo_repetible: fila.grupo_repetible,
+      seccion: fila.seccion,
       orden: fila.orden,
       numero_fila: fila.numero_fila,
       valor: fila.valor,

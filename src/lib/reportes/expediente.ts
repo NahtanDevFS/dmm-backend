@@ -8,7 +8,7 @@ import type {
   EntregaExpediente,
 } from "../../modules/solicitudes/expediente.repository.js";
 
-/** Expediente de una solicitud, en un solo PDF */
+/* Expediente de una solicitud, en un solo PDF */
 
 const MARGEN = 45;
 const GRIS = "#555";
@@ -32,7 +32,7 @@ function texto(valor: string | null | undefined): string {
   return limpio === "" ? "—" : limpio;
 }
 
-/** Salta de página si lo que viene no entra en lo que queda */
+/* Salta de página si lo que viene no entra en lo que queda */
 function asegurarEspacio(doc: Doc, alto: number): void {
   if (doc.y + alto > doc.page.height - doc.page.margins.bottom) {
     doc.addPage();
@@ -40,7 +40,7 @@ function asegurarEspacio(doc: Doc, alto: number): void {
 }
 
 function titulo(doc: Doc, texto: string): void {
-// Un título solo al pie de página deja huérfano lo que anuncia, así que seexige espacio para él y para algo de contenido debajo
+  // Un título solo al pie de página deja huérfano lo que anuncia, así que seexige espacio para él y para algo de contenido debajo
   asegurarEspacio(doc, 60);
   doc.moveDown(0.8);
   doc.x = MARGEN;
@@ -120,7 +120,7 @@ function dato(doc: Doc, etiqueta: string, valor: string): void {
 function parrafo(doc: Doc, valor: string): void {
   const ancho = doc.page.width - MARGEN * 2;
 
-// Mismo motivo que en `dato`: se mide primero para reservar lo que deverdad ocupa, en vez de un alto fijo que se queda corto con dos líneas
+  // Mismo motivo que en `dato`: se mide primero para reservar lo que deverdad ocupa, en vez de un alto fijo que se queda corto con dos líneas
   const alto = doc
     .fontSize(9)
     .font("Helvetica")
@@ -136,13 +136,13 @@ function parrafo(doc: Doc, valor: string): void {
   doc.x = MARGEN;
 }
 
-/** Un grupo repetible como tabla: una fila por integrante, una columna porcampo */
+/* Un grupo repetible como tabla: una fila por integrante, una columna porcampo */
 function tablaGrupo(doc: Doc, encabezados: string[], filas: string[][]): void {
   const disponible = doc.page.width - MARGEN * 2;
   const ancho = disponible / encabezados.length;
   const alturaFila = 16;
 
-// El encabezado sí puede ocupar dos líneas: las etiquetas de los campos sonfrases, no palabras
+  // El encabezado sí puede ocupar dos líneas: las etiquetas de los campos sonfrases, no palabras
   doc.fontSize(8).font("Helvetica-Bold");
   const alturaEncabezado = Math.max(
     ...encabezados.map((h) => doc.heightOfString(h, { width: ancho - 4 })),
@@ -168,7 +168,7 @@ function tablaGrupo(doc: Doc, encabezados: string[], filas: string[][]): void {
     if (y + alturaFila > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
       y = doc.y;
-// Se repite el encabezado: una tabla que sigue en la página siguientesin encabezado obliga a volver atrás para saber qué es cada columna
+      // Se repite el encabezado: una tabla que sigue en la página siguientesin encabezado obliga a volver atrás para saber qué es cada columna
       doc.fillColor(GRIS).fontSize(8).font("Helvetica-Bold");
       encabezados.forEach((h, i) => {
         doc.text(h, MARGEN + i * ancho, y, { width: ancho - 4 });
@@ -189,28 +189,91 @@ function tablaGrupo(doc: Doc, encabezados: string[], filas: string[][]): void {
   doc.x = MARGEN;
 }
 
-/** Reparte las respuestas de un formulario entre campos sueltos y grupos */
-function escribirFormulario(doc: Doc, formulario: FormularioExpediente): void {
-  subtitulo(
-    doc,
-    formulario.nombre + (formulario.completado ? "" : "  (incompleto)"),
-  );
+/* Grupos cuyo papel lleva un total al pie; se suman sus campos en quetzales.
+ *  Mismo criterio que el formulario en pantalla (frontend: totales.ts). */
+const TOTALES_DE_GRUPO: Record<string, string> = {
+  ingresos: "Total de ingresos",
+  egresos: "Total de egresos",
+};
 
-  const sueltos = formulario.respuestas.filter((r) => !r.grupo_repetible);
-  const conGrupo = formulario.respuestas.filter((r) => r.grupo_repetible);
+/* «grupo_familiar» → «Grupo familiar» */
+function tituloDeGrupo(nombre: string): string {
+  const conEspacios = nombre.replace(/_/g, " ").trim();
+  return conEspacios.charAt(0).toUpperCase() + conEspacios.slice(1);
+}
 
-  for (const respuesta of sueltos) {
-    dato(doc, respuesta.etiqueta, texto(respuesta.valor));
+/* Suma lo que haya de número en los campos «(Q)»; lo vacío o ilegible no cuenta */
+export function totalDeGrupo(
+  campos: Map<number, string>,
+  filas: Map<number, Map<number, string | null>>,
+): number {
+  const enQuetzales = [...campos.entries()]
+    .filter(([, etiqueta]) => etiqueta.includes("(Q)"))
+    .map(([id]) => id);
+  let total = 0;
+  for (const valores of filas.values()) {
+    for (const id of enQuetzales) {
+      const numero = Number((valores.get(id) ?? "").replace(/,/g, ""));
+      if (Number.isFinite(numero)) total += numero;
+    }
   }
+  return total;
+}
 
-// Cada grupo repetible se arma como tabla: campos en columnas, filas enfilas
-  const grupos = new Map<string, RespuestasDelGrupo>();
-  for (const respuesta of conGrupo) {
-    const nombre = respuesta.grupo_repetible!;
-    let grupo = grupos.get(nombre);
+export type BloqueFormulario =
+  | { tipo: "seccion"; titulo: string }
+  | { tipo: "dato"; etiqueta: string; valor: string | null }
+  | {
+      tipo: "grupo";
+      nombre: string;
+      campos: Map<number, string>;
+      filas: Map<number, Map<number, string | null>>;
+    };
+
+/**
+ * Arma el formulario en el orden del papel: un título cada vez que cambia la
+ * sección, los campos sueltos donde van y cada grupo repetible (tabla) en el
+ * lugar de su primer campo. Las respuestas llegan ordenadas por campo.
+ */
+export function bloquesDeFormulario(
+  respuestas: FormularioExpediente["respuestas"],
+): BloqueFormulario[] {
+  const bloques: BloqueFormulario[] = [];
+  const grupos = new Map<
+    string,
+    Extract<BloqueFormulario, { tipo: "grupo" }>
+  >();
+  let seccionActual: string | null = null;
+  const vistos = new Set<number>();
+
+  for (const respuesta of respuestas) {
+    if (respuesta.seccion && respuesta.seccion !== seccionActual) {
+      bloques.push({ tipo: "seccion", titulo: respuesta.seccion });
+    }
+    seccionActual = respuesta.seccion ?? seccionActual;
+
+    if (!respuesta.grupo_repetible) {
+      // Un campo suelto llega una sola vez (no tiene filas)
+      if (vistos.has(respuesta.campo_id)) continue;
+      vistos.add(respuesta.campo_id);
+      bloques.push({
+        tipo: "dato",
+        etiqueta: respuesta.etiqueta,
+        valor: respuesta.valor,
+      });
+      continue;
+    }
+
+    let grupo = grupos.get(respuesta.grupo_repetible);
     if (!grupo) {
-      grupo = { campos: new Map(), filas: new Map() };
-      grupos.set(nombre, grupo);
+      grupo = {
+        tipo: "grupo",
+        nombre: respuesta.grupo_repetible,
+        campos: new Map(),
+        filas: new Map(),
+      };
+      grupos.set(respuesta.grupo_repetible, grupo);
+      bloques.push(grupo);
     }
     grupo.campos.set(respuesta.campo_id, respuesta.etiqueta);
 
@@ -220,33 +283,73 @@ function escribirFormulario(doc: Doc, formulario: FormularioExpediente): void {
     grupo.filas.set(respuesta.numero_fila, fila);
   }
 
-  for (const [nombre, grupo] of grupos) {
+  return bloques;
+}
+
+function escribirFormulario(doc: Doc, formulario: FormularioExpediente): void {
+  subtitulo(
+    doc,
+    formulario.nombre + (formulario.completado ? "" : "  (incompleto)"),
+  );
+
+  for (const bloque of bloquesDeFormulario(formulario.respuestas)) {
+    if (bloque.tipo === "seccion") {
+      doc.moveDown(0.3);
+      asegurarEspacio(doc, 40);
+      doc
+        .fillColor(TINTA)
+        .fontSize(9)
+        .font("Helvetica-Bold")
+        .text(bloque.titulo.toUpperCase(), MARGEN, doc.y);
+      doc.moveDown(0.2);
+      doc.x = MARGEN;
+      continue;
+    }
+
+    if (bloque.tipo === "dato") {
+      dato(doc, bloque.etiqueta, texto(bloque.valor));
+      continue;
+    }
+
+    // Cada grupo repetible se arma como tabla: campos en columnas, filas en filas
     doc.moveDown(0.3);
-    doc.fillColor(GRIS).fontSize(9).font("Helvetica-Oblique").text(nombre);
+    doc
+      .fillColor(GRIS)
+      .fontSize(9)
+      .font("Helvetica-Oblique")
+      .text(tituloDeGrupo(bloque.nombre), MARGEN, doc.y);
     doc.moveDown(0.2);
     doc.x = MARGEN;
 
-    const idsCampo = [...grupo.campos.keys()];
-    const encabezados = idsCampo.map((id) => grupo.campos.get(id)!);
+    const idsCampo = [...bloque.campos.keys()];
+    const encabezados = idsCampo.map((id) => bloque.campos.get(id)!);
 
-    if (grupo.filas.size === 0) {
+    if (bloque.filas.size === 0) {
       parrafo(doc, "Sin filas registradas.");
       continue;
     }
 
-    const filas = [...grupo.filas.entries()]
+    const filas = [...bloque.filas.entries()]
       .sort((a, b) => a[0] - b[0])
       .map(([, valores]) =>
         idsCampo.map((id) => texto(valores.get(id) ?? null)),
       );
 
     tablaGrupo(doc, encabezados, filas);
-  }
-}
 
-interface RespuestasDelGrupo {
-  campos: Map<number, string>;
-  filas: Map<number, Map<number, string | null>>;
+    const etiquetaTotal = TOTALES_DE_GRUPO[bloque.nombre];
+    if (etiquetaTotal) {
+      dato(
+        doc,
+        etiquetaTotal,
+        "Q " +
+          totalDeGrupo(bloque.campos, bloque.filas).toLocaleString("es-GT", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }),
+      );
+    }
+  }
 }
 
 export function responderExpedientePdf(
@@ -345,7 +448,7 @@ export function responderExpedientePdf(
     );
   }
 
-  // ── Insumos y sus formularios ───────────────────────────────────────────
+  // Insumos y sus formularios
   titulo(doc, "Insumos solicitados");
 
   if (lineas.length === 0) {
@@ -407,7 +510,7 @@ export function responderExpedientePdf(
   if (documentos.length === 0) {
     parrafo(doc, "No hay documentos adjuntos a esta solicitud.");
   } else {
-// Se listan, no se incrustan: los archivos viven detrás de la sesión ymeterlos dentro convertiría el expediente en algo de varios megas
+    // Se listan, no se incrustan: los archivos viven detrás de la sesión ymeterlos dentro convertiría el expediente en algo de varios megas
     parrafo(
       doc,
       "Los archivos se consultan desde el sistema; aquí solo se deja constancia de cuáles existen.",
