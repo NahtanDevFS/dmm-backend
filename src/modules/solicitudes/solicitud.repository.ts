@@ -327,6 +327,7 @@ export async function crearSolicitudConLineas(
     campos.push("created_by");
     valores.push(usuarioId);
 
+    //cabecera solicitud
     const placeholders = valores.map((_, i) => `$${i + 1}`).join(", ");
     const cabecera = await client.query<SolicitudRow>(
       `INSERT INTO public.solicitud_apoyo (${campos.join(", ")})
@@ -336,6 +337,7 @@ export async function crearSolicitudConLineas(
     );
     const solicitudId = cabecera.rows[0].id;
 
+    //detalle o lineas de la solicitud
     for (const linea of datos.lineas) {
       // Estado_id se envía solo porque la columna es NOT NULL: el triggerBEFORE INSERT lo sobrescribe según el stock real del insumo
       await client.query(
