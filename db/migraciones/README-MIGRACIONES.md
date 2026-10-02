@@ -41,7 +41,7 @@ reales e incluye la consulta para encontrarlos y repararlos.
 
 ## Historial
 
-De la 09 a la 13 están incorporadas al v3 y al v4; de la 28 a la 33, solo al v4.
+De la 09 a la 13 están incorporadas al v3 y al v4; de la 28 a la 34, solo al v4.
 
 | Script                                    | Qué corrige                                                                                                                                                                                                                      |
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -56,6 +56,7 @@ De la 09 a la 13 están incorporadas al v3 y al v4; de la 28 a la 33, solo al v4
 | `31_secciones_y_formularios_silla.sql` | El «Formulario de aptitud» era un formulario aparte, pero en papel es la hoja 2 de la «Solicitud de silla de ruedas»; y los formularios no tenían secciones. Agrega `formulario_campo.seccion`, une las dos hojas (moviendo las respuestas) y ordena ambos formularios como el papel. **Cambia una tabla: requiere `prisma:pull`** |
 | `32_ampliar_seccion_formulario.sql` | La 31 creó `seccion` como `varchar(100)`; se amplía a 200, como la etiqueta del campo. Aparte de la 31 porque esa ya estaba aplicada y `ADD COLUMN IF NOT EXISTS` no cambia una columna existente. Cambia el tipo: requiere `prisma:pull` |
 | `33_cabecera_cancelada.sql` | `fn_recalcular_cabecera_solicitud` cerraba como `ENTREGADA` toda solicitud con sus líneas entregadas o canceladas, aunque no se hubiera entregado nada; y una línea cancelada contaba como avance (`PENDIENTE_ENTREGA_PARCIAL`). Ahora: todo cancelado → `CANCELADA`, y lo pendiente se decide solo con las líneas abiertas. Recalcula las solicitudes con alguna línea cancelada |
+| `34_programa_en_entrega.sql` | La entrega no guardaba programa: en las directas no había de dónde sacarlo y la pantalla no podía mostrarlo. Agrega `entrega.programa_id` y un sexto parámetro opcional a `fn_crear_entrega`. Un despacho hereda el programa de su solicitud (se rellenaron las existentes); una directa lo elige quien la registra. Las directas anteriores quedan sin programa |
 
 ### Qué pasó entre la 13 y la 28
 
@@ -114,7 +115,7 @@ CHECK, un cambio de datos o de un procedimiento no cambia el modelo de Prisma.
 
 ## Para agregar una migración nueva
 
-La siguiente es la **34**.
+La siguiente es la **35**.
 
 1. Escribir el script con el problema medido, la solución y sus límites, como
    los anteriores. Idempotente (`IF NOT EXISTS`, `CREATE OR REPLACE`).

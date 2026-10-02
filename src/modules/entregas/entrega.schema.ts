@@ -28,6 +28,8 @@ export const registrarEntregaSchema = z
       .nullable()
       .optional(),
     observaciones: z.string().trim().max(2000).nullable().optional(),
+    // Solo para entregas directas: un despacho toma el de su solicitud
+    programa_id: z.number().int().positive().nullable().optional(),
   })
   .refine(
     (d) =>
@@ -56,6 +58,16 @@ export const registrarEntregaSchema = z
         "Una entrega no puede mezclar insumos de una solicitud con insumos de entrega directa. Regístrelas por separado",
       path: ["insumos"],
     },
+  )
+  .refine(
+    // Una entrega directa no tiene solicitud de donde heredar el programa
+    (d) =>
+      !d.insumos.every((i) => i.detalle_solicitud_id == null) ||
+      d.programa_id != null,
+    {
+      message: "Debe indicar el programa al que se carga la entrega",
+      path: ["programa_id"],
+    },
   );
 
 /** Mismo cuerpo para anular una entrega completa o un solo renglón */
@@ -70,6 +82,7 @@ export const anularEntregaSchema = z.object({
 export const listarEntregasQuerySchema = z.object({
   personaId: z.coerce.number().int().positive().optional(),
   insumoId: z.coerce.number().int().positive().optional(),
+  programaId: z.coerce.number().int().positive().optional(),
   desde: fechaSchema("Fecha 'desde' inválida: use el formato AAAA-MM-DD").optional(),
   hasta: fechaSchema("Fecha 'hasta' inválida: use el formato AAAA-MM-DD").optional(),
   incluirAnuladas: z
