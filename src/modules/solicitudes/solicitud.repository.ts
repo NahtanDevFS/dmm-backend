@@ -68,7 +68,10 @@ async function resolverCantidadBase(
   );
 
   if (rows.length === 0) {
-    throw new ErrorDeNegocio("La presentación indicada no existe o está inactiva.", 400);
+    throw new ErrorDeNegocio(
+      "La presentación indicada no existe o está inactiva.",
+      400,
+    );
   }
 
   const total = Number(rows[0].factor) * linea.cantidad_presentacion!;
@@ -144,7 +147,7 @@ export async function listarSolicitudesActivas(params: {
   const condiciones: string[] = [];
   const valores: unknown[] = [];
 
-// Se consulta siempre v_solicitudes y se filtra aquí, en vez de alternarentre dos vistas: así el resto de condiciones se escribe una sola vez
+  // Se consulta siempre v_solicitudes y se filtra aquí, en vez de alternarentre dos vistas: así el resto de condiciones se escribe una sola vez
   if (!params.incluirCerradas) {
     condiciones.push(`linea_cerrada = false`);
   }
@@ -246,7 +249,7 @@ async function idEstado(client: PoolClient, nombre: string): Promise<number> {
   return result.rows[0].id;
 }
 
-// Deriva el estado de la cabecera a partir del estado que los triggersasignaron a sus líneas
+// Deriva el estado de la cabecera a partir del estado que los triggers asignaron a sus líneas
 async function sincronizarEstadoCabecera(
   client: PoolClient,
   solicitudId: number,
@@ -334,7 +337,7 @@ export async function crearSolicitudConLineas(
     const solicitudId = cabecera.rows[0].id;
 
     for (const linea of datos.lineas) {
-// Estado_id se envía solo porque la columna es NOT NULL: el triggerBEFORE INSERT lo sobrescribe según el stock real del insumo
+      // Estado_id se envía solo porque la columna es NOT NULL: el triggerBEFORE INSERT lo sobrescribe según el stock real del insumo
       await client.query(
         `INSERT INTO public.detalle_solicitud_apoyo
            (solicitud_id, insumo_id, cantidad_requerida, estado_id,
