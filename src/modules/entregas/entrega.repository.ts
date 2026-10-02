@@ -11,6 +11,8 @@ export interface EntregaRow {
   usuario_entrega_id: number;
   observaciones: string | null;
   activo: boolean;
+  programa_id: number | null;
+  programa_nombre: string | null;
 }
 
 /** De qué lote salió una parte del renglón */
@@ -58,10 +60,12 @@ export interface LineaSolicitudParaEntrega {
   requiere_aprobacion: boolean;
   aprobada: boolean;
   persona_id: number;
+  programa_id: number;
 }
 
-const COLUMNAS_ENTREGA = `id, persona_id, persona_receptor_id,
-  tipo_parentesco_receptor_id, fecha_entrega, usuario_entrega_id, observaciones, activo`;
+const COLUMNAS_ENTREGA = `e.id, e.persona_id, e.persona_receptor_id,
+  e.tipo_parentesco_receptor_id, e.fecha_entrega, e.usuario_entrega_id,
+  e.observaciones, e.activo, e.programa_id, pg.nombre AS programa_nombre`;
 
 // lecturas
 
@@ -69,7 +73,10 @@ export async function buscarEntregaPorId(
   id: number,
 ): Promise<EntregaRow | null> {
   const result = await pool.query<EntregaRow>(
-    `SELECT ${COLUMNAS_ENTREGA} FROM public.entrega WHERE id = $1`,
+    `SELECT ${COLUMNAS_ENTREGA}
+     FROM public.entrega e
+     LEFT JOIN public.programa pg ON pg.id = e.programa_id
+     WHERE e.id = $1`,
     [id],
   );
   return result.rows[0] ?? null;
@@ -79,6 +86,7 @@ export async function buscarEntregaPorId(
 export async function listarEntregas(params: {
   personaId?: number;
   insumoId?: number;
+  programaId?: number;
   desde?: string;
   hasta?: string;
   incluirAnuladas: boolean;
@@ -92,6 +100,10 @@ export async function listarEntregas(params: {
   if (params.personaId !== undefined) {
     valores.push(params.personaId);
     condiciones.push(`e.persona_id = $${valores.length}`);
+  }
+  if (params.programaId !== undefined) {
+    valores.push(params.programaId);
+    condiciones.push(`e.programa_id = $${valores.length}`);
   }
   if (params.desde !== undefined) {
     valores.push(params.desde);
@@ -126,6 +138,8 @@ export async function listarEntregas(params: {
             pr.nombres || ' ' || pr.apellidos            AS receptor_nombre_completo,
             tp.nombre                                    AS parentesco_receptor,
             u.username                                   AS entregado_por,
+            e.programa_id,
+            pg.nombre                                    AS programa_nombre,
             e.observaciones,
             e.activo,
             -- Cantidad por insumo con su unidad base: sumar entre insumos
@@ -145,12 +159,13 @@ export async function listarEntregas(params: {
      LEFT JOIN public.persona pr  ON pr.id = e.persona_receptor_id
      LEFT JOIN public.tipo_parentesco tp ON tp.id = e.tipo_parentesco_receptor_id
      JOIN public.usuario u        ON u.id = e.usuario_entrega_id
+     LEFT JOIN public.programa pg ON pg.id = e.programa_id
      LEFT JOIN public.detalle_entrega de ON de.entrega_id = e.id
      LEFT JOIN public.insumo i    ON i.id = de.insumo_id
      LEFT JOIN public.unidad_medida um ON um.id = i.unidad_medida_base_id
      LEFT JOIN public.detalle_solicitud_apoyo dsa ON dsa.id = de.detalle_solicitud_id
      ${where}
-     GROUP BY e.id, p.nombres, p.apellidos, pr.nombres, pr.apellidos, tp.nombre, u.username
+     GROUP BY e.id, p.nombres, p.apellidos, pr.nombres, pr.apellidos, tp.nombre, u.username, pg.nombre
      ORDER BY e.fecha_entrega DESC, e.id DESC
      LIMIT $${valores.length + 1} OFFSET $${valores.length + 2}`,
     [...valores, params.limite, params.desplazamiento],
@@ -282,7 +297,7 @@ export async function buscarLineaParaEntrega(
   const result = await pool.query<LineaSolicitudParaEntrega>(
     `SELECT d.id, d.solicitud_id, d.insumo_id, d.cantidad_requerida,
             d.cantidad_entregada, e.nombre AS estado_nombre,
-            s.requiere_aprobacion, s.aprobada, s.persona_id
+            s.requiere_aprobacion, s.aprobada, s.persona_id, s.programa_id
      FROM public.detalle_solicitud_apoyo d
      JOIN public.estado_solicitud_apoyo e ON e.id = d.estado_id
      JOIN public.solicitud_apoyo s ON s.id = d.solicitud_id
@@ -307,17 +322,19 @@ export async function registrarEntrega(
     persona_receptor_id?: number | null;
     tipo_parentesco_receptor_id?: number | null;
     observaciones?: string | null;
+    programa_id?: number | null;
   },
 ): Promise<number> {
   return withUserTransaction(usuarioId, async (client) => {
     const cabecera = await client.query<{ id: number }>(
-      `SELECT public.fn_crear_entrega($1, $2, $3, $4, $5) AS id`,
+      `SELECT public.fn_crear_entrega($1, $2, $3, $4, $5, $6) AS id`,
       [
         datos.persona_id,
         usuarioId,
         datos.observaciones ?? null,
         datos.persona_receptor_id ?? null,
         datos.tipo_parentesco_receptor_id ?? null,
+        datos.programa_id ?? null,
       ],
     );
     const entregaId = cabecera.rows[0].id;

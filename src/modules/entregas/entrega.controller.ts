@@ -22,6 +22,7 @@ import {
   anularDetalleEntrega,
 } from "./entrega.repository.js";
 import { tieneFormulariosPendientes } from "../formularios/formulario.repository.js";
+import { existeProgramaActivo } from "../solicitudes/solicitud.repository.js";
 import {
   listarEvidenciasDeEntrega,
   buscarEvidenciaPorId,
@@ -82,6 +83,7 @@ export async function listarController(
     const { total, filas } = await listarEntregas({
       personaId: parsed.data.personaId,
       insumoId: parsed.data.insumoId,
+      programaId: parsed.data.programaId,
       desde: parsed.data.desde,
       hasta: parsed.data.hasta,
       incluirAnuladas: parsed.data.incluirAnuladas,
@@ -186,6 +188,7 @@ export async function registrarController(
 
 // Cada insumo se valida por separado
     const nombresInsumo: string[] = [];
+    const programasDeLineas = new Set<number>();
 
     for (const [indice, renglon] of parsed.data.insumos.entries()) {
       const posicion = `Insumo ${indice + 1}: `;
@@ -209,6 +212,7 @@ export async function registrarController(
             "la línea de solicitud indicada no existe o está inactiva",
         });
       }
+      programasDeLineas.add(linea.programa_id);
       if (linea.estado_nombre === "CANCELADA") {
         return res.status(409).json({
           message:
@@ -256,10 +260,33 @@ export async function registrarController(
       }
     }
 
+    /* Programa de la entrega. Un despacho hereda el de su solicitud: la
+       cabecera guarda uno solo, así que no puede mezclar solicitudes de
+       programas distintos. Una entrega directa lo elige quien la registra. */
+    let programaId: number;
+    if (programasDeLineas.size > 1) {
+      return res.status(400).json({
+        message:
+          "Las solicitudes que intenta despachar son de programas distintos. Regístrelas en entregas separadas.",
+      });
+    } else if (programasDeLineas.size === 1) {
+      programaId = [...programasDeLineas][0];
+    } else {
+      programaId = parsed.data.programa_id!;
+      if (!(await existeProgramaActivo(programaId))) {
+        return res.status(400).json({
+          message: "El programa indicado no existe o no está activo",
+        });
+      }
+    }
+
     const contexto: ContextoError = { insumoNombre: nombresInsumo.join(", ") };
 
     try {
-      const entregaId = await registrarEntrega(req.usuario!.id, parsed.data);
+      const entregaId = await registrarEntrega(req.usuario!.id, {
+        ...parsed.data,
+        programa_id: programaId,
+      });
       const [entrega, detalles] = await Promise.all([
         buscarEntregaPorId(entregaId),
         listarDetallesDeEntrega(entregaId),

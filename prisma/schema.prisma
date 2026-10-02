@@ -224,10 +224,12 @@ model entrega {
   updated_at                                   DateTime?           @db.Timestamp(6)
   created_by                                   Int?
   updated_by                                   Int?
+  programa_id                                  Int?
   detalle_entrega                              detalle_entrega[]
   usuario_entrega_created_byTousuario          usuario?            @relation("entrega_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_entrega_created_by")
   tipo_parentesco                              tipo_parentesco?    @relation(fields: [tipo_parentesco_receptor_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_parentesco")
   persona_entrega_persona_idTopersona          persona             @relation("entrega_persona_idTopersona", fields: [persona_id], references: [id], onUpdate: NoAction, map: "fk_entrega_persona")
+  programa                                     programa?           @relation(fields: [programa_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_programa")
   persona_entrega_persona_receptor_idTopersona persona?            @relation("entrega_persona_receptor_idTopersona", fields: [persona_receptor_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_receptor")
   usuario_entrega_updated_byTousuario          usuario?            @relation("entrega_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_entrega_updated_by")
   usuario_entrega_usuario_entrega_idTousuario  usuario             @relation("entrega_usuario_entrega_idTousuario", fields: [usuario_entrega_id], references: [id], onUpdate: NoAction, map: "fk_entrega_usuario")
@@ -236,6 +238,7 @@ model entrega {
   @@index([fecha_entrega], map: "idx_entrega_fecha")
   @@index([persona_id], map: "idx_entrega_persona")
   @@index([persona_receptor_id], map: "idx_entrega_receptor", where: raw("(persona_receptor_id IS NOT NULL)"))
+  @@index([programa_id], map: "idx_entrega_programa", where: raw("(programa_id IS NOT NULL)"))
 }
 
 model estado_contrato_prestamo {
@@ -439,6 +442,7 @@ model programa {
   updated_at                            DateTime?         @db.Timestamp(6)
   created_by                            Int?
   updated_by                            Int?
+  entrega                               entrega[]
   usuario_programa_created_byTousuario  usuario?          @relation("programa_created_byTousuario", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_prog_created_by")
   usuario_programa_updated_byTousuario  usuario?          @relation("programa_updated_byTousuario", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_prog_updated_by")
   solicitud_apoyo                       solicitud_apoyo[]
