@@ -18,7 +18,7 @@ Hay dos caminos, y conviene no mezclarlos:
 
 | Situación                                                   | Qué correr                                                          |
 | ----------------------------------------------------------- | ------------------------------------------------------------------- |
-| **Entorno nuevo** (base recién creada, incluida `dmm_test`) | **Solo `scripts_bd_v4.sql`.** Ya trae todas las migraciones hasta la 35 |
+| **Entorno nuevo** (base recién creada, incluida `dmm_test`) | **Solo `scripts_bd_v4.sql`.** Ya trae todas las migraciones hasta la 36 |
 | **Base existente** a la que le falta algún cambio           | Solo la migración que le falte, de esta carpeta                     |
 
 El encabezado del v4 explica cómo crear la base, cambiar la clave de `dmm_app`
@@ -41,7 +41,7 @@ reales e incluye la consulta para encontrarlos y repararlos.
 
 ## Historial
 
-De la 09 a la 13 están incorporadas al v3 y al v4; de la 28 a la 35, solo al v4.
+De la 09 a la 13 están incorporadas al v3 y al v4; de la 28 a la 36, solo al v4.
 
 | Script                                    | Qué corrige                                                                                                                                                                                                                      |
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -58,6 +58,7 @@ De la 09 a la 13 están incorporadas al v3 y al v4; de la 28 a la 35, solo al v4
 | `33_cabecera_cancelada.sql` | `fn_recalcular_cabecera_solicitud` cerraba como `ENTREGADA` toda solicitud con sus líneas entregadas o canceladas, aunque no se hubiera entregado nada; y una línea cancelada contaba como avance (`PENDIENTE_ENTREGA_PARCIAL`). Ahora: todo cancelado → `CANCELADA`, y lo pendiente se decide solo con las líneas abiertas. Recalcula las solicitudes con alguna línea cancelada |
 | `34_programa_en_entrega.sql` | La entrega no guardaba programa: en las directas no había de dónde sacarlo y la pantalla no podía mostrarlo. Agrega `entrega.programa_id` y un sexto parámetro opcional a `fn_crear_entrega`. Un despacho hereda el programa de su solicitud (se rellenaron las existentes); una directa lo elige quien la registra. Las directas anteriores quedan sin programa |
 | `35_lotes_vencidos_fuera_del_despacho.sql` | Un lote vencido seguía contando como stock y el FEFO lo despachaba **primero** (la fecha más antigua es la vencida). Ahora `fn_stock_disponible` y `v_inventario_lote_fifo` lo excluyen, `fn_descontar_inventario` rechaza descontar de él, `v_stock_insumo` separa `stock_vencido` y `v_lista_espera` muestra también las líneas `PENDIENTE_ENTREGA` cuyo insumo se quedó sin existencias (`sin_existencias`). Agrega columnas al final de dos vistas; Prisma no las modela, así que no requiere `prisma:pull`. Los vencidos no se dan de baja solos |
+| `36_reportes_programa_edad_y_unidad.sql` | Hallazgos QA DEF-07, DEF-12 y DEF-11. Las vistas de reportes tomaban el programa solo de la solicitud (las entregas directas con programa salían «sin programa»); el grupo etario de población beneficiada usaba la edad de hoy y no la de la entrega; y el stock por categoría sumaba litros con unidades. Ahora programa = `COALESCE(entrega, solicitud)`, edad con `fn_edad_en_fecha` a la fecha de entrega, y stock con una fila por categoría y unidad (`unidad_nombre` al final). Requiere la 35. Sin `prisma:pull` |
 
 ### Qué pasó entre la 13 y la 28
 
@@ -116,7 +117,7 @@ CHECK, un cambio de datos o de un procedimiento no cambia el modelo de Prisma.
 
 ## Para agregar una migración nueva
 
-La siguiente es la **36**.
+La siguiente es la **37**.
 
 1. Escribir el script con el problema medido, la solución y sus límites, como
    los anteriores. Idempotente (`IF NOT EXISTS`, `CREATE OR REPLACE`).
