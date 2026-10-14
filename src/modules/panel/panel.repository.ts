@@ -29,6 +29,8 @@ export async function entregasPorMes(meses: number): Promise<EntregasPorMes[]> {
 
 export interface StockPorCategoria {
   categoria_nombre: string;
+  /** Unidad base de los insumos de la fila; NULL si la categoría no tiene insumos */
+  unidad_nombre: string | null;
   unidades_totales_disponibles: number;
   lotes_urgentes_o_vencidos: number;
 }
@@ -36,7 +38,8 @@ export interface StockPorCategoria {
 /** Mismo origen que el reporte "Stock por categoría", sin filtros */
 export async function stockPorCategoria(): Promise<StockPorCategoria[]> {
   const result = await pool.query<StockPorCategoria>(
-    `SELECT categoria_nombre, unidades_totales_disponibles, lotes_urgentes_o_vencidos
+    `SELECT categoria_nombre, unidad_nombre, unidades_totales_disponibles,
+            lotes_urgentes_o_vencidos
      FROM public.v_reporte_stock_por_categoria
      ORDER BY unidades_totales_disponibles DESC`,
   );
@@ -48,17 +51,27 @@ export interface PoblacionPorPrograma {
   personas_unicas_beneficiadas: number;
 }
 
-/** Población beneficiada agregada por programa, sumando los meses del rango */
+/*
+ * Personas distintas por programa en los meses del rango.
+ *
+ * Se cuenta sobre los renglones entregados y no sumando
+ * v_reporte_poblacion_beneficiada: esa vista ya trae personas únicas POR FILA
+ * (mes, comunidad, género, grupo etario...), y sumar filas contaba dos veces a
+ * quien recibió algo en septiembre y en octubre, o a quien cumplió 65 entre
+ * dos entregas. Mismo criterio de meses completos que antes.
+ */
+const RANGO_DE_MESES = `fecha_entrega >= date_trunc('month', $1::date)
+       AND fecha_entrega < date_trunc('month', $2::date) + interval '1 month'`;
+
 export async function poblacionPorPrograma(
   desde: string,
   hasta: string,
 ): Promise<PoblacionPorPrograma[]> {
   const result = await pool.query<PoblacionPorPrograma>(
     `SELECT programa_nombre,
-            SUM(personas_unicas_beneficiadas)::int AS personas_unicas_beneficiadas
-     FROM public.v_reporte_poblacion_beneficiada
-     WHERE mes >= date_trunc('month', $1::date)::date
-       AND mes <= date_trunc('month', $2::date)::date
+            count(DISTINCT persona_id)::int AS personas_unicas_beneficiadas
+     FROM public.v_reporte_personas_atendidas
+     WHERE ${RANGO_DE_MESES}
        AND programa_nombre IS NOT NULL
      GROUP BY programa_nombre
      ORDER BY personas_unicas_beneficiadas DESC`,
@@ -79,14 +92,32 @@ export async function poblacionPorGenero(
 ): Promise<PoblacionPorGenero[]> {
   const result = await pool.query<PoblacionPorGenero>(
     `SELECT genero,
-            SUM(personas_unicas_beneficiadas)::int AS personas_unicas_beneficiadas
-     FROM public.v_reporte_poblacion_beneficiada
-     WHERE mes >= date_trunc('month', $1::date)::date
-       AND mes <= date_trunc('month', $2::date)::date
+            count(DISTINCT persona_id)::int AS personas_unicas_beneficiadas
+     FROM public.v_reporte_personas_atendidas
+     WHERE ${RANGO_DE_MESES}
        AND genero IS NOT NULL
      GROUP BY genero
      ORDER BY personas_unicas_beneficiadas DESC`,
     [desde, hasta],
   );
   return result.rows;
+}
+
+/*
+ * Solicitudes (trámites, no líneas) que esperan aprobación de dirección.
+ *
+ * La tarjeta de Inicio usaba el `total` del listado de solicitudes, que va por
+ * LÍNEA: una solicitud con dos insumos contaba dos. Mismo filtro que el
+ * listado con «solo pendientes de aprobación»: líneas abiertas de cabeceras
+ * que requieren aprobación y no la tienen.
+ */
+export async function contarSolicitudesPendientesAprobacion(): Promise<number> {
+  const result = await pool.query<{ total: number }>(
+    `SELECT count(DISTINCT solicitud_id)::int AS total
+     FROM public.v_solicitudes
+     WHERE linea_cerrada = false
+       AND requiere_aprobacion = true
+       AND aprobada = false`,
+  );
+  return result.rows[0]?.total ?? 0;
 }

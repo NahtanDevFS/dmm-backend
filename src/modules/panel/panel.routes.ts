@@ -7,6 +7,7 @@ import {
   stockPorCategoriaController,
   poblacionPorProgramaController,
   poblacionPorGeneroController,
+  solicitudesPendientesController,
 } from "./panel.controller.js";
 
 /** Datos agregados para las gráficas de Inicio */
@@ -17,6 +18,12 @@ router.get(
   requireAuth,
   requireRole(OPERACION),
   entregasPorMesController,
+);
+router.get(
+  "/solicitudes-pendientes",
+  requireAuth,
+  requireRole(OPERACION),
+  solicitudesPendientesController,
 );
 router.get(
   "/stock-por-categoria",

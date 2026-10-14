@@ -6,6 +6,7 @@ import {
   stockPorCategoria,
   poblacionPorPrograma,
   poblacionPorGenero,
+  contarSolicitudesPendientesAprobacion,
 } from "./panel.repository.js";
 
 const entregasPorMesQuery = z.object({
@@ -27,6 +28,19 @@ export async function entregasPorMesController(
     }
     const datos = await entregasPorMes(parsed.data.meses);
     return res.status(200).json({ datos });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function solicitudesPendientesController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const total = await contarSolicitudesPendientesAprobacion();
+    return res.status(200).json({ total });
   } catch (error) {
     return next(error);
   }

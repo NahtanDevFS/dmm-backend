@@ -148,11 +148,11 @@ export async function reporteStockPorCategoria(params: {
     f.agregarSinValor(`lotes_urgentes_o_vencidos > 0`);
 
   const result = await pool.query(
-    `SELECT categoria_nombre, cantidad_tipos_insumo,
+    `SELECT categoria_nombre, unidad_nombre, cantidad_tipos_insumo,
             unidades_totales_disponibles, lotes_urgentes_o_vencidos
      FROM public.v_reporte_stock_por_categoria
      ${f.where}
-     ORDER BY categoria_nombre`,
+     ORDER BY categoria_nombre, unidad_nombre`,
     f.params,
   );
   return result.rows;

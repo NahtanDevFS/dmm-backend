@@ -173,6 +173,9 @@ export async function personasAtendidasController(
 
 const COLUMNAS_STOCK: ColumnaReporte[] = [
   { campo: "categoria_nombre", titulo: "Categoría", ancho: 30 },
+  // Una fila por categoría y unidad (migración 36): sin la unidad, la cifra
+  // de al lado no dice si son litros, tabletas o sillas
+  { campo: "unidad_nombre", titulo: "Unidad", ancho: 14 },
   { campo: "cantidad_tipos_insumo", titulo: "Tipos de insumo", ancho: 16 },
   {
     campo: "unidades_totales_disponibles",
