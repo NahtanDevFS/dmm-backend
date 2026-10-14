@@ -60,20 +60,25 @@ export async function existeComunidad(id: number): Promise<boolean> {
   return (await buscarComunidadParaFiltro(id)) !== null;
 }
 
-export async function existeDiscapacidad(id: number): Promise<boolean> {
+// El nombre sirve para validar que exista y para describir el filtro en el PDF
+export async function buscarNombreDiscapacidad(
+  id: number,
+): Promise<string | null> {
   const d = await prisma.discapacidad.findUnique({
     where: { id },
-    select: { id: true },
+    select: { nombre: true },
   });
-  return d !== null;
+  return d?.nombre ?? null;
 }
 
-export async function existeCategoriaInsumo(id: number): Promise<boolean> {
+export async function buscarNombreCategoriaInsumo(
+  id: number,
+): Promise<string | null> {
   const c = await prisma.categoria_insumo.findUnique({
     where: { id },
-    select: { id: true },
+    select: { nombre: true },
   });
-  return c !== null;
+  return c?.nombre ?? null;
 }
 
 // RF-REP-01/02/03/04

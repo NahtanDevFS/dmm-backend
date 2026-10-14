@@ -10,12 +10,13 @@ import {
   reportePoblacionBeneficiada,
   buscarComunidadParaFiltro,
   buscarNombrePrograma,
-  existeDiscapacidad,
-  existeCategoriaInsumo,
+  buscarNombreDiscapacidad,
+  buscarNombreCategoriaInsumo,
 } from "./reporte.repository.js";
 import {
   responderExcel,
   responderPdf,
+  describirFiltros,
   type ColumnaReporte,
   type FormatoReporte,
 } from "../../lib/reportes/exportar.js";
@@ -33,7 +34,13 @@ async function responder(
     return responderExcel(res, titulo, columnas, filas);
   }
   if (formato === "pdf") {
-    return responderPdf(res, titulo, columnas, filas, describir(filtrosAplicados));
+    return responderPdf(
+      res,
+      titulo,
+      columnas,
+      filas,
+      describirFiltros(filtrosAplicados),
+    );
   }
   res.status(200).json({
     titulo,
@@ -45,13 +52,6 @@ async function responder(
   });
 }
 
-function describir(filtros: Record<string, unknown>): string {
-  const partes = Object.entries(filtros)
-    .filter(([, v]) => v !== undefined && v !== false && v !== null)
-    .map(([k, v]) => `${k}: ${v}`);
-  return partes.length ? `Filtros — ${partes.join(" · ")}` : "Sin filtros";
-}
-
 // personas atendidas
 
 const COLUMNAS_PERSONAS: ColumnaReporte[] = [
@@ -61,7 +61,7 @@ const COLUMNAS_PERSONAS: ColumnaReporte[] = [
   { campo: "genero", titulo: "Género", ancho: 14 },
   { campo: "comunidad_nombre", titulo: "Comunidad", ancho: 20 },
   { campo: "municipio_nombre", titulo: "Municipio", ancho: 16 },
-  { campo: "programa_nombre", titulo: "Programa", ancho: 20 },
+  { campo: "programa_nombre", titulo: "Programa", ancho: 28 },
   { campo: "insumo_nombre", titulo: "Insumo", ancho: 24 },
   { campo: "cantidad_entregada", titulo: "Cantidad", ancho: 10 },
   { campo: "unidad_despacho", titulo: "Unidad", ancho: 12 },
@@ -110,13 +110,15 @@ export async function personasAtendidasController(
       comunidadNombre = comunidad.nombre;
     }
 
-    if (
-      d.discapacidadId !== undefined &&
-      !(await existeDiscapacidad(d.discapacidadId))
-    ) {
-      return res
-        .status(400)
-        .json({ message: "La discapacidad indicada no existe" });
+    let discapacidadNombre: string | undefined;
+    if (d.discapacidadId !== undefined) {
+      const nombre = await buscarNombreDiscapacidad(d.discapacidadId);
+      if (!nombre) {
+        return res
+          .status(400)
+          .json({ message: "La discapacidad indicada no existe" });
+      }
+      discapacidadNombre = nombre;
     }
 
     let programaNombre: string | undefined;
@@ -154,6 +156,7 @@ export async function personasAtendidasController(
         hasta: d.hasta,
         comunidad: comunidadNombre,
         programa: programaNombre,
+        discapacidad: discapacidadNombre,
         genero: d.genero,
         edadMin: d.edadMin,
         edadMax: d.edadMax,
@@ -198,13 +201,15 @@ export async function stockPorCategoriaController(
     }
     const d = parsed.data;
 
-    if (
-      d.categoriaId !== undefined &&
-      !(await existeCategoriaInsumo(d.categoriaId))
-    ) {
-      return res
-        .status(400)
-        .json({ message: "La categoría indicada no existe" });
+    let categoriaNombre: string | undefined;
+    if (d.categoriaId !== undefined) {
+      const nombre = await buscarNombreCategoriaInsumo(d.categoriaId);
+      if (!nombre) {
+        return res
+          .status(400)
+          .json({ message: "La categoría indicada no existe" });
+      }
+      categoriaNombre = nombre;
     }
 
     const filas = await reporteStockPorCategoria({
@@ -219,7 +224,7 @@ export async function stockPorCategoriaController(
       COLUMNAS_STOCK,
       filas,
       {
-        categoriaId: d.categoriaId,
+        categoria: categoriaNombre,
         soloConUrgentes: d.soloConUrgentes || undefined,
       },
     );

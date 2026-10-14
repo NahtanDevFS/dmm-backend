@@ -19,6 +19,31 @@ const ETIQUETAS: Record<string, string> = {
   MENOR: "Menor de edad",
   ADULTO: "Adulto",
   ADULTO_MAYOR: "Adulto mayor",
+  // parentesco
+  MADRE: "Madre",
+  PADRE: "Padre",
+  HIJO_A: "Hijo(a)",
+  HERMANO_A: "Hermano(a)",
+  ABUELO_A: "Abuelo(a)",
+  TIO_A: "Tío(a)",
+  CONYUGE: "Cónyuge",
+  // estados de solicitud
+  PENDIENTE_ADQUISICION: "Pendiente de adquisición",
+  PENDIENTE_ENTREGA: "Pendiente de entrega",
+  PENDIENTE_ENTREGA_PARCIAL: "Pendiente de entrega (parcial)",
+  APROBADA: "Aprobada",
+  RECHAZADA: "Rechazada",
+  ENTREGADA: "Entregada",
+  CANCELADA: "Cancelada",
+  // estados de contrato de préstamo
+  VIGENTE: "Vigente",
+  DEVUELTO: "Devuelto",
+  VENCIDO: "Vencido",
+  EXTENDIDO: "Extendido (renovado)",
+  NO_DEVUELTO: "No devuelto",
+  // modalidad de solicitud
+  DONACION: "Donación",
+  PRESTAMO: "Préstamo",
 };
 
 const IDENTIFICADOR = /^[A-Z0-9]+(?:_[A-Z0-9]+)+$/;
