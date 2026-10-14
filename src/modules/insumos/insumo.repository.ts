@@ -27,9 +27,12 @@ export interface StockInsumoRow {
   requiere_fecha_caducidad: boolean;
   requiere_codigo_fabricante: boolean;
   bloquea_solicitud_sin_stock: boolean;
+  /** Lo que se puede entregar: no cuenta los lotes vencidos (migración 35) */
   stock_total: number;
   proxima_caducidad: Date | null;
   semaforo: string | null;
+  /** Unidades en lotes vencidos que siguen activos, pendientes de dar de baja */
+  stock_vencido: number;
 }
 
 /** Una fila del listado de stock: lo de la vista más la categoría por id */
@@ -247,7 +250,8 @@ export async function obtenerStockInsumo(
   const result = await pool.query<StockInsumoRow>(
     `SELECT insumo_id, insumo_nombre, categoria_nombre, unidad_base_nombre,
             requiere_fecha_caducidad, requiere_codigo_fabricante,
-            bloquea_solicitud_sin_stock, stock_total, proxima_caducidad, semaforo
+            bloquea_solicitud_sin_stock, stock_total, proxima_caducidad, semaforo,
+            stock_vencido
      FROM public.v_stock_insumo
      WHERE insumo_id = $1`,
     [id],
@@ -280,7 +284,7 @@ export async function listarStockInsumos(params: {
             ci.permite_prestamo, i.serie_por_unidad,
             v.unidad_base_nombre, v.requiere_fecha_caducidad,
             v.requiere_codigo_fabricante, v.bloquea_solicitud_sin_stock,
-            v.stock_total, v.proxima_caducidad, v.semaforo
+            v.stock_total, v.proxima_caducidad, v.semaforo, v.stock_vencido
      FROM public.v_stock_insumo v
      JOIN public.insumo i ON i.id = v.insumo_id
      JOIN public.categoria_insumo ci ON ci.id = i.categoria_id

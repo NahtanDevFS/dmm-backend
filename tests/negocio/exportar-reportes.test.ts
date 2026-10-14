@@ -13,7 +13,11 @@ import {
   idCatalogo,
 } from "../helpers/bd.js";
 import { crearInsumo, crearLote, crearPersona } from "../helpers/fixtures.js";
-import { formatearValor } from "../../src/lib/reportes/exportar.js";
+import {
+  formatearValor,
+  describirFiltros,
+} from "../../src/lib/reportes/exportar.js";
+import { valorDeRespuesta } from "../../src/lib/reportes/expediente.js";
 
 // Exportación de reportes a Excel y PDF.
 //
@@ -114,5 +118,42 @@ describe("PDF: texto de cada celda", () => {
     // node-postgres entrega un DATE como medianoche local de ese día
     expect(formatearValor("fecha_entrega", new Date(2026, 8, 5))).toBe("05/09/2026");
     expect(formatearValor("mes", new Date(2026, 8, 1))).toBe("09/2026");
+  });
+});
+
+describe("PDF: encabezado de filtros", () => {
+  // Salían las claves internas: «soloConDiscapacidad: true · desde: 2026-01-01»
+  it("nombra cada filtro en español y escribe las fechas como día/mes/año", () => {
+    expect(
+      describirFiltros({
+        desde: "2026-01-01",
+        genero: "FEMENINO",
+        soloConDiscapacidad: true,
+        soloAdultoMayor: undefined,
+        edadMin: 1,
+      }),
+    ).toBe(
+      "Filtros: Desde: 01/01/2026 · Género: Femenino · Solo personas con discapacidad · Edad mínima: 1",
+    );
+  });
+
+  it("lo dice cuando no hay filtros", () => {
+    expect(describirFiltros({ desde: undefined, soloConUrgentes: false })).toBe(
+      "Sin filtros: todos los registros",
+    );
+  });
+});
+
+describe("PDF del expediente: respuestas de formulario", () => {
+  it("las de opción múltiple se leen como lista y no como JSON", () => {
+    expect(valorDeRespuesta('["Sala","Comedor","Baño"]')).toBe("Sala, Comedor, Baño");
+    expect(valorDeRespuesta("[]")).toBe("—");
+  });
+
+  it("las fechas van como día/mes/año y lo vacío como guion", () => {
+    expect(valorDeRespuesta("2026-09-04")).toBe("04/09/2026");
+    expect(valorDeRespuesta("  ")).toBe("—");
+    expect(valorDeRespuesta(null)).toBe("—");
+    expect(valorDeRespuesta("[sin cerrar")).toBe("[sin cerrar");
   });
 });

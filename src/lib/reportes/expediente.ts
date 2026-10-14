@@ -1,5 +1,11 @@
 import type { Response } from "express";
 import PDFDocument from "pdfkit";
+import { etiquetaDe } from "../etiquetas.js";
+import {
+  formatearValor,
+  momentoDeGeneracion,
+  numerarPaginas,
+} from "./exportar.js";
 import type {
   CabeceraExpediente,
   LineaExpediente,
@@ -21,15 +27,54 @@ function nombreArchivo(id: number): string {
   return `expediente-solicitud-${id}-${fecha}.pdf`;
 }
 
+const FECHA_ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Fecha como se escribe en Guatemala (23/09/2026). Antes salía en ISO y, al
+ * pasar por toISOString, un DATE leído como medianoche local podía correrse
+ * al día anterior según el huso del servidor.
+ */
 function fecha(valor: Date | string | null): string {
   if (!valor) return "—";
-  const d = valor instanceof Date ? valor : new Date(valor);
-  return d.toISOString().slice(0, 10);
+  if (typeof valor === "string") {
+    const iso = FECHA_ISO.exec(valor.slice(0, 10));
+    return iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : valor;
+  }
+  return formatearValor("fecha", valor);
 }
 
 function texto(valor: string | null | undefined): string {
   const limpio = (valor ?? "").trim();
   return limpio === "" ? "—" : limpio;
+}
+
+/** Identificadores de catálogo (MASCULINO, PENDIENTE_ENTREGA) en texto legible */
+function catalogo(valor: string | null | undefined): string {
+  const limpio = texto(valor);
+  return limpio === "—" ? limpio : etiquetaDe(limpio);
+}
+
+/**
+ * Respuesta de un formulario tal como se lee en papel. Las de opción múltiple
+ * se guardan como arreglo JSON y salían así: ["Sala","Comedor"]. Las fechas
+ * se guardan como AAAA-MM-DD.
+ */
+export function valorDeRespuesta(valor: string | null | undefined): string {
+  const limpio = texto(valor);
+  if (limpio.startsWith("[")) {
+    try {
+      const lista: unknown = JSON.parse(limpio);
+      if (Array.isArray(lista)) {
+        const elementos = lista.map((e) => String(e).trim()).filter(Boolean);
+        return elementos.length ? elementos.join(", ") : "—";
+      }
+    } catch {
+      // No era JSON: se muestra tal cual
+    }
+  }
+  const iso = FECHA_ISO.exec(limpio);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return limpio;
 }
 
 /* Salta de página si lo que viene no entra en lo que queda */
@@ -136,53 +181,65 @@ function parrafo(doc: Doc, valor: string): void {
   doc.x = MARGEN;
 }
 
-/* Un grupo repetible como tabla: una fila por integrante, una columna porcampo */
+/* Un grupo repetible como tabla: una fila por integrante, una columna por
+   campo. Cada fila mide lo que ocupa su celda más alta: con un alto fijo, un
+   valor de dos líneas pisaba la fila siguiente. */
 function tablaGrupo(doc: Doc, encabezados: string[], filas: string[][]): void {
   const disponible = doc.page.width - MARGEN * 2;
   const ancho = disponible / encabezados.length;
-  const alturaFila = 16;
+  const relleno = 4;
+  const limite = () => doc.page.height - doc.page.margins.bottom;
 
-  // El encabezado sí puede ocupar dos líneas: las etiquetas de los campos sonfrases, no palabras
-  doc.fontSize(8).font("Helvetica-Bold");
-  const alturaEncabezado = Math.max(
-    ...encabezados.map((h) => doc.heightOfString(h, { width: ancho - 4 })),
-    alturaFila,
-  );
+  const altoDe = (celdas: string[], fuente: string): number => {
+    doc.fontSize(8).font(fuente);
+    return (
+      Math.max(
+        ...celdas.map((c) =>
+          doc.heightOfString(c || " ", { width: ancho - relleno * 2 }),
+        ),
+      ) +
+      relleno * 2
+    );
+  };
 
-  asegurarEspacio(doc, alturaEncabezado + alturaFila);
-
-  let y = doc.y;
-  doc.fillColor(GRIS);
-  encabezados.forEach((h, i) => {
-    doc.text(h, MARGEN + i * ancho, y, { width: ancho - 4 });
-  });
-  y += alturaEncabezado + 4;
-  doc
-    .moveTo(MARGEN, y - 3)
-    .lineTo(doc.page.width - MARGEN, y - 3)
-    .strokeColor("#E4DCE0")
-    .stroke();
-
-  doc.fillColor(TINTA).font("Helvetica");
-  for (const fila of filas) {
-    if (y + alturaFila > doc.page.height - doc.page.margins.bottom) {
-      doc.addPage();
-      y = doc.y;
-      // Se repite el encabezado: una tabla que sigue en la página siguientesin encabezado obliga a volver atrás para saber qué es cada columna
-      doc.fillColor(GRIS).fontSize(8).font("Helvetica-Bold");
-      encabezados.forEach((h, i) => {
-        doc.text(h, MARGEN + i * ancho, y, { width: ancho - 4 });
-      });
-      y += alturaEncabezado + 4;
-      doc.fillColor(TINTA).font("Helvetica");
-    }
-    fila.forEach((celda, i) => {
-      doc.text(celda, MARGEN + i * ancho, y, {
-        width: ancho - 4,
-        ellipsis: true,
+  const escribir = (celdas: string[], y: number, fuente: string, color: string) => {
+    doc.fillColor(color).fontSize(8).font(fuente);
+    celdas.forEach((c, i) => {
+      doc.text(c, MARGEN + i * ancho + relleno, y + relleno, {
+        width: ancho - relleno * 2,
       });
     });
-    y += alturaFila;
+  };
+
+  const altoEncabezado = altoDe(encabezados, "Helvetica-Bold");
+
+  const encabezado = (y: number): number => {
+    doc.rect(MARGEN, y, disponible, altoEncabezado).fillColor("#F3ECEF").fill();
+    escribir(encabezados, y, "Helvetica-Bold", GRIS);
+    return y + altoEncabezado;
+  };
+
+  // El encabezado no se queda solo al pie: necesita al menos su primera fila
+  const primera = filas[0] ? altoDe(filas[0], "Helvetica") : 0;
+  asegurarEspacio(doc, altoEncabezado + primera);
+  let y = encabezado(doc.y);
+
+  for (const fila of filas) {
+    const alto = altoDe(fila, "Helvetica");
+    if (y + alto > limite()) {
+      doc.addPage();
+      // Se repite el encabezado: una tabla que sigue en la página siguiente
+      // sin encabezado obliga a volver atrás para saber qué es cada columna
+      y = encabezado(doc.page.margins.top);
+    }
+    escribir(fila, y, "Helvetica", TINTA);
+    doc
+      .moveTo(MARGEN, y + alto)
+      .lineTo(doc.page.width - MARGEN, y + alto)
+      .strokeColor("#E4DCE0")
+      .lineWidth(0.5)
+      .stroke();
+    y += alto;
   }
 
   doc.y = y + 4;
@@ -295,7 +352,9 @@ function escribirFormulario(doc: Doc, formulario: FormularioExpediente): void {
   for (const bloque of bloquesDeFormulario(formulario.respuestas)) {
     if (bloque.tipo === "seccion") {
       doc.moveDown(0.3);
-      asegurarEspacio(doc, 40);
+      // El título de sección arrastra consigo su primer contenido, que puede ser
+      // una tabla: con menos espacio quedaba solo al pie de la página
+      asegurarEspacio(doc, 90);
       doc
         .fillColor(TINTA)
         .fontSize(9)
@@ -307,11 +366,14 @@ function escribirFormulario(doc: Doc, formulario: FormularioExpediente): void {
     }
 
     if (bloque.tipo === "dato") {
-      dato(doc, bloque.etiqueta, texto(bloque.valor));
+      dato(doc, bloque.etiqueta, valorDeRespuesta(bloque.valor));
       continue;
     }
 
-    // Cada grupo repetible se arma como tabla: campos en columnas, filas en filas
+    // Cada grupo repetible se arma como tabla: campos en columnas, filas en
+    // filas. Su nombre pide espacio para el encabezado y una fila debajo; si
+    // no, quedaba solo al pie de una página y la tabla en la siguiente.
+    asegurarEspacio(doc, 70);
     doc.moveDown(0.3);
     doc
       .fillColor(GRIS)
@@ -332,7 +394,7 @@ function escribirFormulario(doc: Doc, formulario: FormularioExpediente): void {
     const filas = [...bloque.filas.entries()]
       .sort((a, b) => a[0] - b[0])
       .map(([, valores]) =>
-        idsCampo.map((id) => texto(valores.get(id) ?? null)),
+        idsCampo.map((id) => valorDeRespuesta(valores.get(id) ?? null)),
       );
 
     tablaGrupo(doc, encabezados, filas);
@@ -364,7 +426,16 @@ export function responderExpedientePdf(
 ): void {
   const { cabecera, lineas, formulariosPorLinea, documentos, entregas } = datos;
 
-  const doc = new PDFDocument({ size: "LETTER", margin: MARGEN });
+  // bufferPages: al final se vuelve a cada página para escribir «Página X de Y»
+  const doc = new PDFDocument({
+    size: "LETTER",
+    margin: MARGEN,
+    bufferPages: true,
+    info: {
+      Title: "Expediente de solicitud n.º " + cabecera.solicitud_id,
+      Author: "Sistema DMM Usumatlán",
+    },
+  });
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
@@ -389,7 +460,7 @@ export function responderExpedientePdf(
     .fillColor(GRIS)
     .fontSize(8)
     .font("Helvetica")
-    .text("Generado el " + new Date().toLocaleString("es-GT"));
+    .text("Generado el " + momentoDeGeneracion());
 
   // ── La persona ──────────────────────────────────────────────────────────
   titulo(doc, "Datos del beneficiario");
@@ -405,7 +476,7 @@ export function responderExpedientePdf(
           texto(cabecera.departamento_nacimiento)
       : "—",
   );
-  dato(doc, "Género", texto(cabecera.genero));
+  dato(doc, "Género", catalogo(cabecera.genero));
   dato(doc, "Estado civil", texto(cabecera.estado_civil));
   dato(doc, "Grado académico", texto(cabecera.grado_academico));
   dato(doc, "Ocupación", texto(cabecera.ocupacion));
@@ -427,7 +498,7 @@ export function responderExpedientePdf(
   titulo(doc, "Datos de la solicitud");
   dato(doc, "Fecha de solicitud", fecha(cabecera.fecha_solicitud));
   dato(doc, "Programa", cabecera.programa);
-  dato(doc, "Estado", cabecera.estado);
+  dato(doc, "Estado", catalogo(cabecera.estado));
   dato(
     doc,
     "Aprobación",
@@ -456,7 +527,7 @@ export function responderExpedientePdf(
   }
 
   for (const linea of lineas) {
-    subtitulo(doc, linea.insumo + " · " + linea.modalidad);
+    subtitulo(doc, linea.insumo + " · " + catalogo(linea.modalidad));
     dato(
       doc,
       "Cantidad",
@@ -473,7 +544,7 @@ export function responderExpedientePdf(
             ")"
           : ""),
     );
-    dato(doc, "Estado", linea.estado);
+    dato(doc, "Estado", catalogo(linea.estado));
 
     const formularios =
       formulariosPorLinea.get(linea.detalle_solicitud_id) ?? [];
@@ -524,5 +595,9 @@ export function responderExpedientePdf(
     }
   }
 
+  numerarPaginas(
+    doc,
+    "Expediente de solicitud n.º " + cabecera.solicitud_id,
+  );
   doc.end();
 }
