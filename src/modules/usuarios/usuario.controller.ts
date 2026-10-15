@@ -310,7 +310,7 @@ export async function cambiarPasswordPropiaController(
             ? "La contraseña actual no es correcta"
             : restantes === 0
               ? "La contraseña actual no es correcta. Era su último intento: deberá esperar 15 minutos para volver a intentarlo."
-              : `La contraseña actual no es correcta. Le quedan ${restantes} intento${restantes === 1 ? "" : "s"}.`,
+              : `La contraseña actual no es correcta. ${restantes === 1 ? "Le queda 1 intento" : `Le quedan ${restantes} intentos`}.`,
       });
     }
 
