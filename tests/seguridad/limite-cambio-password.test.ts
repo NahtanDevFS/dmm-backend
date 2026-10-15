@@ -46,8 +46,9 @@ describe("límite de intentos al cambiar la contraseña", () => {
       expect(r.status).toBe(400);
       expect(r.cuerpo.code).toBe("CURRENT_PASSWORD_INVALID");
       expect(r.cuerpo.intentos_restantes).toBe(restantes);
+      // Concordancia completa: «Le queda 1 intento», no «Le quedan 1 intento»
       expect(r.cuerpo.message).toContain(
-        `Le quedan ${restantes} intento${restantes === 1 ? "" : "s"}`,
+        restantes === 1 ? "Le queda 1 intento." : `Le quedan ${restantes} intentos.`,
       );
     }
 
