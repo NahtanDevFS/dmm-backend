@@ -36,6 +36,35 @@ function redactar(
   return copia;
 }
 
+/*
+ * Lo técnico, para ocultarlo a quien no es administrador.
+ *
+ * Las cuentas ADMINISTRADOR ya son invisibles para la Directora en Usuarios
+ * (QA-03). Aquí se completa esa decisión: tampoco ve lo que hacen (tareas de
+ * mantenimiento que no le dicen nada y pueden alarmarla), ni los cambios a sus
+ * cuentas, ni sus inicios de sesión. Los registros siguen en la base y el
+ * administrador los ve completos: es un filtro de lectura, no un borrado.
+ *
+ * Tampoco ve lo que no tiene autor (usuario_id NULL). Toda escritura de la
+ * aplicación pasa por withUserTransaction, que fija app.usuario_id, así que un
+ * registro sin autor solo puede venir de fuera de ella: migraciones, carga
+ * inicial o SQL manual. Es mantenimiento, igual que lo de los administradores.
+ * Si algún día se agrega una escritura que no use withUserTransaction, sus
+ * registros también quedarían fuera de la vista de la Directora.
+ *
+ * Se mira el rol ACTUAL de la cuenta: si un administrador pasa a otro rol, lo
+ * que hizo como administrador vuelve a verse.
+ */
+const ES_TECNICO = `(a.usuario_id IS NULL OR EXISTS (
+       SELECT 1 FROM public.usuario ua
+       JOIN public.rol r ON r.id = ua.rol_id
+       WHERE r.nombre = 'ADMINISTRADOR'
+         AND (ua.id = a.usuario_id
+              OR (a.tabla_afectada = 'usuario' AND ua.id = a.registro_id)
+              OR (a.tabla_afectada = 'sesion'
+                  AND ua.id::text IN (a.valores_nuevos ->> 'usuario_id',
+                                      a.valores_antiguos ->> 'usuario_id')))))`;
+
 export async function listarAuditoria(params: {
   tabla?: string;
   registroId?: number;
@@ -45,6 +74,8 @@ export async function listarAuditoria(params: {
   hasta?: string;
   limite: number;
   desplazamiento: number;
+  /** true para quien no es administrador (ver ES_TECNICO) */
+  ocultarAdministradores?: boolean;
 }): Promise<{ total: number; filas: AuditoriaRow[] }> {
   const condiciones: string[] = [];
   const valores: unknown[] = [];
@@ -68,6 +99,9 @@ export async function listarAuditoria(params: {
       (n) => `a.fecha_hora < (${n}::date + INTERVAL '1 day')`,
       params.hasta,
     );
+  if (params.ocultarAdministradores) {
+    condiciones.push(`NOT ${ES_TECNICO}`);
+  }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
 
@@ -102,13 +136,15 @@ export async function listarAuditoria(params: {
   };
 }
 
-/** Tablas que tienen registros de auditoría, para poblar el filtro */
-export async function listarTablasAuditadas(): Promise<
-  { tabla: string; registros: number }[]
-> {
+/** Tablas que tienen registros de auditoría, para poblar el filtro. Los
+ *  conteos respetan el mismo ocultamiento que el listado. */
+export async function listarTablasAuditadas(
+  ocultarAdministradores = false,
+): Promise<{ tabla: string; registros: number }[]> {
   const result = await pool.query<{ tabla: string; registros: number }>(
     `SELECT tabla_afectada AS tabla, count(*)::int AS registros
-     FROM public.auditoria_log
+     FROM public.auditoria_log a
+     ${ocultarAdministradores ? `WHERE NOT ${ES_TECNICO}` : ""}
      GROUP BY tabla_afectada
      ORDER BY tabla_afectada`,
   );
@@ -119,6 +155,7 @@ export async function listarTablasAuditadas(): Promise<
 export async function historialDeRegistro(
   tabla: string,
   registroId: number,
+  ocultarAdministradores = false,
 ): Promise<AuditoriaRow[]> {
   const result = await pool.query<AuditoriaRow>(
     `SELECT a.id, a.tabla_afectada, a.registro_id, t.nombre AS accion,
@@ -128,6 +165,7 @@ export async function historialDeRegistro(
      JOIN public.tipo_accion_auditoria t ON t.id = a.tipo_accion_id
      LEFT JOIN public.usuario u ON u.id = a.usuario_id
      WHERE a.tabla_afectada = $1 AND a.registro_id = $2
+       ${ocultarAdministradores ? `AND NOT ${ES_TECNICO}` : ""}
      ORDER BY a.fecha_hora, a.id`,
     [tabla, registroId],
   );

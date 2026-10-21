@@ -129,3 +129,85 @@ describe("para un Administrador", () => {
     );
   });
 });
+
+describe("auditoría", () => {
+  // La Directora no ve lo técnico: lo que toca a los administradores (lo que
+  // hicieron, los cambios a sus cuentas, sus sesiones) ni lo que no tiene
+  // autor (migraciones, SQL manual). El administrador lo ve todo. Los registros
+  // no se borran: es solo un filtro de lectura.
+  const tablas = (cuerpo: { datos: { tabla_afectada: string; registro_id: number; usuario_id: number | null }[] }) =>
+    cuerpo.datos;
+
+  let programaAdmin: number;
+  let programaDirectora: number;
+
+  beforeAll(async () => {
+    const a = await pedir("POST", "/api/programas", admin, { nombre: "Programa del admin (auditoría)" });
+    const d = await pedir("POST", "/api/programas", directora, { nombre: "Programa de la directora (auditoría)" });
+    expect(a.status).toBe(201);
+    expect(d.status).toBe(201);
+    programaAdmin = a.cuerpo.id;
+    programaDirectora = d.cuerpo.id;
+
+    // Un cambio de la Directora sobre la cuenta del empleado: con autor
+    const e = await pedir("PATCH", `/api/usuarios/${empleadoId}`, directora, {
+      nombre_completo: "Empleado editado por la directora",
+    });
+    expect(e.status).toBe(200);
+  });
+
+  it("la Directora no ve lo que hizo un administrador, pero sí lo suyo", async () => {
+    const r = await pedir("GET", "/api/auditoria?tabla=programa&limite=100", directora);
+    expect(r.status).toBe(200);
+    const ids = tablas(r.cuerpo).map((f) => f.registro_id);
+    expect(ids).toContain(programaDirectora);
+    expect(ids).not.toContain(programaAdmin);
+    expect(tablas(r.cuerpo).some((f) => f.usuario_id === admin.usuarioId)).toBe(false);
+  });
+
+  it("el administrador sigue viéndolo todo", async () => {
+    const r = await pedir("GET", "/api/auditoria?tabla=programa&limite=100", admin);
+    const ids = tablas(r.cuerpo).map((f) => f.registro_id);
+    expect(ids).toContain(programaAdmin);
+    expect(ids).toContain(programaDirectora);
+  });
+
+  it("la Directora no ve los cambios a cuentas de administrador ni sus sesiones", async () => {
+    const usuarios = await pedir("GET", "/api/auditoria?tabla=usuario&limite=100", directora);
+    const idsUsuario = tablas(usuarios.cuerpo).map((f) => f.registro_id);
+    expect(idsUsuario).toContain(empleadoId);
+    expect(idsUsuario).not.toContain(otroAdminId);
+    expect(idsUsuario).not.toContain(admin.usuarioId);
+
+    const historial = await pedir("GET", `/api/auditoria/usuario/${otroAdminId}`, directora);
+    expect(historial.status).toBe(200);
+    expect(historial.cuerpo.total).toBe(0);
+
+    const sesiones = await pedir("GET", "/api/auditoria?tabla=sesion&limite=100", directora);
+    const deAdmin = tablas(sesiones.cuerpo).filter((f) => {
+      const v = (f as unknown as { valores_nuevos: { usuario_id?: number } | null }).valores_nuevos;
+      return v?.usuario_id === admin.usuarioId;
+    });
+    expect(deAdmin).toHaveLength(0);
+  });
+
+  it("la Directora no ve lo que no tiene autor (migraciones, SQL manual)", async () => {
+    // Un cambio hecho por fuera de la aplicación, como una migración
+    const { rows } = await poolOwner.query<{ id: number }>(
+      `INSERT INTO public.programa (nombre) VALUES ('Programa cargado por SQL') RETURNING id`,
+    );
+    const porSql = rows[0].id;
+
+    const directa = await pedir("GET", "/api/auditoria?tabla=programa&limite=100", directora);
+    expect(tablas(directa.cuerpo).map((f) => f.registro_id)).not.toContain(porSql);
+    expect(tablas(directa.cuerpo).some((f) => f.usuario_id === null)).toBe(false);
+
+    const delAdmin = await pedir("GET", "/api/auditoria?tabla=programa&limite=100", admin);
+    expect(tablas(delAdmin.cuerpo).map((f) => f.registro_id)).toContain(porSql);
+  });
+
+  it("el administrador sí ve el historial de otra cuenta de administrador", async () => {
+    const historial = await pedir("GET", `/api/auditoria/usuario/${otroAdminId}`, admin);
+    expect(historial.cuerpo.total).toBeGreaterThan(0);
+  });
+});
