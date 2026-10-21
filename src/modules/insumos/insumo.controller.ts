@@ -1,5 +1,13 @@
 import type { Request, Response, NextFunction } from "express";
 import { paginar } from "../../lib/paginacion.js";
+import { requiereReceta } from "../../config/receta.js";
+
+/* Marca calculada, no columna: si el insumo es de una categoría que exige
+   receta médica para entregarse (config/receta.ts) */
+const conReceta = <T extends { categoria_id: number }>(fila: T) => ({
+  ...fila,
+  requiere_receta: requiereReceta(fila.categoria_id),
+});
 import {
   crearInsumoSchema,
   editarInsumoSchema,
@@ -46,7 +54,9 @@ export async function listarController(
       limite: parsed.data.limite,
       desplazamiento: parsed.data.desplazamiento,
     });
-    return res.status(200).json(paginar(filas, total, parsed.data));
+    return res
+      .status(200)
+      .json(paginar(filas.map(conReceta), total, parsed.data));
   } catch (error) {
     return next(error);
   }
@@ -68,7 +78,7 @@ export async function obtenerController(
       return res.status(404).json({ message: "Insumo no encontrado" });
     }
 
-    return res.status(200).json(insumo);
+    return res.status(200).json(conReceta(insumo));
   } catch (error) {
     return next(error);
   }
@@ -265,12 +275,11 @@ export async function listarStockController(
       });
     }
 
-    return res.status(200).json(
-      await listarStockInsumos({
-        categoriaId: parsed.data.categoriaId,
-        busqueda: parsed.data.busqueda,
-      }),
-    );
+    const filas = await listarStockInsumos({
+      categoriaId: parsed.data.categoriaId,
+      busqueda: parsed.data.busqueda,
+    });
+    return res.status(200).json(filas.map(conReceta));
   } catch (error) {
     return next(error);
   }

@@ -1,6 +1,10 @@
 import prisma from "../../db/prisma.js";
 import { pool } from "../../db/pool.js";
 import { withUserTransaction } from "../../db/withUserTransaction.js";
+import {
+  CATEGORIAS_CON_RECETA,
+  TIPO_EVIDENCIA_RECETA,
+} from "../../config/receta.js";
 
 export interface EntregaRow {
   id: number;
@@ -82,6 +86,33 @@ export async function buscarEntregaPorId(
   return result.rows[0] ?? null;
 }
 
+/*
+ * Entrega vigente con algún renglón de una categoría que exige receta
+ * (config/receta.ts) y sin la evidencia «Receta médica». La pantalla pide la
+ * receta antes de registrar; esto es la red para lo que se escape: una subida
+ * que falló, una entrega anterior a la regla o una llamada directa a la API.
+ * `$CAT` se reemplaza por el número del parámetro con el arreglo de categorías.
+ */
+const FALTA_RECETA = `(e.activo AND EXISTS (
+       SELECT 1 FROM public.detalle_entrega dr
+       JOIN public.insumo ir ON ir.id = dr.insumo_id
+       WHERE dr.entrega_id = e.id AND dr.activo
+         AND ir.categoria_id = ANY($CAT::int[])
+     ) AND NOT EXISTS (
+       SELECT 1 FROM public.evidencia_entrega ev
+       JOIN public.tipo_evidencia_entrega te ON te.id = ev.tipo_evidencia_id
+       WHERE ev.entrega_id = e.id AND ev.activo AND te.nombre = '${TIPO_EVIDENCIA_RECETA}'
+     ))`;
+
+export async function faltaRecetaEnEntrega(id: number): Promise<boolean> {
+  const result = await pool.query<{ falta: boolean }>(
+    `SELECT ${FALTA_RECETA.replace("$CAT", "$2")} AS falta
+     FROM public.entrega e WHERE e.id = $1`,
+    [id, CATEGORIAS_CON_RECETA],
+  );
+  return result.rows[0]?.falta ?? false;
+}
+
 /** Listado con los nombres ya resueltos */
 export async function listarEntregas(params: {
   personaId?: number;
@@ -153,7 +184,8 @@ export async function listarEntregas(params: {
             -- Origen de la entrega. La regla de origen único garantiza que
             -- todos los renglones comparten solicitud, así que un MIN alcanza.
             MIN(dsa.solicitud_id)                        AS solicitud_id,
-            COUNT(*) FILTER (WHERE NOT de.activo)::integer AS renglones_anulados
+            COUNT(*) FILTER (WHERE NOT de.activo)::integer AS renglones_anulados,
+            ${FALTA_RECETA.replace("$CAT", `$${valores.length + 3}`)} AS falta_receta
      FROM public.entrega e
      JOIN public.persona p        ON p.id = e.persona_id
      LEFT JOIN public.persona pr  ON pr.id = e.persona_receptor_id
@@ -168,7 +200,7 @@ export async function listarEntregas(params: {
      GROUP BY e.id, p.nombres, p.apellidos, pr.nombres, pr.apellidos, tp.nombre, u.username, pg.nombre
      ORDER BY e.fecha_entrega DESC, e.id DESC
      LIMIT $${valores.length + 1} OFFSET $${valores.length + 2}`,
-    [...valores, params.limite, params.desplazamiento],
+    [...valores, params.limite, params.desplazamiento, CATEGORIAS_CON_RECETA],
   );
 
   return { total: totalResult.rows[0]?.n ?? 0, filas: result.rows };
