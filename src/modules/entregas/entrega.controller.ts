@@ -10,6 +10,7 @@ import {
   buscarEntregaPorId,
   listarEntregas,
   listarDetallesDeEntrega,
+  faltaRecetaEnEntrega,
   listarLotesFifo,
   existePersonaActiva,
   buscarInsumoActivo,
@@ -107,13 +108,16 @@ export async function obtenerController(
       return res.status(ruta.status).json({ message: ruta.message });
     }
 
-    const [entrega, detalles, evidencias] = await Promise.all([
+    const [entrega, detalles, evidencias, falta_receta] = await Promise.all([
       buscarEntregaPorId(ruta.id),
       listarDetallesDeEntrega(ruta.id),
       listarEvidenciasDeEntrega(ruta.id),
+      faltaRecetaEnEntrega(ruta.id),
     ]);
 
-    return res.status(200).json({ ...entrega, detalles, evidencias });
+    return res
+      .status(200)
+      .json({ ...entrega, detalles, evidencias, falta_receta });
   } catch (error) {
     return next(error);
   }
